@@ -1,48 +1,120 @@
-#' With samples drawn from proposal distribution, this function computes the importance weight.
-#' Simulating under proposal distribution can be easily done by using EALasso::DirectSampler.
+#' @title Computing importance weights under high-dimensional setting
 #'
-#' @param X Predictor matrix of size n x p, where n is the number of observations and p is number of covariates.
-#' @param coefftarget Parameter of target distribution. n x 1 vector of coefficient estimate.
-#' @param sig2target Parameter of target distribution. Estimated variance of error term.
-#' @param lbdtarget Parameter of target distribution. Lambda.
-#' @param coeffprop Coefficient estimate of proposal distribution.
-#' @param sig2prop Estimated variance of error term of proposal distribution.
-#' @param lbdprop Lambda of proposal distribution. Lambda.
-#' @param propsalsample Samples drawn from proposal distribution. The samples can be easily drawn by using DirectSampler.
+#' @description \code{hdIS} is used to computes importance weights using samples
+#' drawn by \code{\link{DirectSampler}}. For group lasso, we provide the option
+#' to use mixture distribution as a proposal distribution. See the examples
+#' below for more details
+#'
+#' @param X Predictor matrix of size n x p, where n is the number of
+#' observations and p is number of covariates.
+#' @param coefftarget,sig2target,lbdtarget Parameter of target distribution.
+#' (coefficient estimate, estimated variance of error, lambda)
+#' @param coeffprop1,sig2prop1,lbdprop1 Parameter of proposal distribution.
+#' (coefficient estimate, estimated variance of error, lambda).
+#' @param coeffprop2,sig2prop2,lbdprop2 Parameter of mixture proposal
+#' distribution. (coefficient estimate, estimated variance of error, lambda).
+#' Only needed for group lasso under mixture distribution.
+#' See Zhou and Min(2016) for more details.
+#' @param propsalsample Samples drawn from proposal distribution. The samples
+#' can be easily drawn by using \code{\link{DirectSampler}} with relevant choice
+#' of \code{coeff, sigma2, lbd}.
 #' @param group Prespecifed group structure for group lasso. p x 1 vector.
-#' Use the same integer if covariates are in the same group. See example for more detail.
-#' @param weights Weight term for each group. Default is rep(1, length(unique(group))).
-#' @param TsA.method Way to construct T(eta(s),A) matrix. See Zhou and Min(2016) for more detail.
+#' Use the same integer if covariates are in the same group. See example for
+#' more detail.
+#' @param weights Weight term for each group. Default is
+#' rep(1, length(unique(group))).
+#' @param TsA.method Way to construct T(eta(s),A) matrix. See Zhou and Min(2016)
+#' for more detail.
 #' @param log If true, importance weight is computed in log scale.
-#' @param parallel If true, parallelize the computation.
+#' @param parallel logical. If true, parallelize the computation.
 #' @param ncores number of CPU cores to use for parallelization.
 #'
-#' @details If futype="normal", it generate
-#' @return \describe{
-#'   \item{beta}{coefficient matrix of size N x p.}
-#'   \item{subgrad}{subgradient matrix of size N x p.}
-#'  }
+#' @details Computes importance weights which is defined as \deqn{\frac{target
+#'  density}{proposal density}}, when the samples is drawn from proposal
+#'  distribution with (coeffprop, sig2prop, lbdprop) while the parameter of
+#'  target distribution is (coefftarget, sig2target, lbdtarget).
+#'
+#' @return \code{hdIS} returns importance weights of the proposed sample.
+#'
 #' @examples
+#' set.seed(1234)
 #' n <- 10
 #' p <- 30
-#' lbd <-  .5
-#' niter <-  10
-#' group <- rep(1:(p/10), each=10)
-#' Weights <- rep(1,p/10)
+#' Niter <-  10
+#' Group <- rep(1:(p/10), each = 10)
+#' Weights <- rep(1, p/10)
 #' x <- matrix(rnorm(n*p), n)
-#' DirectSampler(X = x, coefftarget = rep(0,p), sig2target=1, lbd=.5, weights=Weights, group=group,N=niter, parallel=FALSE)
-#' DirectSampler(X = x, coefftarget = rep(0,p), sig2target=1, lbd=.5, weights=Weights, group=group,N=niter, parallel=TRUE)
+#'
+#' # Target distribution parameter
+#' coefftarget <- rep(0,p)
+#' sig2target <- .5
+#' lbdtarget <- .37
+#'
+#' # Proposal distribution parameter
+#' coeffprop1 <- rep(0,p) ;coeffprop2 <- rep(1,p)
+#' sig2prop1 <- .5; sig2prop2 <- 1
+#' lbdprop1 <- .37; lbdprop2 <- .5
+#'
+#' #
+#' # Using non-mixture distribution
+#' # ------------------------------
+#' # Target distribution parameters (coeff, sig2, lbd) = (rep(0,p), .5, .37)
+#' # Proposal distribution parameters (coeff, sig2, lbd) = (rep(1,p), 1, .5)
+#' #
+#' DS <- DirectSampler(X = x, coeff_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
+#'  weights = Weights, group = Group, niter = Niter, parallel = FALSE)
+#'
+#' hdIS(X = x,coefftarget = rep(0,p), sig2target = .5, lbdtarget = .37,
+#'      coeffprop1 = rep(1,p),sig2prop1 = 1,lbdprop1 = .5,proposalsample = DS, group = Group,
+#'      weights = Weights, log = TRUE)
+#'
+#' #
+#' # Using mixture distribution
+#' # ------------------------------
+#' # Target distribution parameters (coeff, sig2, lbd) = (rep(0,p), .5, .37)
+#' # Proposal distribution parameters
+#' #  (coeff, sig2, lbd) = (rep(0,p), .5, .37) & (rep(1,p), 1, .5)
+#' #
+#' #
+#' coefftarget <- rep(0,p)
+#' sig2target <- .5
+#' lbdtarget <- .37
+#' coeffprop1 <- rep(0,p)
+#' coeffprop2 <- rep(1,p)
+#' sig2prop1 <- .5
+#' sig2prop2 <- 1
+#' lbdprop1 <- .37
+#' lbdprop2 <- .5
+#'
+#' DSMixture <- DirectSampler(X = x, coeff_1 = coeffprop1, sig2_1 = sig2prop1, lbd_1 = lbdprop1,
+#'  coeff_2 = coeffprop2, sig2_2 = sig2prop2, lbd_2 = lbdprop2, weights = Weights,
+#'  group = Group, niter = Niter, parallel = TRUE)
+#' hdIS(X = x,coefftarget = coefftarget, sig2target = sig2target, lbdtarget = lbdtarget,
+#'      coeffprop1 = coeffprop1, sig2prop1 = sig2prop1, lbdprop1 = lbdprop1,
+#'      coeffprop2 = coeffprop2, sig2prop2 = sig2prop2, lbdprop2 = lbdprop2,
+#'      proposalsample = DSMixture, group = Group,
+#'      weights = Weights, log = TRUE)
 #' @export
-hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdprop, proposalsample,
-   group, weights=rep(1,length(unique(group))), TsA.method = "default", log=TRUE, parallel=FALSE, ncores)
+hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
+  lbdprop1, coeffprop2, sig2prop2, lbdprop2, proposalsample, group,
+  weights = rep(1, length(unique(group))), TsA.method = "default", log = TRUE,
+  parallel = FALSE, ncores)
 {
   X <- as.matrix(X)
   n <- nrow(X)
   p <- ncol(X)
 
-  if (length(coefftarget) != p || length(coeffprop)%%p !=0) {
+  if (parallel && !missing(ncores) && ncores == 1) {
+    ncores <- 2
+    warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
+            Set ncores to the maximum number.")
+  }
+
+  if (any(c(length(coefftarget), length(coeffprop1)) != p) ||
+      (!missing(coeffprop2) && (length(coeffprop2) != p)) ) {
     stop("coefftarget/coeffprop must have a same length with the number of X columns")
   }
+
   if (length(group) != p) {
     stop("group must have a same length with the number of X columns")
   }
@@ -51,7 +123,9 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
   }
 
   if (all(group==1:p)) {
+    #
     # Lasso
+    #
     # precalculation
     C <- t(X) %*% X / n
     egC <- eigen(C)
@@ -59,14 +133,14 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
     R <- 1:n
     N <- (n+1):p
     InvVarR     <- 1 / (egC$values[R] * sig2target / n) #inverse of (sig2target*Lambda_i/n)
-    InvVarRprop <- 1 / (egC$values[R] * sig2prop / n) #inverse of (sig2prop*Lambda_i/n)
+    InvVarRprop <- 1 / (egC$values[R] * sig2prop1 / n) #inverse of (sig2prop1*Lambda_i/n)
     VR <-matrix(V[, R], p, n)
     VRC <- VRCprop <- t(VR)%*%C
     W <- diag(weights)
     LBD <- LBDprop <- diag(egC$values[R])
     VRW <- VRWprop <- t(VR)%*%W
     VRCB     <- t(VR) %*% C %*% coefftarget
-    VRCBprop <- t(VR) %*% C %*% coeffprop
+    VRCBprop <- t(VR) %*% C %*% coeffprop1
 
     #sample from proposal distribution
     B <- proposalsample$beta
@@ -74,41 +148,46 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
     niter <- nrow(B)
 
     logISweights <- numeric(niter)
-    # for(t in 1:niter)
-    # {
-    #   logISweights[t] <- (n-sum(B[t,]!=0))*log(lbdtarget/lbdprop)-0.5*sum((VRC%*%B[t,]+lbdtarget*VRW%*%S[t,]-VRCB)^2*InvVarR)+
-    #     0.5*sum((VRCprop%*%B[t,]+lbdprop*VRWprop%*%S[t,]-VRCBprop)^2*InvVarRprop)
-    # }
-    # logISweights <- logISweights-n/2*(log(sig2target/sig2prop))
     FF <- function(x) {
-      (n - sum(B[x,] != 0)) * log(lbdtarget / lbdprop) - 0.5 * sum((VRC %*% B[x, ]+lbdtarget * VRW %*% S[x, ] -
-      VRCB)^2 * InvVarR) + 0.5 * sum((VRCprop %*% B[x, ] + lbdprop * VRWprop %*% S[x, ] - VRCBprop)^2 * InvVarRprop)
+      (n - sum(B[x,] != 0)) * log(lbdtarget / lbdprop1) - 0.5 * sum((VRC %*% B[x, ] + lbdtarget * VRW %*% S[x, ] -
+      VRCB)^2 * InvVarR) + 0.5 * sum((VRCprop %*% B[x, ] + lbdprop1 * VRWprop %*% S[x, ] - VRCBprop)^2 * InvVarRprop)
     }
     if (!parallel) {
       for (t in 1:niter) {
         logISweights[t] <- FF(t)
       }
     } else {
-      if (missing(ncores)) {ncores <- detectCores()}
-      options(mc.cores <- ncores)
-      logISweights <- mclapply(1:niter, FF)
-      logISweights <- do.call(c, Weight)
-    }
-    logISweights <- logISweights - n / 2 * (log(sig2target / sig2prop))
-    return(if(log) logISweights else exp(logISweights))
+      if (missing(ncores)) {
+        ncores <- parallel::detectCores()
+      } else if (ncores > parallel::detectCores()){
+        ncores <- parallel::detectCores()
+        warnings("ncores is larger than the maximum number of available processes.
+                 Set it to the maximum possible value.")
+      }
+      logISweights <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
+      logISweights <- do.call(c,Weight)
+     }
+    logISweights <- logISweights - n / 2 * (log(sig2target / sig2prop1))
+    return(ifelse(log, logISweights, exp(logISweights)))
   } else {
+    #
     # Group Lasso
-    coeffprop <- matrix(coeffprop, , p)
+    #
     if (!TsA.method %in% c("default", "qr")) {
       stop("TsA.method should be either \"default\" or \"qr\"")
     }
-    if (length(sig2prop) != length(lbdprop) || length(sig2prop) != nrow(coeffprop) || length(lbdprop) != nrow(coeffprop)) {
+    # if (length(sig2prop) != length(lbdprop) || length(sig2prop) != nrow(coeffprop) || length(lbdprop) != nrow(coeffprop)) {
+    #   stop("provide all the parameters for the proposal distribution(s)")
+    # }
+    #
+    if (!sum(c(missing(sig2prop2), missing(lbdprop2), missing(coeffprop2)))
+        %in% c(0,3)) {
       stop("provide all the parameters for the proposal distribution(s)")
     }
 
-    if (length(sig2prop) == 1) {
+    if (missing(sig2prop2)) {
       Mixture <- FALSE
-      lbdprop[2] <- lbdprop[1]
+      lbdprop2 <- lbdprop1
     } else {
       Mixture <- TRUE
     }
@@ -126,8 +205,8 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
 
     W <- rep(weights, table(group))
 
-    if (!all(lbdtarget == c(lbdprop[1], lbdprop[2])) && TsA.method != "null") {
-      Q <- Null(t(X)/W)#round(Null(t(X)/W),5)
+    if (!all(lbdtarget == c(lbdprop1, lbdprop2)) && TsA.method != "null") {
+      Q <- MASS::Null(t(X)/W)#round(Null(t(X)/W),5)
     }
     t.XWinv <- t(X)/W
     Weight <- c()
@@ -137,15 +216,15 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
       Subgrad <- S[x,]
       if (n < p) {
         H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - coefftarget) + lbdtarget * W * Subgrad) #H.tilde
-        H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - coeffprop[1,]) + lbdprop[1] * W * Subgrad) #H.tilde proposed1
+        H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - coeffprop1) + lbdprop1 * W * Subgrad) #H.tilde proposed1
         if (Mixture) {
-          H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - coeffprop[2,]) + lbdprop[2] * W * Subgrad) #H.tilde proposed2
+          H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - coeffprop2) + lbdprop2 * W * Subgrad) #H.tilde proposed2
         }
 
         r <- group.norm2(Beta, group)
         A <- unique(group[Beta != 0])
 
-        if (!all(lbdtarget == c(lbdprop[1], lbdprop[2]))) {
+        if (!all(lbdtarget == c(lbdprop1, lbdprop2))) {
 
           if (TsA.method == "null") {
             TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
@@ -153,11 +232,11 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
             TSA <- TsA.select(Q, Subgrad, group, A, n, p)
           }
 
-          log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2prop[1]/n), log = T)) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop[1], weights, TSA) )
+          log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2prop1/n), log = T)) +
+            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop1, weights, TSA) )
           if (Mixture) {
-            log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2prop[2]/n), log = T)) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop[2], weights, TSA) )
+            log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2prop2/n), log = T)) +
+              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop2, weights, TSA) )
           }
           log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2target/n), log = T)) +
             (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdtarget, weights, TSA) )
@@ -174,8 +253,8 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
             }
           }
         } else {
-          log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2prop[1]/n), log = TRUE))
-          if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2prop[2]/n), log = TRUE))}
+          log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2prop1/n), log = TRUE))
+          if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2prop2/n), log = TRUE))}
           log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2target/n), log = TRUE))
 
           if (!Mixture) {
@@ -193,13 +272,13 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
       }
       else {
         H.target <- (Psi %*% (Beta - coefftarget) + lbdtarget * W * Subgrad) #H.tilde
-        H.prop1 <-  (Psi %*% (Beta - coeffprop[1,]) + lbdprop[1] * W * Subgrad) #H.tilde proposed1
-        if (Mixture) H.prop2 <-  (Psi %*% (Beta - coeffprop[2,]) + lbdprop[2] * W * Subgrad) #H.tilde proposed2
+        H.prop1 <-  (Psi %*% (Beta - coeffprop1) + lbdprop1 * W * Subgrad) #H.tilde proposed1
+        if (Mixture) H.prop2 <-  (Psi %*% (Beta - coeffprop2) + lbdprop2 * W * Subgrad) #H.tilde proposed2
 
         r <- group.norm2(Beta, group)
         A <- unique(group[Beta != 0])
 
-        if (!all(lbdtarget == c(lbdprop[1], lbdprop[2]))) {
+        if (!all(lbdtarget == c(lbdprop1, lbdprop2))) {
 
           if (TsA.method == "null") {
             TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
@@ -207,11 +286,11 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
             TSA <- TsA.select(Q, Subgrad, group, A, n, p)
           }
 
-          log.f1 <- dmvnorm(drop(H.prop1), , sig2prop[1]/n * Psi, log = T) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop[1], weights, TSA) )
+          log.f1 <- dmvnorm(drop(H.prop1), , sig2prop1/n * Psi, log = T) +
+            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop1, weights, TSA) )
           if (Mixture) {
-            log.f2 <- dmvnorm(drop(H.prop2), , sig2prop[2]/n * Psi, log = T) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop[2], weights, TSA) )
+            log.f2 <- dmvnorm(drop(H.prop2), , sig2prop2/n * Psi, log = T) +
+              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop2, weights, TSA) )
           }
           log.f0 <- dmvnorm(drop(H.target), , sig2target/n * Psi, log = T) +
             (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdtarget, weights, TSA) )
@@ -228,9 +307,9 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
             }
           }
         } else {
-          log.f1 <- sum(dmvnorm(drop(H.prop1), , sig2prop[1]/n * Psi, log = TRUE))
+          log.f1 <- sum(dmvnorm(drop(H.prop1), , sig2prop1/n * Psi, log = TRUE))
           if (Mixture) {
-            log.f2 <- sum(dmvnorm(drop(H.prop2), , sig2prop[2]/n * Psi, log = TRUE))
+            log.f2 <- sum(dmvnorm(drop(H.prop2), , sig2prop2/n * Psi, log = TRUE))
           }
           log.f0 <- sum(dmvnorm(drop(H.target), , sig2target/n * Psi, log = TRUE))
 
@@ -247,6 +326,7 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
           }
         }
       }
+      return(Weight)
     }
 
     if (!parallel) {
@@ -254,9 +334,14 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop, sig2prop, lbdpro
         Weight[t] <- FF(t)
       }
     } else {
-      if (missing(ncores)) {ncores <- detectCores()}
-      options(mc.cores=ncores)
-      Weight <- mclapply(1:niter,FF)
+      if (missing(ncores)) {
+        ncores <- parallel::detectCores()
+      } else if (ncores > parallel::detectCores()){
+        ncores <- parallel::detectCores()
+        warnings("ncores is larger than the maximum number of available processes.
+                 Set it to the maximum possible value.")
+      }
+      Weight <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
       Weight <- do.call(c,Weight)
     }
     return(Weight)

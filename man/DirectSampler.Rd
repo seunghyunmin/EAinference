@@ -2,59 +2,84 @@
 % Please edit documentation in R/DirectSampler.R
 \name{DirectSampler}
 \alias{DirectSampler}
-\title{This function directly draw samples with bootstrap using gglasso package.}
+\title{Bootstrapping lasso / group lasso estimator}
 \usage{
-DirectSampler(X, Y, coeff, sigma2, lbd, weights, group, niter = 2000,
-  futype = "normal", center = FALSE, parallel = FALSE, ncores,
-  verbose = FALSE)
+DirectSampler(X, coeff_1, sig2_1, lbd_1, coeff_2, sig2_2, lbd_2, lbd,
+  weights = rep(1, max(group)), group = 1:ncol(X), niter = 2000,
+  type = "normal", Y, parallel = FALSE, ncores = 2L, verbose = FALSE)
 }
 \arguments{
-\item{X}{n x p matrix of predictors.}
+\item{X}{Predictor matrix.}
 
-\item{Y}{n x 1 vector of response. Not needed for futype="bootstrap".}
+\item{coeff_1, sig2_1, lbd_1}{Parameter of target distribution.
+(coefficient estimate, estimated variance of error, lambda). Not required for
+\code{type = "normal"}.}
 
-\item{coeff}{n x 1 vector of estimates of true coefficient.}
+\item{coeff_2, sig2_2, lbd_2}{Additional Parameter of target distribution only
+if mixture distribution is used. Not required for \code{type = "normal"}.}
 
-\item{sigma2}{variance of error term. Not needed for futype="bootstrap".}
+\item{weights}{Weight vector in length of the number of groups. Default is
+\code{rep(1, max(group))}.}
 
-\item{lbd}{penalty term of lasso. See the loss function given at details.}
-
-\item{weights}{Weight term for each group. Default is rep(1, max(group)).}
-
-\item{group}{p x 1 vector of consecutive integers. The number of groups should be same as max(group).}
+\item{group}{p x 1 vector of consecutive integers describing group structure.
+The number of groups should be same as max(group). Default is \code{group = 1:p}
+, where \code{p} is number of covariates.}
 
 \item{niter}{The number of iterations.}
 
-\item{futype}{Method for resampling errors. Either to be "noraml" or "bootstrap". Default is "normal".}
+\item{type}{Bootstrap method, one of \code{"normal"} or \code{"nonparametric"}.
+If \code{"normal"}, resample errors from normal distiribution. If \code{"nonparametric"},
+resample errors from residuals.}
 
-\item{center}{Whether to center Y values. Default is FALSE.}
+\item{Y}{Response vector. Needed only if \code{type="nonparametric"}.}
 
-\item{parallel}{Whether to parallelize the code. Default is FALSE.}
+\item{parallel}{Logical. If \code{TRUE}, use parallelization.}
 
-\item{ncores}{The number of cores to use for the parallelization. If missing, it uses maximum number of cores.}
+\item{ncores}{Integer. The number of cores to use for the parallelization.}
 
-\item{verbose}{Whether to show the process. Default is FALSE. Only works when parallel=FALSE.}
+\item{verbose}{Whether to show the process. Default is FALSE. Only works when
+parallel=FALSE.}
 }
 \value{
-\describe{
-  \item{beta}{coefficient matrix of size N x p.}
-  \item{subgrad}{subgradient matrix of size N x p.}
- }
+\item{beta}{(group) lasso estimator.}
+
+\item{subgrad}{subgradient.}
 }
 \description{
-This function directly draw samples with bootstrap using gglasso package.
+Draw bootstrap samples in parametric or nonparametric way and
+derive (group) lasso estimator along with subgradient.
 }
 \details{
-If futype="normal", it generate
+This function provides bootstrap samples for (group) lasso estimator
+and its subgradient. The user specifed argument is (coeff, sig2, lbd).
+If \code{type="normal"}, error_new is generated from N(0, sig2_1), i.e.,
+\deqn{y_new = X * coeff_1 + error_new.}
+If \code{type="nonparametric"}, error_new is resampled from the residuals,
+y - X*coeff_1. See Zhou(2014) and Zhou and Min(2016) for more details.
+
+If one uses mixture distribution by providing (coeff_2, sig2_2, lbd_2),
+with 1/2 chance, samples will be drawn from the distribution with
+(coeff_1, sig2_1, lbd_1) and with another 1/2 chance, they will be drawn from
+the distribution with (coeff_2, sig2_2, lbd_2).
 }
 \examples{
 n <- 10
 p <- 30
-lbd <-  .5
-niter <-  10
-group <- rep(1:(p/10), each=10)
-Weights <- rep(1,p/10)
+Niter <-  10
+Group <- rep(1:(p/10), each = 10)
+Weights <- rep(1, p/10)
 x <- matrix(rnorm(n*p), n)
-DirectSampler(X = x, coeff = rep(0,p), sigma2=1, lbd=.5, weights=Weights, group=group,N=niter, parallel=FALSE)
-DirectSampler(X = x, coeff = rep(0,p), sigma2=1, lbd=.5, weights=Weights, group=group,N=niter, parallel=TRUE)
+#
+# Using non-mixture distribution
+#
+DirectSampler(X = x, coeff_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+ weights = Weights, group = Group, niter = Niter, parallel = FALSE)
+DirectSampler(X = x, coeff_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+ weights = Weights, group = Group, niter = Niter, parallel = TRUE)
+#
+# Using mixture distribution
+#
+DirectSampler(X = x, coeff_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+ coeff_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights,
+ group = Group, niter = Niter, parallel = TRUE)
 }

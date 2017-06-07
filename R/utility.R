@@ -1,3 +1,5 @@
+#' @importFrom gglasso gglasso coef.gglasso
+
 # devtools:load_all()
 # Cmd + Shift + L , to load the package.
 #-------------------------------------------
@@ -23,7 +25,7 @@ UpdateBA <- function(Bcur,Scur,tau,A,I,Rcur,logfRcur,VRC,lbdVRW,InvVarR,
                   tVAN.WA,invB_D,B_F,FlipSA,IndexSF,nA=length(A),nI=length(I))
 {
   Bnew=Bcur;
-  Bnew[A]=rnorm(nA,Bcur[A],tau[A])
+  Bnew[A]=rnorm(nA,Bcur[A],tau)
 
   diffB=Bnew-Bcur;
   nAcceptBA=0;
@@ -94,11 +96,11 @@ UpdateBA.fixedSA <- function(Bcur,tau,A,Rcur,logfRcur,VRC,InvVarR) # Fix sign(be
   LUbounds[Bcur[A]>0,2]=Inf;
   LUbounds[Bcur[A]<0,1]=-Inf;
   Bnew=Bcur;
-  Bnew[A]=rtnorm(nA,Bcur[A],tau[A],lower=LUbounds[,1],upper=LUbounds[,2]);
+  Bnew[A]=rtnorm(nA,Bcur[A],tau,lower=LUbounds[,1],upper=LUbounds[,2]);
 
-  Ccur=pnorm(0,mean=Bcur[A],sd=tau[A],lower.tail=TRUE,log.p=FALSE);
+  Ccur=pnorm(0,mean=Bcur[A],sd=tau,lower.tail=TRUE,log.p=FALSE);
   Ccur[Bcur[A]>0]=1-Ccur[Bcur[A]>0];
-  Cnew=pnorm(0,mean=Bnew[A],sd=tau[A],lower.tail=TRUE,log.p=FALSE);
+  Cnew=pnorm(0,mean=Bnew[A],sd=tau,lower.tail=TRUE,log.p=FALSE);
   Cnew[Bcur[A]>0]=1-Cnew[Bcur[A]>0];
   lqratio=log(Ccur/Cnew);
 
@@ -255,7 +257,7 @@ TsA <- function(Q, s, group, A, n, p) { # T(s,A)
     stop("High dimensional setting needs Q")
   }
   nA <- length(A)
-
+  rankX <- min(c(n,p))
   Subgradient.group.matix <- matrix(0, length(unique(group)), p)
 
   for (i in 1:length(unique(group))) {
@@ -273,8 +275,8 @@ TsA <- function(Q, s, group, A, n, p) { # T(s,A)
     P <- matrix(0, p, p)
     Permute.order <- 1:p
 
-    if (n < p) { nrowB <- p - n + nA ; rankX <- n} else
-    {nrowB <- nA; rankX <- p}
+    if (n < p) {nrowB <- p - n + nA} else
+    {nrowB <- nA}
     for (i in 1:nrowB) {
       if (B[i, rankX - nA + i] == 0) {
         W1 <- which(B[i,] !=0)[1]
@@ -433,7 +435,7 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,tau) {
   Bcur <- Bprop <- Scur * rep(rcur,table(group));
   TSA.cur <- TSA.prop <- TsA(,Scur,group,A,n,p);
   for (i in A) {
-    rprop[i] <- rtruncnorm(1, 0, , rcur[i], sqrt(tau[i] * rcur[i]) )
+    rprop[i] <- rtruncnorm(1, 0, , rcur[i], sqrt(tau[which(A==i)] * rcur[i]) )
     Bprop[group==i] <- rprop[i] * Scur[group==i]
     Hprop <- drop(Psi %*% drop(Bprop - coeff) + lbd * W * drop(S))
     Hdiff <- Hcur - Hprop
@@ -442,8 +444,8 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,tau) {
     #dmvnorm(Hprop,,sig2 / n * Psi,log=T) - dmvnorm(Hcur,,sig2 / n * Psi,log=T)
     lJacobianRatio <- log.Jacobi.partial(X,Scur,rprop,Psi,group,A,lbd,Weights,TSA.prop) -
       log.Jacobi.partial(X,Scur,rcur,Psi,group,A,lbd,Weights,TSA.cur)
-    lProposalRatio <- pnorm(0,rcur[i],sqrt(tau[i] * rcur[i]), lower.tail=FALSE, log.p=TRUE) -
-      pnorm(0,rprop[i],sqrt(tau[i] * rprop[i]), lower.tail=FALSE, log.p=TRUE)
+    lProposalRatio <- pnorm(0,rcur[i],sqrt(tau[which(A==i)] * rcur[i]), lower.tail=FALSE, log.p=TRUE) -
+      pnorm(0,rprop[i],sqrt(tau[which(A==i)] * rprop[i]), lower.tail=FALSE, log.p=TRUE)
     lAcceptanceRatio <-  lNormalRatio + lJacobianRatio + lProposalRatio
     if (lAcceptanceRatio <= log(runif(1))) { # Reject
       rprop[i] <- rcur[i];
