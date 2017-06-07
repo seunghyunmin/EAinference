@@ -1,0 +1,25 @@
+Package: EAlasso
+Type: Package
+Title: Simulation based Inference of Lasso Estimator
+Version: 0.1.0
+Author: Seunghyun Min
+Maintainer: Seunghyun Min <seunghyun@ucla.edu>
+Description: Simulation based inference of lasso estimator. It provides several sampling methods 
+    to sample lasso estimator : importance sampler, Markov chain Monte Carlo sampler and bootstrap.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+Depends: 
+    lars (>= 1.2),
+    gglasso (>= 1.3)
+Imports: 
+    lars,
+    gglasso,
+    msm,
+    parallel,
+    ggm,
+    limSolve
+RoxygenNote: 6.0.1
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr
