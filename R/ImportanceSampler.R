@@ -7,11 +7,11 @@
 #'
 #' @param X Predictor matrix of size n x p, where n is the number of
 #' observations and p is number of covariates.
-#' @param coefftarget,sig2target,lbdtarget Parameter of target distribution.
+#' @param pluginTarget,sig2Target,lbdTarget Parameter of target distribution.
 #' (coefficient estimate, estimated variance of error, lambda)
-#' @param coeffprop1,sig2prop1,lbdprop1 Parameter of proposal distribution.
+#' @param pluginProp1,sig2Prop1,lbdProp1 Parameter of proposal distribution.
 #' (coefficient estimate, estimated variance of error, lambda).
-#' @param coeffprop2,sig2prop2,lbdprop2 Parameter of mixture proposal
+#' @param pluginProp2,sig2Prop2,lbdProp2 Parameter of mixture proposal
 #' distribution. (coefficient estimate, estimated variance of error, lambda).
 #' Only needed for group lasso under mixture distribution.
 #' See Zhou and Min(2016) for more details.
@@ -32,7 +32,7 @@
 #' @details Computes importance weights which is defined as \deqn{\frac{target
 #'  density}{proposal density}}, when the samples is drawn from proposal
 #'  distribution with (coeffprop, sig2prop, lbdprop) while the parameter of
-#'  target distribution is (coefftarget, sig2target, lbdtarget).
+#'  target distribution is (pluginTarget, sig2Target, lbdTarget).
 #'
 #' @return \code{hdIS} returns importance weights of the proposed sample.
 #'
@@ -46,14 +46,14 @@
 #' x <- matrix(rnorm(n*p), n)
 #'
 #' # Target distribution parameter
-#' coefftarget <- rep(0,p)
-#' sig2target <- .5
-#' lbdtarget <- .37
+#' pluginTarget <- rep(0,p)
+#' sig2Target <- .5
+#' lbdTarget <- .37
 #'
 #' # Proposal distribution parameter
-#' coeffprop1 <- rep(0,p) ;coeffprop2 <- rep(1,p)
-#' sig2prop1 <- .5; sig2prop2 <- 1
-#' lbdprop1 <- .37; lbdprop2 <- .5
+#' pluginProp1 <- rep(0,p) ;pluginProp2 <- rep(1,p)
+#' sig2Prop1 <- .5; sig2Prop2 <- 1
+#' lbdProp1 <- .37; lbdProp2 <- .5
 #'
 #' #
 #' # Using non-mixture distribution
@@ -61,11 +61,11 @@
 #' # Target distribution parameters (coeff, sig2, lbd) = (rep(0,p), .5, .37)
 #' # Proposal distribution parameters (coeff, sig2, lbd) = (rep(1,p), 1, .5)
 #' #
-#' DS <- DirectSampler(X = x, coeff_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
-#'  weights = Weights, group = Group, niter = Niter, parallel = FALSE)
+#' DS <- DirectSampler(X = x, pointEstimate_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
+#'  weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = FALSE)
 #'
-#' hdIS(X = x,coefftarget = rep(0,p), sig2target = .5, lbdtarget = .37,
-#'      coeffprop1 = rep(1,p),sig2prop1 = 1,lbdprop1 = .5,proposalsample = DS, group = Group,
+#' hdIS(X = x,pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+#'      pluginProp1 = rep(1,p),sig2Prop1 = 1,lbdProp1 = .5,proposalsample = DS, group = Group,
 #'      weights = Weights, log = TRUE)
 #'
 #' #
@@ -76,33 +76,37 @@
 #' #  (coeff, sig2, lbd) = (rep(0,p), .5, .37) & (rep(1,p), 1, .5)
 #' #
 #' #
-#' coefftarget <- rep(0,p)
-#' sig2target <- .5
-#' lbdtarget <- .37
-#' coeffprop1 <- rep(0,p)
-#' coeffprop2 <- rep(1,p)
-#' sig2prop1 <- .5
-#' sig2prop2 <- 1
-#' lbdprop1 <- .37
-#' lbdprop2 <- .5
+#' pluginTarget <- rep(0,p)
+#' sig2Target <- .5
+#' lbdTarget <- .37
+#' pluginProp1 <- rep(0,p)
+#' pluginProp2 <- rep(1,p)
+#' sig2Prop1 <- .5
+#' sig2Prop2 <- 1
+#' lbdProp1 <- .37
+#' lbdProp2 <- .5
 #'
-#' DSMixture <- DirectSampler(X = x, coeff_1 = coeffprop1, sig2_1 = sig2prop1, lbd_1 = lbdprop1,
-#'  coeff_2 = coeffprop2, sig2_2 = sig2prop2, lbd_2 = lbdprop2, weights = Weights,
-#'  group = Group, niter = Niter, parallel = TRUE)
-#' hdIS(X = x,coefftarget = coefftarget, sig2target = sig2target, lbdtarget = lbdtarget,
-#'      coeffprop1 = coeffprop1, sig2prop1 = sig2prop1, lbdprop1 = lbdprop1,
-#'      coeffprop2 = coeffprop2, sig2prop2 = sig2prop2, lbdprop2 = lbdprop2,
+#' DSMixture <- DirectSampler(X = x, pointEstimate_1 = pluginProp1, sig2_1 = sig2Prop1, lbd_1 = lbdProp1,
+#'  pointEstimate_2 = pluginProp2, sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights,
+#'  group = Group, niter = Niter, type = "coeff", parallel = TRUE)
+#' hdIS(X = x,pluginTarget = pluginTarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+#'      pluginProp1 = pluginProp1, sig2Prop1 = sig2Prop1, lbdProp1 = lbdProp1,
+#'      pluginProp2 = pluginProp2, sig2Prop2 = sig2Prop2, lbdProp2 = lbdProp2,
 #'      proposalsample = DSMixture, group = Group,
 #'      weights = Weights, log = TRUE)
 #' @export
-hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
-  lbdprop1, coeffprop2, sig2prop2, lbdprop2, proposalsample, group,
-  weights = rep(1, length(unique(group))), TsA.method = "default", log = TRUE,
+hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
+  lbdProp1, pluginProp2, sig2Prop2, lbdProp2, proposalsample, group,
+  weights = rep(1, length(unique(group))), type = "coeff", TsA.method = "default", log = TRUE,
   parallel = FALSE, ncores)
 {
   X <- as.matrix(X)
   n <- nrow(X)
   p <- ncol(X)
+
+  if (!type %in% c("coeff", "mu")) {
+    stop("Invalide type input.")
+  }
 
   if (parallel && !missing(ncores) && ncores == 1) {
     ncores <- 2
@@ -110,10 +114,16 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
             Set ncores to the maximum number.")
   }
 
-  if (any(c(length(coefftarget), length(coeffprop1)) != p) ||
-      (!missing(coeffprop2) && (length(coeffprop2) != p)) ) {
-    stop("coefftarget/coeffprop must have a same length with the number of X columns")
+  if (type == "coeff" && (any(c(length(pluginTarget), length(pluginProp1)) != p) ||
+      (!missing(pluginProp2) && (length(pluginProp2) != p))) ) {
+    stop("pluginTarget/pluginProp must have a same length with the number of X columns, when type=\"coeff\"")
   }
+
+  if (type == "mu" && (any(c(length(pluginTarget), length(pluginProp1)) != n) ||
+                          (!missing(pluginProp2) && (length(pluginProp2) != n))) ) {
+    stop("pluginTarget/pluginProp must have a same length with the number of X rows, when type=\"mu\"")
+  }
+
 
   if (length(group) != p) {
     stop("group must have a same length with the number of X columns")
@@ -132,15 +142,20 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
     V <- egC$vectors
     R <- 1:n
     N <- (n+1):p
-    InvVarR     <- 1 / (egC$values[R] * sig2target / n) #inverse of (sig2target*Lambda_i/n)
-    InvVarRprop <- 1 / (egC$values[R] * sig2prop1 / n) #inverse of (sig2prop1*Lambda_i/n)
+    InvVarR     <- 1 / (egC$values[R] * sig2Target / n) #inverse of (sig2Target*Lambda_i/n)
+    InvVarRprop <- 1 / (egC$values[R] * sig2Prop1 / n) #inverse of (sig2Prop1*Lambda_i/n)
     VR <-matrix(V[, R], p, n)
     VRC <- VRCprop <- t(VR)%*%C
     W <- diag(weights)
     LBD <- LBDprop <- diag(egC$values[R])
     VRW <- VRWprop <- t(VR)%*%W
-    VRCB     <- t(VR) %*% C %*% coefftarget
-    VRCBprop <- t(VR) %*% C %*% coeffprop1
+    if (type == "coeff") {
+      VRCB     <- t(VR) %*% C %*% pluginTarget
+      VRCBprop <- t(VR) %*% C %*% pluginProp1
+    } else {
+      VRCB     <- t(VR) %*% t(X) %*% pluginTarget / n
+      VRCBprop <- t(VR) %*% t(X) %*% pluginProp1 / n
+    }
 
     #sample from proposal distribution
     B <- proposalsample$beta
@@ -149,8 +164,8 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
 
     logISweights <- numeric(niter)
     FF <- function(x) {
-      (n - sum(B[x,] != 0)) * log(lbdtarget / lbdprop1) - 0.5 * sum((VRC %*% B[x, ] + lbdtarget * VRW %*% S[x, ] -
-      VRCB)^2 * InvVarR) + 0.5 * sum((VRCprop %*% B[x, ] + lbdprop1 * VRWprop %*% S[x, ] - VRCBprop)^2 * InvVarRprop)
+      (n - sum(B[x,] != 0)) * log(lbdTarget / lbdProp1) - 0.5 * sum((VRC %*% B[x, ] + lbdTarget * VRW %*% S[x, ] -
+      VRCB)^2 * InvVarR) + 0.5 * sum((VRCprop %*% B[x, ] + lbdProp1 * VRWprop %*% S[x, ] - VRCBprop)^2 * InvVarRprop)
     }
     if (!parallel) {
       for (t in 1:niter) {
@@ -167,7 +182,7 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
       logISweights <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
       logISweights <- do.call(c,Weight)
      }
-    logISweights <- logISweights - n / 2 * (log(sig2target / sig2prop1))
+    logISweights <- logISweights - n / 2 * (log(sig2Target / sig2Prop1))
     return(ifelse(log, logISweights, exp(logISweights)))
   } else {
     #
@@ -180,14 +195,14 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
     #   stop("provide all the parameters for the proposal distribution(s)")
     # }
     #
-    if (!sum(c(missing(sig2prop2), missing(lbdprop2), missing(coeffprop2)))
+    if (!sum(c(missing(sig2Prop2), missing(lbdProp2), missing(pluginProp2)))
         %in% c(0,3)) {
       stop("provide all the parameters for the proposal distribution(s)")
     }
 
-    if (missing(sig2prop2)) {
+    if (missing(sig2Prop2)) {
       Mixture <- FALSE
-      lbdprop2 <- lbdprop1
+      lbdProp2 <- lbdProp1
     } else {
       Mixture <- TRUE
     }
@@ -205,7 +220,7 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
 
     W <- rep(weights, table(group))
 
-    if (!all(lbdtarget == c(lbdprop1, lbdprop2)) && TsA.method != "null") {
+    if (!all(lbdTarget == c(lbdProp1, lbdProp2)) && TsA.method != "null") {
       Q <- MASS::Null(t(X)/W)#round(Null(t(X)/W),5)
     }
     t.XWinv <- t(X)/W
@@ -215,16 +230,25 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
       Beta <- B[x,]
       Subgrad <- S[x,]
       if (n < p) {
-        H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - coefftarget) + lbdtarget * W * Subgrad) #H.tilde
-        H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - coeffprop1) + lbdprop1 * W * Subgrad) #H.tilde proposed1
-        if (Mixture) {
-          H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - coeffprop2) + lbdprop2 * W * Subgrad) #H.tilde proposed2
+        if (type == "coeff") {
+          H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pluginTarget) + lbdTarget * W * Subgrad) #H.tilde
+          H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pluginProp1) + lbdProp1 * W * Subgrad) #H.tilde proposed1
+          if (Mixture) {
+            H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pluginProp2) + lbdProp2 * W * Subgrad) #H.tilde proposed2
+          }
+        } else {
+          H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdTarget * W * Subgrad) - pluginTarget / sqrt(n) #H.tilde
+          H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp1 * W * Subgrad) - pluginProp1 / sqrt(n)  #H.tilde proposed1
+          if (Mixture) {
+            H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp2 * W * Subgrad) - pluginProp2 / sqrt(n)   #H.tilde proposed2
+          }
         }
+
 
         r <- group.norm2(Beta, group)
         A <- unique(group[Beta != 0])
 
-        if (!all(lbdtarget == c(lbdprop1, lbdprop2))) {
+        if (!all(lbdTarget == c(lbdProp1, lbdProp2))) {
 
           if (TsA.method == "null") {
             TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
@@ -232,14 +256,14 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
             TSA <- TsA.select(Q, Subgrad, group, A, n, p)
           }
 
-          log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2prop1/n), log = T)) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop1, weights, TSA) )
+          log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = T)) +
+            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, weights, TSA) )
           if (Mixture) {
-            log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2prop2/n), log = T)) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop2, weights, TSA) )
+            log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = T)) +
+              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, weights, TSA) )
           }
-          log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2target/n), log = T)) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdtarget, weights, TSA) )
+          log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = T)) +
+            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, weights, TSA) )
 
           if (!Mixture) {
             if (log) {Weight <- log.f0 - log.f1} else {
@@ -253,9 +277,9 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
             }
           }
         } else {
-          log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2prop1/n), log = TRUE))
-          if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2prop2/n), log = TRUE))}
-          log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2target/n), log = TRUE))
+          log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = TRUE))
+          if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = TRUE))}
+          log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = TRUE))
 
           if (!Mixture) {
             if (log) {Weight <- log.f0 - log.f1} else {
@@ -271,14 +295,20 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
         }
       }
       else {
-        H.target <- (Psi %*% (Beta - coefftarget) + lbdtarget * W * Subgrad) #H.tilde
-        H.prop1 <-  (Psi %*% (Beta - coeffprop1) + lbdprop1 * W * Subgrad) #H.tilde proposed1
-        if (Mixture) H.prop2 <-  (Psi %*% (Beta - coeffprop2) + lbdprop2 * W * Subgrad) #H.tilde proposed2
+        if (type == "coeff") {
+          H.target <- Psi %*% (Beta - pluginTarget) + lbdTarget * W * Subgrad #H.tilde
+          H.prop1 <-  Psi %*% (Beta - pluginProp1) + lbdProp1 * W * Subgrad #H.tilde proposed1
+          if (Mixture) H.prop2 <-  Psi %*% (Beta - pluginProp2) + lbdProp2 * W * Subgrad #H.tilde proposed2
+        } else {
+          H.target <- Psi %*% Beta + lbdTarget * W * Subgrad - t(X) %*% pluginTarget / n #H.tilde
+          H.prop1 <-  Psi %*% Beta + lbdProp1 * W * Subgrad - t(X) %*% pluginProp1 / n  #H.tilde proposed1
+          if (Mixture) H.prop2 <-  Psi %*% Beta + lbdProp2 * W * Subgrad - t(X) %*% pluginProp2 / n  #H.tilde proposed2
+        }
 
         r <- group.norm2(Beta, group)
         A <- unique(group[Beta != 0])
 
-        if (!all(lbdtarget == c(lbdprop1, lbdprop2))) {
+        if (!all(lbdTarget == c(lbdProp1, lbdProp2))) {
 
           if (TsA.method == "null") {
             TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
@@ -286,14 +316,14 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
             TSA <- TsA.select(Q, Subgrad, group, A, n, p)
           }
 
-          log.f1 <- dmvnorm(drop(H.prop1), , sig2prop1/n * Psi, log = T) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop1, weights, TSA) )
+          log.f1 <- dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = T) +
+            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, weights, TSA) )
           if (Mixture) {
-            log.f2 <- dmvnorm(drop(H.prop2), , sig2prop2/n * Psi, log = T) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdprop2, weights, TSA) )
+            log.f2 <- dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = T) +
+              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, weights, TSA) )
           }
-          log.f0 <- dmvnorm(drop(H.target), , sig2target/n * Psi, log = T) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdtarget, weights, TSA) )
+          log.f0 <- dmvnorm(drop(H.target), , sig2Target/n * Psi, log = T) +
+            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, weights, TSA) )
 
           if (!Mixture) {
             if (log) {Weight <- log.f0 - log.f1} else {
@@ -307,11 +337,11 @@ hdIS=function(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1,
             }
           }
         } else {
-          log.f1 <- sum(dmvnorm(drop(H.prop1), , sig2prop1/n * Psi, log = TRUE))
+          log.f1 <- sum(dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = TRUE))
           if (Mixture) {
-            log.f2 <- sum(dmvnorm(drop(H.prop2), , sig2prop2/n * Psi, log = TRUE))
+            log.f2 <- sum(dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = TRUE))
           }
-          log.f0 <- sum(dmvnorm(drop(H.target), , sig2target/n * Psi, log = TRUE))
+          log.f0 <- sum(dmvnorm(drop(H.target), , sig2Target/n * Psi, log = TRUE))
 
           if (!Mixture) {
             if (log) {Weight <- log.f0 - log.f1} else {

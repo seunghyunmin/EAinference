@@ -69,6 +69,13 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, si
   lbd, weights = rep(1, max(group)), group = 1:ncol(X), niter = 2000,
   type = "coeff", method = "normal", Y, parallel = FALSE, ncores = 2L, verbose = FALSE)
 {
+  n <- nrow(X)
+  p <- ncol(X)
+
+  if (!type %in% c("coeff", "mu")) {
+    stop("Invalide type input.")
+  }
+
   if (any(missing(pointEstimate_1), missing(sig2_1), missing(lbd_1))) {
     stop("provide all the parameters for the distribution")
   }
@@ -81,6 +88,18 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, si
       %in% c(0, 3)) {
     stop("provide all the parameters for the mixture distribution.")
   }
+
+  if (type == "coeff" && (any(c(length(pluginTarget), length(pluginProp1)) != p) ||
+                          (!missing(pluginProp2) && (length(pluginProp2) != p))) ) {
+    stop("pluginTarget/pluginProp must have a same length with the number of X columns, when type=\"coeff\"")
+  }
+
+  if (type == "mu" && (any(c(length(pluginTarget), length(pluginProp1)) != n) ||
+                       (!missing(pluginProp2) && (length(pluginProp2) != n))) ) {
+    stop("pluginTarget/pluginProp must have a same length with the number of X rows, when type=\"mu\"")
+  }
+
+
 
   Mixture <- !missing(sig2_2)
 
