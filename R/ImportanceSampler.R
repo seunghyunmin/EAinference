@@ -64,8 +64,9 @@
 #' DS <- DirectSampler(X = x, pointEstimate_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
 #'  weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = FALSE)
 #'
-#' hdIS(X = x,pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
-#'      pluginProp1 = rep(1,p),sig2Prop1 = 1,lbdProp1 = .5,proposalsample = DS, group = Group,
+#' hdIS(X = DS$X, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+#'      pluginProp1 = DS$pointEstimate,sig2Prop1 = DS$sig2,lbdProp1 = DS$lbd,
+#'      proposalsample = DS, group = Group,
 #'      weights = Weights, log = TRUE)
 #'
 #' #
@@ -103,6 +104,10 @@ hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
   X <- as.matrix(X)
   n <- nrow(X)
   p <- ncol(X)
+
+  if (n >= p) {
+    stop("High dimensional setting is required, i.e. nrow(X) < ncol(X)")
+  }
 
   if (!type %in% c("coeff", "mu")) {
     stop("Invalide type input.")

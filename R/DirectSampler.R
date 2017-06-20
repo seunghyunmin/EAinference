@@ -76,6 +76,20 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, si
     stop("Invalide type input.")
   }
 
+  if (!method %in% c("normal", "nonparametric")){
+    stop("method needs to be either normal or nonparametric")
+  }
+
+  if (length(group) != p) {
+    stop("group must have a same length with the number of X columns")
+  }
+  if (length(weights) != length(unique(group))) {
+    stop("weights has to have a same length as the number of groups")
+  }
+  if (any(!1:max(group) %in% group)) {
+    stop("group index has to be a consecutive integer starting from 1.")
+  }
+
   if (any(missing(pointEstimate_1), missing(sig2_1), missing(lbd_1))) {
     stop("provide all the parameters for the distribution")
   }
@@ -89,17 +103,15 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, si
     stop("provide all the parameters for the mixture distribution.")
   }
 
-  if (type == "coeff" && (any(c(length(pluginTarget), length(pluginProp1)) != p) ||
-                          (!missing(pluginProp2) && (length(pluginProp2) != p))) ) {
-    stop("pluginTarget/pluginProp must have a same length with the number of X columns, when type=\"coeff\"")
-  }
-
-  if (type == "mu" && (any(c(length(pluginTarget), length(pluginProp1)) != n) ||
-                       (!missing(pluginProp2) && (length(pluginProp2) != n))) ) {
-    stop("pluginTarget/pluginProp must have a same length with the number of X rows, when type=\"mu\"")
-  }
-
-
+  # if (type == "coeff" && (length(pointEstimate_1) != p ||
+  #                         (!missing(pointEstimate_2) && (length(pointEstimate_2) != p))) ) {
+  #   stop("pointEstimate must have a same length with the number of X columns, when type=\"coeff\"")
+  # }
+  #
+  # if (type == "mu" && (length(pointEstimate_1) != n ||
+  #                      (!missing(pointEstimate_2) && (length(pointEstimate_2) != n))) ) {
+  #   stop("pointEstimate_1 must have a same length with the number of X rows, when type=\"mu\"")
+  # }
 
   Mixture <- !missing(sig2_2)
 
@@ -113,14 +125,37 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, si
     DS2 <- DirectSamplerMain(X = X, pointEstimate = pointEstimate_2, sig2 = sig2_1,
                          lbd = lbd_1, weights = weights, group = group, niter = niter2,
                          type = type, method = method, Y=Y, parallel = parallel, ncores = ncores, verbose = verbose)
-    return(list(beta = rbind(DS1$beta, DS2$beta), subgrad = rbind(DS1$subgrad, DS2$subgrad)))
+    if (method == "normal") {
+      RESULT <- list(beta = rbind(DS1$beta, DS2$beta),
+        subgrad = rbind(DS1$subgrad, DS2$subgrad), X = X,
+        pointEstimate = rbind(pointEstimate_1, pointEstimate_2),
+        sig2 = c(sig2_1, sig2_2), lbd = c(lbd_1, lbd_2), method = method,
+        type = type, mixture = FALSE)
+    } else {
+      RESULT <- list(beta = rbind(DS1$beta, DS2$beta),
+        subgrad = rbind(DS1$subgrad, DS2$subgrad), X = X, Y = Y,
+        pointEstimate = rbind(pointEstimate_1, pointEstimate_2),
+        sig2 = c(sig2_1, sig2_2), lbd = c(lbd_1, lbd_2), method = method,
+        type = type, mixture = FALSE)
+    }
   } else {
-    return(DirectSamplerMain(X = X, pointEstimate = pointEstimate_1, sig2 = sig2_1,
-                  lbd = lbd_1, weights = weights, group = group, niter = niter,
-                  type = type, method = method, Y=Y, parallel = parallel, ncores = ncores, verbose = verbose))
-  }
-}
+    DS <- DirectSamplerMain(X = X, pointEstimate = pointEstimate_1,
+      sig2 = sig2_1, lbd = lbd_1, weights = weights, group = group,
+      niter = niter, type = type, method = method, Y=Y, parallel = parallel,
+      ncores = ncores, verbose = verbose)
 
+    if (method == "normal") {
+      RESULT <- list(beta = DS$beta, subgrad = DS$subgrad, X = X,
+        pointEstimate = pointEstimate_1, sig2 = sig2_1, lbd = lbd_1,
+        method = method, type = type, mixture = FALSE)
+    } else {
+      RESULT <- list(beta = DS$beta, subgrad = DS$subgrad, X = X, Y = Y,
+        pointEstimate = pointEstimate_1, sig2 = sig2_1, lbd = lbd_1,
+        method = method, type = type, mixture = FALSE)
+    }
+  }
+  return(RESULT)
+}
 
 DirectSamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, max(group)),
  group = 1:ncol(X), niter = 2000, type = "coeff", method = "normal", Y, parallel = FALSE,
@@ -132,8 +167,32 @@ DirectSamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, 
   if (parallel && !missing(ncores) && ncores == 1) {
     ncores <- 2
     warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
-            Set ncores to the maximum number.")
+            Set ncores to 2.")
   }
+
+  if (parallel && (ncores > parallel::detectCores())) {
+    ncores <- parallel::detectCores()
+    warning("ncores is larger than the maximum number of available processes.
+             Set it to the maximum possible value.")
+  }
+
+
+  if (sig2 <= 0) {
+    stop("sig2 should be positive.")
+  }
+
+  if (lbd < 0) {
+    stop("lbd should be non-negative.")
+  }
+
+  if (any(weights < 0)) {
+    stop("weights should be non-negative.")
+  }
+
+  if (length(sig2) !=1 || length(lbd) != 1) {
+    stop("sig2/lbd should be a scalar.")
+  }
+
 
   if (missing(Y) && method == "nonparametric") {
     stop("Y is needed for the method=\"nonparametric\"")
@@ -141,22 +200,13 @@ DirectSamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, 
   if (parallel && verbose) {
     warning("Note that verbose only works when parallel=FALSE")
   }
-  if (length(pointEstimate) != p) {
-    stop("pointEstimate must have a same length with the number of X columns")
-  }
-  if (length(group) != p) {
-    stop("group must have a same length with the number of X columns")
-  }
-  if (length(weights) != length(unique(group))) {
-    stop("weights has to have a same length as the number of groups")
-  }
-  if (method %in% c("normal", "nonparametric") == FALSE){
-    stop("method needs to be either normal or nonparametric")
-  }
-  if (any(!1:max(group) %in% group)) {
-    stop("Group index has to be a consecutive integer.")
+  if (type == "coeff" && length(pointEstimate) != p) {
+    stop("pointEstimate must have a same length with the col-number of X, if type = \"coeff\"")
   }
 
+  if (type == "mu" && length(pointEstimate) != n) {
+    stop("pointEstimate must have a same length with the row-number of X, if type = \"mu\"")
+  }
 
   if(verbose) {
     ptm <- proc.time();
@@ -204,11 +254,6 @@ DirectSamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, 
     Lassobeta <- TEMP[, 1:p]
     Subgrad   <- TEMP[, -c(1:p)]
   } else {
-    if (ncores > parallel::detectCores()) {
-      ncores <- parallel::detectCores()
-      warnings("ncores is larger than the maximum number of available processes.
-               Set it to the maximum possible value.")
-    }
     TEMP <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
     TEMP <- do.call(rbind, TEMP)
     Lassobeta <- TEMP[, 1:p]
@@ -217,7 +262,3 @@ DirectSamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, 
   if (verbose) {print(proc.time() - ptm)}
   return(list(beta = Lassobeta, subgrad = Subgrad));
 }
-
-
-
-

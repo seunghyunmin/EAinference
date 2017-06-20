@@ -4,22 +4,22 @@
 \alias{hdIS}
 \title{Computing importance weights under high-dimensional setting}
 \usage{
-hdIS(X, coefftarget, sig2target, lbdtarget, coeffprop1, sig2prop1, lbdprop1,
-  coeffprop2, sig2prop2, lbdprop2, proposalsample, group, weights = rep(1,
-  length(unique(group))), TsA.method = "default", log = TRUE,
-  parallel = FALSE, ncores)
+hdIS(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1, lbdProp1,
+  pluginProp2, sig2Prop2, lbdProp2, proposalsample, group, weights = rep(1,
+  length(unique(group))), type = "coeff", TsA.method = "default",
+  log = TRUE, parallel = FALSE, ncores)
 }
 \arguments{
 \item{X}{Predictor matrix of size n x p, where n is the number of
 observations and p is number of covariates.}
 
-\item{coefftarget, sig2target, lbdtarget}{Parameter of target distribution.
+\item{pluginTarget, sig2Target, lbdTarget}{Parameter of target distribution.
 (coefficient estimate, estimated variance of error, lambda)}
 
-\item{coeffprop1, sig2prop1, lbdprop1}{Parameter of proposal distribution.
+\item{pluginProp1, sig2Prop1, lbdProp1}{Parameter of proposal distribution.
 (coefficient estimate, estimated variance of error, lambda).}
 
-\item{coeffprop2, sig2prop2, lbdprop2}{Parameter of mixture proposal
+\item{pluginProp2, sig2Prop2, lbdProp2}{Parameter of mixture proposal
 distribution. (coefficient estimate, estimated variance of error, lambda).
 Only needed for group lasso under mixture distribution.
 See Zhou and Min(2016) for more details.}
@@ -57,18 +57,64 @@ below for more details
 Computes importance weights which is defined as \deqn{\frac{target
  density}{proposal density}}, when the samples is drawn from proposal
  distribution with (coeffprop, sig2prop, lbdprop) while the parameter of
- target distribution is (coefftarget, sig2target, lbdtarget).
+ target distribution is (pluginTarget, sig2Target, lbdTarget).
 }
 \examples{
+set.seed(1234)
 n <- 10
 p <- 30
-lbd <-  .5
-niter <-  10
-group <- rep(1:(p/10), each=10)
-Weights <- rep(1,p/10)
+Niter <-  10
+Group <- rep(1:(p/10), each = 10)
+Weights <- rep(1, p/10)
 x <- matrix(rnorm(n*p), n)
-DirectSampler(X = x, coefftarget = rep(0,p), sig2target=1, lbd=.5,
-weights=Weights, group=group,N=niter, parallel=FALSE)
-DirectSampler(X = x, coefftarget = rep(0,p), sig2target=1, lbd=.5,
-weights=Weights, group=group,N=niter, parallel=TRUE)
+
+# Target distribution parameter
+pluginTarget <- rep(0,p)
+sig2Target <- .5
+lbdTarget <- .37
+
+# Proposal distribution parameter
+pluginProp1 <- rep(0,p) ;pluginProp2 <- rep(1,p)
+sig2Prop1 <- .5; sig2Prop2 <- 1
+lbdProp1 <- .37; lbdProp2 <- .5
+
+#
+# Using non-mixture distribution
+# ------------------------------
+# Target distribution parameters (coeff, sig2, lbd) = (rep(0,p), .5, .37)
+# Proposal distribution parameters (coeff, sig2, lbd) = (rep(1,p), 1, .5)
+#
+DS <- DirectSampler(X = x, pointEstimate_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
+ weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = FALSE)
+
+hdIS(X = x,pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+     pluginProp1 = rep(1,p),sig2Prop1 = 1,lbdProp1 = .5,proposalsample = DS, group = Group,
+     weights = Weights, log = TRUE)
+
+#
+# Using mixture distribution
+# ------------------------------
+# Target distribution parameters (coeff, sig2, lbd) = (rep(0,p), .5, .37)
+# Proposal distribution parameters
+#  (coeff, sig2, lbd) = (rep(0,p), .5, .37) & (rep(1,p), 1, .5)
+#
+#
+pluginTarget <- rep(0,p)
+sig2Target <- .5
+lbdTarget <- .37
+pluginProp1 <- rep(0,p)
+pluginProp2 <- rep(1,p)
+sig2Prop1 <- .5
+sig2Prop2 <- 1
+lbdProp1 <- .37
+lbdProp2 <- .5
+
+DSMixture <- DirectSampler(X = x, pointEstimate_1 = pluginProp1, sig2_1 = sig2Prop1, lbd_1 = lbdProp1,
+ pointEstimate_2 = pluginProp2, sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights,
+ group = Group, niter = Niter, type = "coeff", parallel = TRUE)
+hdIS(X = x,pluginTarget = pluginTarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+     pluginProp1 = pluginProp1, sig2Prop1 = sig2Prop1, lbdProp1 = lbdProp1,
+     pluginProp2 = pluginProp2, sig2Prop2 = sig2Prop2, lbdProp2 = lbdProp2,
+     proposalsample = DSMixture, group = Group,
+     weights = Weights, log = TRUE)
 }
