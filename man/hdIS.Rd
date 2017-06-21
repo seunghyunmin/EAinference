@@ -4,12 +4,14 @@
 \alias{hdIS}
 \title{Computing importance weights under high-dimensional setting}
 \usage{
-hdIS(DirectSample, pluginTarget, sig2Target, lbdTarget,
-  TsA.method = "default", log = TRUE, parallel = FALSE, ncores = 2L)
+hdIS(DirectSample, pETarget, sig2Target, lbdTarget, TsA.method = "default",
+  log = TRUE, parallel = FALSE, ncores = 2L)
 }
 \arguments{
-\item{pluginTarget, sig2Target, lbdTarget}{Parameter of target distribution.
-(coefficient estimate, estimated variance of error, lambda)}
+\item{DirectSample}{Bootstrap samples of class \code{DS} from \code{DirectSampler}}
+
+\item{pETarget, sig2Target, lbdTarget}{Parameter of target distribution.
+(point estimate of beta or mu, estimated variance of error, lambda)}
 
 \item{TsA.method}{Way to construct T(eta(s),A) matrix. See Zhou and Min(2016)
 for more detail.}
@@ -19,28 +21,6 @@ for more detail.}
 \item{parallel}{logical. If true, parallelize the computation.}
 
 \item{ncores}{number of CPU cores to use for parallelization.}
-
-\item{X}{Predictor matrix of size n x p, where n is the number of
-observations and p is number of covariates.}
-
-\item{pluginProp1, sig2Prop1, lbdProp1}{Parameter of proposal distribution.
-(coefficient estimate, estimated variance of error, lambda).}
-
-\item{pluginProp2, sig2Prop2, lbdProp2}{Parameter of mixture proposal
-distribution. (coefficient estimate, estimated variance of error, lambda).
-Only needed for group lasso under mixture distribution.
-See Zhou and Min(2016) for more details.}
-
-\item{propsalsample}{Samples drawn from proposal distribution. The samples
-can be easily drawn by using \code{\link{DirectSampler}} with relevant choice
-of \code{coeff, sigma2, lbd}.}
-
-\item{group}{Prespecifed group structure for group lasso. p x 1 vector.
-Use the same integer if covariates are in the same group. See example for
-more detail.}
-
-\item{weights}{Weight term for each group. Default is
-rep(1, length(unique(group))).}
 }
 \value{
 \code{hdIS} returns importance weights of the proposed sample.
@@ -55,7 +35,7 @@ below for more details
 Computes importance weights which is defined as \deqn{\frac{target
  density}{proposal density}}, when the samples is drawn from proposal
  distribution with (coeffprop, sig2prop, lbdprop) while the parameter of
- target distribution is (pluginTarget, sig2Target, lbdTarget).
+ target distribution is (pETarget, sig2Target, lbdTarget).
 }
 \examples{
 set.seed(1234)
@@ -67,12 +47,12 @@ Weights <- rep(1, p/10)
 x <- matrix(rnorm(n*p), n)
 
 # Target distribution parameter
-pluginTarget <- rep(0,p)
+pETarget <- rep(0,p)
 sig2Target <- .5
 lbdTarget <- .37
 
 # Proposal distribution parameter
-pluginProp1 <- rep(0,p) ;pluginProp2 <- rep(1,p)
+pEProp1 <- rep(0,p) ;pEProp2 <- rep(1,p)
 sig2Prop1 <- .5; sig2Prop2 <- 1
 lbdProp1 <- .37; lbdProp2 <- .5
 
@@ -85,7 +65,7 @@ lbdProp1 <- .37; lbdProp2 <- .5
 DS <- DirectSampler(X = x, pointEstimate_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
  weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = FALSE)
 
-hdIS(DS, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+hdIS(DS, pETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
  log = TRUE)
 
 #
@@ -96,16 +76,17 @@ hdIS(DS, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
 #  (coeff, sig2, lbd) = (rep(0,p), .5, .37) & (rep(1,p), 1, .5)
 #
 #
-pluginProp1 <- rep(0,p)
-pluginProp2 <- rep(1,p)
+pEProp1 <- rep(0,p)
+pEProp2 <- rep(1,p)
 sig2Prop1 <- .5
 sig2Prop2 <- 1
 lbdProp1 <- .37
 lbdProp2 <- .5
 
-DSMixture <- DirectSampler(X = x, pointEstimate_1 = pluginProp1, sig2_1 = sig2Prop1, lbd_1 = lbdProp1,
- pointEstimate_2 = pluginProp2, sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights,
- group = Group, niter = Niter, type = "coeff", parallel = TRUE)
-hdIS(DSMixturem, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+DSMixture <- DirectSampler(X = x, pointEstimate_1 = pEProp1,
+ sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pEProp2,
+ sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
+ niter = Niter, type = "coeff", parallel = TRUE)
+hdIS(DSMixturem, pETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
  log = TRUE)
 }

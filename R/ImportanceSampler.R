@@ -6,8 +6,8 @@
 #' below for more details
 #'
 #' @param DirectSample Bootstrap samples of class \code{DS} from \code{DirectSampler}
-#' @param pluginTarget,sig2Target,lbdTarget Parameter of target distribution.
-#' (coefficient estimate, estimated variance of error, lambda)
+#' @param pETarget,sig2Target,lbdTarget Parameter of target distribution.
+#' (point estimate of beta or mu, estimated variance of error, lambda)
 #' @param TsA.method Way to construct T(eta(s),A) matrix. See Zhou and Min(2016)
 #' for more detail.
 #' @param log If true, importance weight is computed in log scale.
@@ -17,7 +17,7 @@
 #' @details Computes importance weights which is defined as \deqn{\frac{target
 #'  density}{proposal density}}, when the samples is drawn from proposal
 #'  distribution with (coeffprop, sig2prop, lbdprop) while the parameter of
-#'  target distribution is (pluginTarget, sig2Target, lbdTarget).
+#'  target distribution is (pETarget, sig2Target, lbdTarget).
 #'
 #' @return \code{hdIS} returns importance weights of the proposed sample.
 #'
@@ -31,12 +31,12 @@
 #' x <- matrix(rnorm(n*p), n)
 #'
 #' # Target distribution parameter
-#' pluginTarget <- rep(0,p)
+#' pETarget <- rep(0,p)
 #' sig2Target <- .5
 #' lbdTarget <- .37
 #'
 #' # Proposal distribution parameter
-#' pluginProp1 <- rep(0,p) ;pluginProp2 <- rep(1,p)
+#' pEProp1 <- rep(0,p) ;pEProp2 <- rep(1,p)
 #' sig2Prop1 <- .5; sig2Prop2 <- 1
 #' lbdProp1 <- .37; lbdProp2 <- .5
 #'
@@ -49,7 +49,7 @@
 #' DS <- DirectSampler(X = x, pointEstimate_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
 #'  weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = FALSE)
 #'
-#' hdIS(DS, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+#' hdIS(DS, pETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
 #'  log = TRUE)
 #'
 #' #
@@ -60,40 +60,45 @@
 #' #  (coeff, sig2, lbd) = (rep(0,p), .5, .37) & (rep(1,p), 1, .5)
 #' #
 #' #
-#' pluginProp1 <- rep(0,p)
-#' pluginProp2 <- rep(1,p)
+#' pEProp1 <- rep(0,p)
+#' pEProp2 <- rep(1,p)
 #' sig2Prop1 <- .5
 #' sig2Prop2 <- 1
 #' lbdProp1 <- .37
 #' lbdProp2 <- .5
 #'
-#' DSMixture <- DirectSampler(X = x, pointEstimate_1 = pluginProp1,
-#'  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pluginProp2,
+#' DSMixture <- DirectSampler(X = x, pointEstimate_1 = pEProp1,
+#'  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pEProp2,
 #'  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
 #'  niter = Niter, type = "coeff", parallel = TRUE)
-#' hdIS(DSMixturem, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+#' hdIS(DSMixturem, pETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
 #'  log = TRUE)
 #' @export
-hdIS=function(DirectSample, pluginTarget, sig2Target, lbdTarget,
+hdIS=function(DirectSample, pETarget, sig2Target, lbdTarget,
             TsA.method = "default", log = TRUE, parallel = FALSE, ncores = 2L)
 {
   if (class(DirectSample) != "DS") {
     stop("Use EAlasso::DirectSampler to generate DirectSample.")
   }
 
+  if (any(missing(pETarget), missing(sig2Target), missing(lbdTarget))) {
+    stop("provide all the parameters for the target distribution")
+  }
+
+
   X <- DirectSample$X
   n <- nrow(X)
   p <- ncol(X)
 
   if (DirectSample$mixture) {
-    pluginProp1 <- DirectSample$PointEstimate[1,]
-    pluginProp2 <- DirectSample$PointEstimate[2,]
+    pEProp1 <- DirectSample$pointEstimate[1,]
+    pEProp2 <- DirectSample$pointEstimate[2,]
     sig2Prop1 <- DirectSample$sig2[1]
     sig2Prop2 <- DirectSample$sig2[2]
     lbdProp1 <- DirectSample$lbd[1]
     lbdProp2 <- DirectSample$lbd[2]
   } else {
-    pluginProp1 <- DirectSample$PointEstimate
+    pEProp1 <- DirectSample$pointEstimate
     sig2Prop1 <- DirectSample$sig2
     lbdProp1 <- DirectSample$lbd
   }
@@ -140,11 +145,11 @@ hdIS=function(DirectSample, pluginTarget, sig2Target, lbdTarget,
     LBD <- LBDprop <- diag(egC$values[R])
     VRW <- VRWprop <- t(VR)%*%W
     if (type == "coeff") {
-      VRCB     <- t(VR) %*% C %*% pluginTarget
-      VRCBprop <- t(VR) %*% C %*% pluginProp1
+      VRCB     <- t(VR) %*% C %*% pETarget
+      VRCBprop <- t(VR) %*% C %*% pEProp1
     } else {
-      VRCB     <- t(VR) %*% t(X) %*% pluginTarget / n
-      VRCBprop <- t(VR) %*% t(X) %*% pluginProp1 / n
+      VRCB     <- t(VR) %*% t(X) %*% pETarget / n
+      VRCBprop <- t(VR) %*% t(X) %*% pEProp1 / n
     }
 
     #sample from proposal distribution
@@ -200,16 +205,16 @@ hdIS=function(DirectSample, pluginTarget, sig2Target, lbdTarget,
       Subgrad <- S[x,]
       if (n < p) {
         if (type == "coeff") {
-          H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pluginTarget) + lbdTarget * W * Subgrad) #H.tilde
-          H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pluginProp1) + lbdProp1 * W * Subgrad) #H.tilde proposed1
+          H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pETarget) + lbdTarget * W * Subgrad) #H.tilde
+          H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp1) + lbdProp1 * W * Subgrad) #H.tilde proposed1
           if (Mixture) {
-            H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pluginProp2) + lbdProp2 * W * Subgrad) #H.tilde proposed2
+            H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp2) + lbdProp2 * W * Subgrad) #H.tilde proposed2
           }
         } else {
-          H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdTarget * W * Subgrad) - pluginTarget / sqrt(n) #H.tilde
-          H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp1 * W * Subgrad) - pluginProp1 / sqrt(n)  #H.tilde proposed1
+          H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdTarget * W * Subgrad) - pETarget / sqrt(n) #H.tilde
+          H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp1 * W * Subgrad) - pEProp1 / sqrt(n)  #H.tilde proposed1
           if (Mixture) {
-            H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp2 * W * Subgrad) - pluginProp2 / sqrt(n)   #H.tilde proposed2
+            H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp2 * W * Subgrad) - pEProp2 / sqrt(n)   #H.tilde proposed2
           }
         }
 
@@ -264,13 +269,13 @@ hdIS=function(DirectSample, pluginTarget, sig2Target, lbdTarget,
       }
       else {
         if (type == "coeff") {
-          H.target <- Psi %*% (Beta - pluginTarget) + lbdTarget * W * Subgrad #H.tilde
-          H.prop1 <-  Psi %*% (Beta - pluginProp1) + lbdProp1 * W * Subgrad #H.tilde proposed1
-          if (Mixture) H.prop2 <-  Psi %*% (Beta - pluginProp2) + lbdProp2 * W * Subgrad #H.tilde proposed2
+          H.target <- Psi %*% (Beta - pETarget) + lbdTarget * W * Subgrad #H.tilde
+          H.prop1 <-  Psi %*% (Beta - pEProp1) + lbdProp1 * W * Subgrad #H.tilde proposed1
+          if (Mixture) H.prop2 <-  Psi %*% (Beta - pEProp2) + lbdProp2 * W * Subgrad #H.tilde proposed2
         } else {
-          H.target <- Psi %*% Beta + lbdTarget * W * Subgrad - t(X) %*% pluginTarget / n #H.tilde
-          H.prop1 <-  Psi %*% Beta + lbdProp1 * W * Subgrad - t(X) %*% pluginProp1 / n  #H.tilde proposed1
-          if (Mixture) H.prop2 <-  Psi %*% Beta + lbdProp2 * W * Subgrad - t(X) %*% pluginProp2 / n  #H.tilde proposed2
+          H.target <- Psi %*% Beta + lbdTarget * W * Subgrad - t(X) %*% pETarget / n #H.tilde
+          H.prop1 <-  Psi %*% Beta + lbdProp1 * W * Subgrad - t(X) %*% pEProp1 / n  #H.tilde proposed1
+          if (Mixture) H.prop2 <-  Psi %*% Beta + lbdProp2 * W * Subgrad - t(X) %*% pEProp2 / n  #H.tilde proposed2
         }
 
         r <- group.norm2(Beta, group)
@@ -338,7 +343,7 @@ hdIS=function(DirectSample, pluginTarget, sig2Target, lbdTarget,
     return(Weight)
   }
 }
-# hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
-#   lbdProp1, pluginProp2, sig2Prop2, lbdProp2, proposalsample, group,
+# hdIS=function(X, pETarget, sig2Target, lbdTarget, pEProp1, sig2Prop1,
+#   lbdProp1, pEProp2, sig2Prop2, lbdProp2, proposalsample, group,
 #   weights = rep(1, length(unique(group))), type = "coeff", TsA.method = "default", log = TRUE,
 #   parallel = FALSE, ncores)
