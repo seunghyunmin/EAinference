@@ -4,32 +4,12 @@
 \alias{hdIS}
 \title{Computing importance weights under high-dimensional setting}
 \usage{
-hdIS(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1, lbdProp1,
-  pluginProp2, sig2Prop2, lbdProp2, proposalsample, group, weights = rep(1,
-  length(unique(group))), type = "coeff", TsA.method = "default",
-  log = TRUE, parallel = FALSE, ncores)
+hdIS(DirectSample, pluginTarget, sig2Target, lbdTarget,
+  TsA.method = "default", log = TRUE, parallel = FALSE, ncores = 2L)
 }
 \arguments{
-\item{X}{Predictor matrix of size n x p, where n is the number of
-observations and p is number of covariates.}
-
 \item{pluginTarget, sig2Target, lbdTarget}{Parameter of target distribution.
 (coefficient estimate, estimated variance of error, lambda)}
-
-\item{pluginProp1, sig2Prop1, lbdProp1}{Parameter of proposal distribution.
-(coefficient estimate, estimated variance of error, lambda).}
-
-\item{pluginProp2, sig2Prop2, lbdProp2}{Parameter of mixture proposal
-distribution. (coefficient estimate, estimated variance of error, lambda).
-Only needed for group lasso under mixture distribution.
-See Zhou and Min(2016) for more details.}
-
-\item{group}{Prespecifed group structure for group lasso. p x 1 vector.
-Use the same integer if covariates are in the same group. See example for
-more detail.}
-
-\item{weights}{Weight term for each group. Default is
-rep(1, length(unique(group))).}
 
 \item{TsA.method}{Way to construct T(eta(s),A) matrix. See Zhou and Min(2016)
 for more detail.}
@@ -40,9 +20,27 @@ for more detail.}
 
 \item{ncores}{number of CPU cores to use for parallelization.}
 
+\item{X}{Predictor matrix of size n x p, where n is the number of
+observations and p is number of covariates.}
+
+\item{pluginProp1, sig2Prop1, lbdProp1}{Parameter of proposal distribution.
+(coefficient estimate, estimated variance of error, lambda).}
+
+\item{pluginProp2, sig2Prop2, lbdProp2}{Parameter of mixture proposal
+distribution. (coefficient estimate, estimated variance of error, lambda).
+Only needed for group lasso under mixture distribution.
+See Zhou and Min(2016) for more details.}
+
 \item{propsalsample}{Samples drawn from proposal distribution. The samples
 can be easily drawn by using \code{\link{DirectSampler}} with relevant choice
 of \code{coeff, sigma2, lbd}.}
+
+\item{group}{Prespecifed group structure for group lasso. p x 1 vector.
+Use the same integer if covariates are in the same group. See example for
+more detail.}
+
+\item{weights}{Weight term for each group. Default is
+rep(1, length(unique(group))).}
 }
 \value{
 \code{hdIS} returns importance weights of the proposed sample.
@@ -87,9 +85,8 @@ lbdProp1 <- .37; lbdProp2 <- .5
 DS <- DirectSampler(X = x, pointEstimate_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
  weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = FALSE)
 
-hdIS(X = x,pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
-     pluginProp1 = rep(1,p),sig2Prop1 = 1,lbdProp1 = .5,proposalsample = DS, group = Group,
-     weights = Weights, log = TRUE)
+hdIS(DS, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+ log = TRUE)
 
 #
 # Using mixture distribution
@@ -99,9 +96,6 @@ hdIS(X = x,pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
 #  (coeff, sig2, lbd) = (rep(0,p), .5, .37) & (rep(1,p), 1, .5)
 #
 #
-pluginTarget <- rep(0,p)
-sig2Target <- .5
-lbdTarget <- .37
 pluginProp1 <- rep(0,p)
 pluginProp2 <- rep(1,p)
 sig2Prop1 <- .5
@@ -112,9 +106,6 @@ lbdProp2 <- .5
 DSMixture <- DirectSampler(X = x, pointEstimate_1 = pluginProp1, sig2_1 = sig2Prop1, lbd_1 = lbdProp1,
  pointEstimate_2 = pluginProp2, sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights,
  group = Group, niter = Niter, type = "coeff", parallel = TRUE)
-hdIS(X = x,pluginTarget = pluginTarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
-     pluginProp1 = pluginProp1, sig2Prop1 = sig2Prop1, lbdProp1 = lbdProp1,
-     pluginProp2 = pluginProp2, sig2Prop2 = sig2Prop2, lbdProp2 = lbdProp2,
-     proposalsample = DSMixture, group = Group,
-     weights = Weights, log = TRUE)
+hdIS(DSMixturem, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+ log = TRUE)
 }

@@ -72,12 +72,31 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, si
   n <- nrow(X)
   p <- ncol(X)
 
+  #--------------------
+  # Error Handling
+  #--------------------
   if (!type %in% c("coeff", "mu")) {
     stop("Invalide type input.")
   }
 
   if (!method %in% c("normal", "nonparametric")){
     stop("method needs to be either normal or nonparametric")
+  }
+
+  if (parallel && !missing(ncores) && ncores == 1) {
+    ncores <- 2
+    warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
+            Set ncores to 2.")
+  }
+
+  if (parallel && (ncores > parallel::detectCores())) {
+    ncores <- parallel::detectCores()
+    warning("ncores is larger than the maximum number of available processes.
+            Set it to the maximum possible value.")
+  }
+
+  if (missing(Y) && method == "nonparametric") {
+    stop("Y is needed for the method=\"nonparametric\"")
   }
 
   if (length(group) != p) {
@@ -102,17 +121,9 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, si
       %in% c(0, 3)) {
     stop("provide all the parameters for the mixture distribution.")
   }
-
-  # if (type == "coeff" && (length(pointEstimate_1) != p ||
-  #                         (!missing(pointEstimate_2) && (length(pointEstimate_2) != p))) ) {
-  #   stop("pointEstimate must have a same length with the number of X columns, when type=\"coeff\"")
-  # }
-  #
-  # if (type == "mu" && (length(pointEstimate_1) != n ||
-  #                      (!missing(pointEstimate_2) && (length(pointEstimate_2) != n))) ) {
-  #   stop("pointEstimate_1 must have a same length with the number of X rows, when type=\"mu\"")
-  # }
-
+  #--------------------
+  # Main Step
+  #--------------------
   Mixture <- !missing(sig2_2)
 
   if (Mixture) {
@@ -129,13 +140,13 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, si
       RESULT <- list(beta = rbind(DS1$beta, DS2$beta),
         subgrad = rbind(DS1$subgrad, DS2$subgrad), X = X,
         pointEstimate = rbind(pointEstimate_1, pointEstimate_2),
-        sig2 = c(sig2_1, sig2_2), lbd = c(lbd_1, lbd_2), method = method,
+        sig2 = c(sig2_1, sig2_2), lbd = c(lbd_1, lbd_2), weights = weights, group = group, method = method,
         type = type, mixture = FALSE)
     } else {
       RESULT <- list(beta = rbind(DS1$beta, DS2$beta),
         subgrad = rbind(DS1$subgrad, DS2$subgrad), X = X, Y = Y,
         pointEstimate = rbind(pointEstimate_1, pointEstimate_2),
-        sig2 = c(sig2_1, sig2_2), lbd = c(lbd_1, lbd_2), method = method,
+        lbd = c(lbd_1, lbd_2), weights = weights, group = group, method = method,
         type = type, mixture = FALSE)
     }
   } else {
@@ -146,14 +157,15 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, si
 
     if (method == "normal") {
       RESULT <- list(beta = DS$beta, subgrad = DS$subgrad, X = X,
-        pointEstimate = pointEstimate_1, sig2 = sig2_1, lbd = lbd_1,
+        pointEstimate = pointEstimate_1, sig2 = sig2_1, lbd = lbd_1, weights = weights, group = group,
         method = method, type = type, mixture = FALSE)
     } else {
       RESULT <- list(beta = DS$beta, subgrad = DS$subgrad, X = X, Y = Y,
-        pointEstimate = pointEstimate_1, sig2 = sig2_1, lbd = lbd_1,
+        pointEstimate = pointEstimate_1, lbd = lbd_1, weights = weights, group = group,
         method = method, type = type, mixture = FALSE)
     }
   }
+  class(RESULT) <- "DS"
   return(RESULT)
 }
 
@@ -163,19 +175,6 @@ DirectSamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, 
 {
   n <- nrow(X);
   p <- ncol(X);
-
-  if (parallel && !missing(ncores) && ncores == 1) {
-    ncores <- 2
-    warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
-            Set ncores to 2.")
-  }
-
-  if (parallel && (ncores > parallel::detectCores())) {
-    ncores <- parallel::detectCores()
-    warning("ncores is larger than the maximum number of available processes.
-             Set it to the maximum possible value.")
-  }
-
 
   if (sig2 <= 0) {
     stop("sig2 should be positive.")
@@ -193,10 +192,6 @@ DirectSamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, 
     stop("sig2/lbd should be a scalar.")
   }
 
-
-  if (missing(Y) && method == "nonparametric") {
-    stop("Y is needed for the method=\"nonparametric\"")
-  }
   if (parallel && verbose) {
     warning("Note that verbose only works when parallel=FALSE")
   }

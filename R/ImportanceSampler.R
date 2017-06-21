@@ -5,24 +5,9 @@
 #' to use mixture distribution as a proposal distribution. See the examples
 #' below for more details
 #'
-#' @param X Predictor matrix of size n x p, where n is the number of
-#' observations and p is number of covariates.
+#' @param DirectSample Bootstrap samples of class \code{DS} from \code{DirectSampler}
 #' @param pluginTarget,sig2Target,lbdTarget Parameter of target distribution.
 #' (coefficient estimate, estimated variance of error, lambda)
-#' @param pluginProp1,sig2Prop1,lbdProp1 Parameter of proposal distribution.
-#' (coefficient estimate, estimated variance of error, lambda).
-#' @param pluginProp2,sig2Prop2,lbdProp2 Parameter of mixture proposal
-#' distribution. (coefficient estimate, estimated variance of error, lambda).
-#' Only needed for group lasso under mixture distribution.
-#' See Zhou and Min(2016) for more details.
-#' @param propsalsample Samples drawn from proposal distribution. The samples
-#' can be easily drawn by using \code{\link{DirectSampler}} with relevant choice
-#' of \code{coeff, sigma2, lbd}.
-#' @param group Prespecifed group structure for group lasso. p x 1 vector.
-#' Use the same integer if covariates are in the same group. See example for
-#' more detail.
-#' @param weights Weight term for each group. Default is
-#' rep(1, length(unique(group))).
 #' @param TsA.method Way to construct T(eta(s),A) matrix. See Zhou and Min(2016)
 #' for more detail.
 #' @param log If true, importance weight is computed in log scale.
@@ -64,10 +49,8 @@
 #' DS <- DirectSampler(X = x, pointEstimate_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
 #'  weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = FALSE)
 #'
-#' hdIS(X = DS$X, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
-#'      pluginProp1 = DS$pointEstimate,sig2Prop1 = DS$sig2,lbdProp1 = DS$lbd,
-#'      proposalsample = DS, group = Group,
-#'      weights = Weights, log = TRUE)
+#' hdIS(DS, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+#'  log = TRUE)
 #'
 #' #
 #' # Using mixture distribution
@@ -77,9 +60,6 @@
 #' #  (coeff, sig2, lbd) = (rep(0,p), .5, .37) & (rep(1,p), 1, .5)
 #' #
 #' #
-#' pluginTarget <- rep(0,p)
-#' sig2Target <- .5
-#' lbdTarget <- .37
 #' pluginProp1 <- rep(0,p)
 #' pluginProp2 <- rep(1,p)
 #' sig2Prop1 <- .5
@@ -87,54 +67,59 @@
 #' lbdProp1 <- .37
 #' lbdProp2 <- .5
 #'
-#' DSMixture <- DirectSampler(X = x, pointEstimate_1 = pluginProp1, sig2_1 = sig2Prop1, lbd_1 = lbdProp1,
-#'  pointEstimate_2 = pluginProp2, sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights,
-#'  group = Group, niter = Niter, type = "coeff", parallel = TRUE)
-#' hdIS(X = x,pluginTarget = pluginTarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
-#'      pluginProp1 = pluginProp1, sig2Prop1 = sig2Prop1, lbdProp1 = lbdProp1,
-#'      pluginProp2 = pluginProp2, sig2Prop2 = sig2Prop2, lbdProp2 = lbdProp2,
-#'      proposalsample = DSMixture, group = Group,
-#'      weights = Weights, log = TRUE)
+#' DSMixture <- DirectSampler(X = x, pointEstimate_1 = pluginProp1,
+#'  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pluginProp2,
+#'  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
+#'  niter = Niter, type = "coeff", parallel = TRUE)
+#' hdIS(DSMixturem, pluginTarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+#'  log = TRUE)
 #' @export
-hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
-  lbdProp1, pluginProp2, sig2Prop2, lbdProp2, proposalsample, group,
-  weights = rep(1, length(unique(group))), type = "coeff", TsA.method = "default", log = TRUE,
-  parallel = FALSE, ncores)
+hdIS=function(DirectSample, pluginTarget, sig2Target, lbdTarget,
+            TsA.method = "default", log = TRUE, parallel = FALSE, ncores = 2L)
 {
-  X <- as.matrix(X)
+  if (class(DirectSample) != "DS") {
+    stop("Use EAlasso::DirectSampler to generate DirectSample.")
+  }
+
+  X <- DirectSample$X
   n <- nrow(X)
   p <- ncol(X)
 
+  if (DirectSample$mixture) {
+    pluginProp1 <- DirectSample$PointEstimate[1,]
+    pluginProp2 <- DirectSample$PointEstimate[2,]
+    sig2Prop1 <- DirectSample$sig2[1]
+    sig2Prop2 <- DirectSample$sig2[2]
+    lbdProp1 <- DirectSample$lbd[1]
+    lbdProp2 <- DirectSample$lbd[2]
+  } else {
+    pluginProp1 <- DirectSample$PointEstimate
+    sig2Prop1 <- DirectSample$sig2
+    lbdProp1 <- DirectSample$lbd
+  }
+
+  type <- DirectSample$type
+  method <- DirectSample$method
+  group <- DirectSample$group
+  weights <- DirectSample$weights
+
+  B <- DirectSample$beta
+  S <- DirectSample$subgrad
+  niter <- nrow(B)
+
   if (n >= p) {
-    stop("High dimensional setting is required, i.e. nrow(X) < ncol(X)")
+    stop("High dimensional setting is required, i.e. nrow(X) < ncol(X) required.")
   }
 
-  if (!type %in% c("coeff", "mu")) {
-    stop("Invalide type input.")
-  }
-
-  if (parallel && !missing(ncores) && ncores == 1) {
+  if (parallel && ncores == 1) {
     ncores <- 2
     warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
             Set ncores to the maximum number.")
   }
-
-  if (type == "coeff" && (any(c(length(pluginTarget), length(pluginProp1)) != p) ||
-      (!missing(pluginProp2) && (length(pluginProp2) != p))) ) {
-    stop("pluginTarget/pluginProp must have a same length with the number of X columns, when type=\"coeff\"")
-  }
-
-  if (type == "mu" && (any(c(length(pluginTarget), length(pluginProp1)) != n) ||
-                          (!missing(pluginProp2) && (length(pluginProp2) != n))) ) {
-    stop("pluginTarget/pluginProp must have a same length with the number of X rows, when type=\"mu\"")
-  }
-
-
-  if (length(group) != p) {
-    stop("group must have a same length with the number of X columns")
-  }
-  if (length(weights) != length(unique(group))) {
-    stop("weights has to have a same length as the number of groups")
+  if (parallel && ncores > parallel::detectCores()){
+    ncores <- parallel::detectCores()
+    warning("ncores is larger than the maximum number of available processes.
+             Set it to the maximum possible value.")
   }
 
   if (all(group==1:p)) {
@@ -163,9 +148,6 @@ hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
     }
 
     #sample from proposal distribution
-    B <- proposalsample$beta
-    S <- proposalsample$subgrad
-    niter <- nrow(B)
 
     logISweights <- numeric(niter)
     FF <- function(x) {
@@ -177,13 +159,6 @@ hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
         logISweights[t] <- FF(t)
       }
     } else {
-      if (missing(ncores)) {
-        ncores <- parallel::detectCores()
-      } else if (ncores > parallel::detectCores()){
-        ncores <- parallel::detectCores()
-        warnings("ncores is larger than the maximum number of available processes.
-                 Set it to the maximum possible value.")
-      }
       logISweights <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
       logISweights <- do.call(c,Weight)
      }
@@ -196,16 +171,8 @@ hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
     if (!TsA.method %in% c("default", "qr")) {
       stop("TsA.method should be either \"default\" or \"qr\"")
     }
-    # if (length(sig2prop) != length(lbdprop) || length(sig2prop) != nrow(coeffprop) || length(lbdprop) != nrow(coeffprop)) {
-    #   stop("provide all the parameters for the proposal distribution(s)")
-    # }
-    #
-    if (!sum(c(missing(sig2Prop2), missing(lbdProp2), missing(pluginProp2)))
-        %in% c(0,3)) {
-      stop("provide all the parameters for the proposal distribution(s)")
-    }
 
-    if (missing(sig2Prop2)) {
+    if (!DirectSample$mixture) {
       Mixture <- FALSE
       lbdProp2 <- lbdProp1
     } else {
@@ -214,9 +181,6 @@ hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
     #TsA.select <- switch(TsA.method, null = TsA.null, qr = TsA.qr, default = TsA)
     TsA.select <- switch(TsA.method, qr = TsA.qr, default = TsA)
     Psi <- t(X)%*%X / n
-    S <- proposalsample$subgrad
-    B <- proposalsample$beta
-    niter <- nrow(B)
 
     #precaculation
     if (n < p) {
@@ -229,7 +193,7 @@ hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
       Q <- MASS::Null(t(X)/W)#round(Null(t(X)/W),5)
     }
     t.XWinv <- t(X)/W
-    Weight <- c()
+    Weight <- numeric(niter)
 
     FF <- function(x) {
       Beta <- B[x,]
@@ -249,17 +213,16 @@ hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
           }
         }
 
-
         r <- group.norm2(Beta, group)
         A <- unique(group[Beta != 0])
 
         if (!all(lbdTarget == c(lbdProp1, lbdProp2))) {
-
-          if (TsA.method == "null") {
-            TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
-          } else {
-            TSA <- TsA.select(Q, Subgrad, group, A, n, p)
-          }
+#           if (TsA.method == "null") {
+#             TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
+#           } else {
+#             TSA <- TsA.select(Q, Subgrad, group, A, n, p)
+#           }
+          TSA <- TsA.select(Q, Subgrad, group, A, n, p)
 
           log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = T)) +
             (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, weights, TSA) )
@@ -369,16 +332,13 @@ hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
         Weight[t] <- FF(t)
       }
     } else {
-      if (missing(ncores)) {
-        ncores <- parallel::detectCores()
-      } else if (ncores > parallel::detectCores()){
-        ncores <- parallel::detectCores()
-        warnings("ncores is larger than the maximum number of available processes.
-                 Set it to the maximum possible value.")
-      }
       Weight <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
       Weight <- do.call(c,Weight)
     }
     return(Weight)
   }
 }
+# hdIS=function(X, pluginTarget, sig2Target, lbdTarget, pluginProp1, sig2Prop1,
+#   lbdProp1, pluginProp2, sig2Prop2, lbdProp2, proposalsample, group,
+#   weights = rep(1, length(unique(group))), type = "coeff", TsA.method = "default", log = TRUE,
+#   parallel = FALSE, ncores)
