@@ -41,7 +41,7 @@
 #'
 #' @return \item{beta}{(group) lasso estimator.}
 #' @return \item{subgrad}{subgradient.}
-#'
+#' @return \item{X, pointEstimate, sig2, weights, group, method, type, mixture}{Model parameters}
 #' @examples
 #' set.seed(1234)
 #' n <- 10
@@ -65,9 +65,10 @@
 #'  group = Group, niter = Niter, parallel = TRUE)
 #' @export
 #'
-DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, sig2_2, lbd_2,
-  lbd, weights = rep(1, max(group)), group = 1:ncol(X), niter = 2000,
-  type = "coeff", method = "normal", Y, parallel = FALSE, ncores = 2L, verbose = FALSE)
+DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2,
+  sig2_2, lbd_2, weights = rep(1, max(group)), group = 1:ncol(X), niter = 2000,
+  type = "coeff", method = "normal", Y, parallel = FALSE, ncores = 2L,
+  verbose = FALSE)
 {
   n <- nrow(X)
   p <- ncol(X)
@@ -104,6 +105,9 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, si
   }
   if (length(weights) != length(unique(group))) {
     stop("weights has to have a same length as the number of groups")
+  }
+  if (any(weights < 0)) {
+    stop("weights should be non-negative.")
   }
   if (any(!1:max(group) %in% group)) {
     stop("group index has to be a consecutive integer starting from 1.")
@@ -184,9 +188,6 @@ DirectSamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, 
     stop("lbd should be non-negative.")
   }
 
-  if (any(weights < 0)) {
-    stop("weights should be non-negative.")
-  }
 
   if (length(sig2) !=1 || length(lbd) != 1) {
     stop("sig2/lbd should be a scalar.")
@@ -195,6 +196,7 @@ DirectSamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, 
   if (parallel && verbose) {
     warning("Note that verbose only works when parallel=FALSE")
   }
+
   if (type == "coeff" && length(pointEstimate) != p) {
     stop("pointEstimate must have a same length with the col-number of X, if type = \"coeff\"")
   }

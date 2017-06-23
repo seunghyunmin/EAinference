@@ -1,7 +1,7 @@
 #' Metropolis-Hastings sampler using estimator augmentation in lasso estimator.
 #'
 #' @param X n x p matrix of predictors.
-#' @param coeff n x 1 vector of estimates of true coefficient.
+#' @param pointEstimate n x 1 vector of estimates of true coefficient.
 #' @param sig2 variance of error term.
 #' @param weights Weight term for each coefficient. Default is rep(1, p).
 #' @param lbd penalty term of lasso. See the loss function given at details.
@@ -19,15 +19,14 @@
 #' @param FlipSA The parameter that is needed for the high-dimensional setting.
 #' Has to be a subset of active set, A. If the index is not listed in FlipSA,
 #' the sign of coefficients which corresponds to the index will be fixed.
-#' The default is FlipSA=A.
-#' @param skipS logical. If \code{true}, skip updating subgradients.
+#' The default is \code{FlipSA=A}.
 #' @param SFindex Subgradient index for the free coordinate.
 #' @param randomSFindex logical. If \code{true}, resample \code{SFindex} in every
-#' randombreak number.
-#' @param randombreak Specifies how many iterations will be done without
+#' \code{updateSFindex} number.
+#' @param updateSFindex Specifies how many iterations will be done without
 #' updating the SFindex.
 #' @param verbose verbose
-#' @param updateS.itv Update S in every updateS.itv iterations.
+#' @param updateS.itv Update S in every updateS.itv iterations. Set this value larger than niter if one wants to skip updating subgradients.
 #'
 #' @details If futype="normal", it generate
 #' @return \describe{
@@ -42,30 +41,85 @@
 #' group <- rep(1:(p/10), each=10)
 #' Weights <- rep(1,p/10)
 #' x <- matrix(rnorm(n*p), n)
-#' DirectSampler(X = x, coeff = rep(0,p), sig2=1, lbd=.5, weights=Weights,
+#' DirectSampler(X = x, pointEstimate = rep(0,p), sig2=1, lbd=.5, weights=Weights,
 #' group=group,N=niter, parallel=FALSE)
-#' DirectSampler(X = x, coeff = rep(0,p), sig2=1, lbd=.5, weights=Weights,
+#' DirectSampler(X = x, pointEstimate = rep(0,p), sig2=1, lbd=.5, weights=Weights,
 #' group=group,N=niter, parallel=TRUE)
 #' @export
-MHLS <-  function (X , ...) UseMethod("MHLS")
-
-
-MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
-  burnin = 0, A = which(B0 != 0), B0, S0, tau = rep(1, length(A)), FlipSA = A,
-  skipS = FALSE, SFindex, randomSFindex = TRUE, randombreak = 500,
-  verbose = FALSE, updateS.itv = 1,...)
+MHLS <- function (X, pointEstimate, sig2, lbd, group = 1:ncol(X),
+                  weights = rep(1, ncol(X)), B0, S0, A = which(B0!=0), tau = rep(1, length(A)),
+                  niter=2000, burnin=0, type = "coeff", ...)
 {
+  #------------------
+  # Error handling
+  #------------------
+  if (type == "coeff" && length(pointEstimate) != p) {
+    stop("pointEstimate must have a same length with the col-number of X, if type = \"coeff\"")
+  }
+  if (type == "mu" && length(pointEstimate) != n) {
+    stop("pointEstimate must have a same length with the row-number of X, if type = \"mu\"")
+  }
+  if (!type %in% c("coeff", "mu")) {
+    stop("Invalide type input.")
+  }
+  if (length(group) != p) {
+    stop("group must have a same length with the number of X columns")
+  }
+  if (length(weights) != length(unique(group))) {
+    stop("weights has to have a same length as the number of groups")
+  }
+  if (any(weights < 0)) {
+    stop("weights should be non-negative.")
+  }
+  if (any(!1:max(group) %in% group)) {
+    stop("group index has to be a consecutive integer starting from 1.")
+  }
+  if (any(missing(pointEstimate), missing(sig2), missing(lbd))) {
+    stop("provide all the parameters for the distribution")
+  }
   if (burnin >= niter) {
     stop("burnin has to be greater than niter")
   }
+  if (niter <= 1) {
+    stop("niter should be a integer greater than 1.")
+  }
+
+
+  if (all(group == 1:ncol(X))) {
+    est <- MHLSswp(X,pointEstimate,sig2,lbd,weights,B0,S0,A,tau,niter,burnin,type,
+                    ...)
+  } else {
+    est <- fixedA.MCMC(X,pointEstimate,sig2,weights,lbd,group,niter=2000,A,B0,S0,tau,verbose=FALSE)
+    #Need to be updated!!!!!!!!!!!!!
+  }
+  est$niteration <- niter
+  est$burnin <- burnin
+  est$pluginbeta <- pointEstimate
+  est$type <- type
+  class(est) <- "MHLS"
+  return(est)
+}
+
+
+#MHLS <-  function (X , ...) UseMethod("MHLS")
+
+MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
+  B0, S0, A = which(B0 != 0), tau = rep(1, length(A)), niter = 2000,
+  burnin = 0, type = "coeff", FlipSA = A, SFindex,
+  randomSFindex = TRUE, updateSFindex = round(niter/20), updateS.itv = 1,
+  verbose = FALSE, ...)
+{
   X <- as.matrix(X)
   n <- nrow(X)
   p <- ncol(X)
-  NN <- floor((1:10) * niter / 10)
+
+  NN <- floor((1:10) * niter / 10) # verbose index
+
   A <- unique(A) # active set
   Ac <- setdiff(1:p,A) # inactive set
   nA <- length(A) # size of the active set
   nI <- length(Ac) # size of the inactive set
+  C <- crossprod(X) / n #Gram matrix
 
   if (!all(which(B0 != 0) %in% A)) {
     stop("The active set, A, has to include every index of nonzero B0.")
@@ -79,8 +133,14 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
     stop("Invalid S0. Leave S0 blank, if S0 is unknown.")
   }
 
-  if (any(c(length(coeff),length(weights)) != p)) {
-    stop("coeff/weights must have a same length with the number of X columns.")
+  if (type == "coeff") {
+    if (any(c(length(pointEstimate),length(weights)) != p)) {
+      stop("pointEstimate/weights must have a same length with the number of X columns.")
+    }
+  } else {
+    if (any(c(length(pointEstimate),length(weights)) != p)) {
+      stop("pointEstimate/weights must have a same length with the number of X columns.")
+    }
   }
 
   if (length(tau) != length(A)) {
@@ -91,11 +151,10 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
     #precalculation
     #for(j in 1:p){X[,j]=X[,j]-mean(X[,j])}
     #If X to be centered, we need to recompute B0 and S0 using centered X.
-    C <- t(X) %*% X / n #Gram matrix
     Cinv <- solve(C) #Inverse Gram matrix
     logdiagC <- log(diag(C))
     Vinv <- n / (2 * sig2) * Cinv # non exponential part of pdf of U
-    CB <- C %*% coeff    # coeff : True beta
+    CB <- C %*% pointEstimate    # pointEstimate : True beta
     lbdwgt <- lbd * weights
     loglbd <- log(lbdwgt)
 
@@ -103,8 +162,6 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
     B <- matrix(0, niter, p) #Store Coefficient
     S <- matrix(0, niter, p) #Store Sub-grad
     B[1,] <- B0 #B0 initial value of beta
-
-    #A=(1:p)[B0!=0]
 
     if (missing(S0)) {
       S[1, A] <- sign(B[1, A])
@@ -117,35 +174,78 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
     ldetDRatio <- 0
     if (nA >= 1) {negCAAinv <- -solve(C[A, A])} else {negCAAinv <- NULL}
 
-    naccept <- numeric(3)
-    nprop <- (niter - burnin) * c(nA, nI)
+    nAccept <- numeric(2)
+    nProp <- (niter - burnin) * c(nA, nI)
+
+    if (length(setdiff(FlipSA, A))!=0)
+      stop("FlipSA has to be a subset of active set, A.")
+    A2 <- setdiff(A,FlipSA)
+    if (any(B0[A2]==0))
+      stop("To fix the sign of beta_j, use non-zero B0_j.")
+
+    if (length(A2) != 0) {
+      LUbounds <- matrix(0, p, 2);
+      LUbounds[B0 < 0, 1] <- -Inf;
+      LUbounds[B0 > 0, 2] <- Inf;
+    }
+
 
     for(t in 2:niter)
     {
       if(nA >= 1){
-        for(j in A)
-        {
-          b_prop <- rnorm(1, mean = B[t - 1, j], sd = tau[which(A == j)])
-          s_prop <- sign(b_prop)
-          DiffU <- (b_prop - B[t - 1, j]) * C[, j]
-          DiffU[j] <- DiffU[j] + lbdwgt[j] * (s_prop - S[t - 1, j])
-          Uprop <- Ucur + DiffU
-          logMH <- -t(Ucur + Uprop) %*% Vinv %*% DiffU
-          u <- runif(1)
-          if(log(u) < logMH)
-          {
-            B[t, j] <- b_prop
-            S[t, j] <- s_prop
-            Ucur <- Uprop
-            if (t > burnin) {naccept[2] <- naccept[2] + 1}
-            #naccept[2]=naccept[2]+1
-          }else{
-            B[t, j] <- B[t - 1, j]
-            S[t, j] <- S[t - 1, j]
+        if (length(FlipSA)!=0) {
+          for (j in FlipSA) {
+            b_prop <- rnorm(1, mean = B[t - 1, j], sd = tau[which(A == j)])
+            s_prop <- sign(b_prop)
+            DiffU <- (b_prop - B[t - 1, j]) * C[, j]
+            DiffU[j] <- DiffU[j] + lbdwgt[j] * (s_prop - S[t - 1, j])
+            Uprop <- Ucur + DiffU
+            logMH <- -t(Ucur + Uprop) %*% Vinv %*% DiffU
+            u <- runif(1)
+            if(log(u) < logMH)
+            {
+              B[t, j] <- b_prop
+              S[t, j] <- s_prop
+              Ucur <- Uprop
+              if (t > burnin) {nAccept[1] <- nAccept[1] + 1}
+              #nAccept[2]=nAccept[2]+1
+            }else{
+              B[t, j] <- B[t - 1, j]
+              S[t, j] <- S[t - 1, j]
+            }
           }
         }
+
+        if (length(A2)!=0) {
+          for (j in A2) {
+            b_prop <- rtnorm(1, mean = B[t - 1, j], sd = tau[which(A == j)],
+                             lower = LUbounds[j, 1],
+                             upper = LUbounds[j, 2])
+            Ccur <- pnorm(0,mean=B[t-1, j],sd=tau[which(A == j)],lower.tail=(B[t-1,j]<0),log.p=FALSE);
+            Cnew <- pnorm(0,mean=b_prop,sd=tau[which(A == j)],lower.tail=(b_prop<0),log.p=FALSE);
+            lqratio=log(Ccur/Cnew);
+
+
+            DiffU <- (b_prop - B[t - 1, j]) * C[, j]
+            Uprop <- Ucur + DiffU
+            logMH <- -t(Ucur + Uprop) %*% Vinv %*% DiffU + lqratio
+            u <- runif(1)
+            if(log(u) < logMH)
+            {
+              B[t, j] <- b_prop
+              S[t, j] <- s_prop
+              Ucur <- Uprop
+              if (t > burnin) {nAccept[1] <- nAccept[1] + 1}
+              #nAccept[2]=nAccept[2]+1
+            }else{
+              B[t, j] <- B[t - 1, j]
+              S[t, j] <- S[t - 1, j]
+            }
+          }
+        }
+
       }
-      if(nI >= 1){
+      if(nI >= 1 && (t %% updateS.itv == 0)){
         for(j in Ac)
         {
           s_prop <- runif(1, -1, 1)
@@ -158,27 +258,25 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
           {
             S[t,j] <- s_prop
             Ucur <- Uprop
-            if (t > burnin) {naccept[3] <- naccept[3] + 1}
-            #naccept[3]=naccept[3]+1
-          }else{
+            if (t > burnin) {nAccept[2] <- nAccept[2] + 1}
+            #nAccept[3]=nAccept[3]+1
+          } else {
             S[t, j] <- S[t - 1, j]
           }
         }
+      } else {
+        S[t, Ac] <- S[t - 1, Ac]
       }
       if (sum(t == NN)==1) {
         aa <- which(NN==t)
         cat(paste("Updating : ", aa * 10,"%" ,sep = ""), "\n")
       }
     }
-    #naccept=naccept/c((niter-1)*selectsize,nprop)
-    #naccept=naccept/nprop
-    #return(list(beta=B,subgrad=S,acceptrate=naccept))
-    if (burnin == 0) {
-      return(list(beta = B, subgrad = S, acceptHistory = rbind(naccept, nprop)))
-    } else {
-      return(list(beta = B[-c(1:burnin), ], subgrad = S[-c(1:burnin), ],
-                  acceptHistory = rbind(naccept, nprop)))
-    }
+    #nAccept=nAccept/c((niter-1)*selectsize,nProp)
+    #nAccept=nAccept/nProp
+    return(list(beta = B[if (burnin != 0){-c(1:burnin)}, ],
+                subgrad = S[if(burnin != 0){-c(1:burnin)}, ],
+                  acceptHistory = rbind(nAccept, nProp)))
   }
   if (n<p) {
     #precalculation---------------------------
@@ -195,7 +293,7 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
     W <- diag(weights)
     LBD <- diag(egC$values[R])
     lbdVRW <- lbd * t(VR) %*% W
-    VRCB <- t(VR) %*% C %*% coeff
+    VRCB <- t(VR) %*% C %*% pointEstimate
 
     # if (is.missing(B0)) {
     #   if (signBA == NULL)
@@ -272,8 +370,8 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
 
     #record acceptance rates
     nAccept <- numeric(2)
-    #nMove=numeric(2)
-    nMove <- c(nA*(niter-max(1,burnin)),(n-nA)*(niter-max(1,burnin)))
+    #nProp=numeric(2)
+    nProp <- c(nA*(niter-max(1,burnin)),(n-nA)*(niter-max(1,burnin)))
     #Change sign count
     nSignChange <- numeric(3)
     for(t in 2:niter )
@@ -291,7 +389,7 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
           Rcur <- MoveBA$Rvec
           logfRcur <- MoveBA$logf
           nAccept[1] <- nAccept[1]+MoveBA$nAccept
-          #nMove[1]=nMove[1]+nA
+          #nProp[1]=nProp[1]+nA
         }
 
         if (length(A2)!=0) {
@@ -305,7 +403,7 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
       }else{ B[t,] <- B[t-1,]; S[t,] <- S[t-1,]}
 
       # P2: update S_I
-      if(nA<n & !skipS & t%%updateS.itv==0)
+      if(nA<n && (t %% updateS.itv == 0))
       {
         MoveSI <- UpdateSI(S[t,],A,Ac,Rcur,n,p,logfRcur,lbdVRW,InvVarR,
                         tVAN.WA,invB_D,BDF,B_F,SFindex,...)
@@ -313,10 +411,10 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
         Rcur <- MoveSI$Rvec
         logfRcur <- MoveSI$logf
         nAccept[2] <- nAccept[2]+MoveSI$nAccept
-        #nMove[2]=nMove[2]+(n-nA)
+        #nProp[2]=nProp[2]+(n-nA)
       }#else{S[t,]=S[t-1,];S[t,A]=sign(B[t,A])}
 
-      if (!is.null(SFindex) && randomSFindex && (t%%randombreak==0) ) {
+      if (!is.null(SFindex) && randomSFindex && (t%%updateSFindex==0) ) {
         SFindex <- sort(sample(1:(p-nA),n-nA))
         if (verbose) {cat("New SFindex : [",paste(SFindex,collapse=", "),"]\n")}
         B_F <- BB[,SFindex,drop=FALSE]
@@ -330,12 +428,15 @@ MHLSswp=function(X, coeff, sig2, weights = rep(1, ncol(X)), lbd, niter = 2000,
         cat(paste("Updating : ", aa*10  ,"%",sep=""),"\n")
       }
     }
-    if (burnin == 0) {return(list(beta=B,subgrad=S, pluginbeta=coeff, acceptHistory=rbind(nAccept,nMove),signchange=nSignChange))} else {
-      return(list(beta=B[-c(1:burnin),],subgrad=S[-c(1:burnin),], pluginbeta=coeff,acceptHistory=rbind(nAccept,nMove),signchange=nSignChange)) }
-  }
+  return(list(beta = B[if (burnin != 0){-c(1:burnin)}, ],
+              subgrad = S[if (burnin != 0){-c(1:burnin)}, ],
+              pluginbeta = pointEstimate,
+              acceptHistory = rbind(nAccept, nProp),
+              signchange=nSignChange)) }
+
 }
 
-fixedA.MCMC <- function(X,coeff,sig2,weights=rep(1,max(group)),lbd,group,niter=2000,A,B0,S0,tau,verbose=FALSE) {
+fixedA.MCMC <- function(X,pointEstimate,sig2,weights=rep(1,max(group)),lbd,group,niter=2000,A,B0,S0,tau,verbose=FALSE) {
   K <- 10
   W <- rep(weights,table(group))
   Psi <- 1/n * crossprod(X)
@@ -353,12 +454,12 @@ fixedA.MCMC <- function(X,coeff,sig2,weights=rep(1,max(group)),lbd,group,niter=2
 
   if (n >= p) {
     for (i in 2:niter) {
-      r.new <- ld.Update.r(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,tau)
+      r.new <- ld.Update.r(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,tau)
       r.seq[i,] <- rcur <- r.new$r
       Hcur <- r.new$Hcur
       nAccept[1] <- nAccept[1] + r.new$nrUpdate
 
-      S.new <- ld.Update.S (rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,p)
+      S.new <- ld.Update.S (rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,p)
       S.seq[i,] <- Scur <- S.new$S
       Hcur <- S.new$Hcur
       nAccept[2] <- nAccept[2] + S.new$nSUpdate
@@ -370,12 +471,12 @@ fixedA.MCMC <- function(X,coeff,sig2,weights=rep(1,max(group)),lbd,group,niter=2
     }
   } else {
     for (i in 2:niter) {
-      r.new <- hd.Update.r(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,1)
+      r.new <- hd.Update.r(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,1)
       r.seq[i,] <- rcur <- r.new$r
       Hcur <- r.new$Hcur
       nAccept[1] <- nAccept[1] + r.new$nrUpdate
 
-      S.new <- hd.Update.S (rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,p)
+      S.new <- hd.Update.S (rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,p)
       S.seq[i,] <- Scur <- S.new$S
       Hcur <- S.new$Hcur
       nAccept[2] <- nAccept[2] + S.new$nSUpdate
@@ -389,117 +490,3 @@ fixedA.MCMC <- function(X,coeff,sig2,weights=rep(1,max(group)),lbd,group,niter=2
   return(list(group.l2.norm = r.seq, subgradient = S.seq, nAccept = nAccept))
 }
 
-
-
-MHLS.default <- function (X,coeff,sig2,group=1:ncol(X),weights=rep(1,ncol(X)), lbd, niter=2000, burnin=0, A=which(B0!=0),
-                          B0, S0, tau=rep(1,length(A)),
-                          FlipSA=A, skipS=FALSE, SFindex, randomSFindex=TRUE, randombreak=500, verbose=FALSE, ...)
- {
-  if (all(group == 1:ncol(X))) {
-    est <- MHLSswp(X,coeff,sig2,weights,lbd,niter,burnin,A,B0,S0,tau,
-                FlipSA,skipS, SFindex,randomSFindex, randombreak, verbose, ...)
-  } else {
-    est <- MixedA.MCMC(X,coeff,sig2,weights,lbd,group,niter=2000,A,B0,S0,tau,verbose=FALSE)
-      #Need to be updated!!!!!!!!!!!!!
-  }
-  est$niteration = niter
-  est$burnin <- burnin
-  est$pluginbeta <- coeff
-
-  class(est) <- "MHLS"
-  est
-}
-
-print.MHLS <- function (x) {
-  cat ("===========================\n")
-  cat ("Number of iteration: ", x$niteration,"\n\n")
-  cat ("Burn-in period: ", x$burnin,"\n\n")
-  cat ("Plug-in beta: \n")
-  print(x$pluginbeta)
-
-  cat ("\nLast 10 steps of beta's:\n")
-  if (x$niteration-x$burnin <= 9) {
-    print(x$beta)
-  } else {
-    print(x$beta[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
-  }
-
-  cat ("\nlast 10 steps of subgradients:\n")
-  if (x$niteration-x$burnin <= 9) {
-    print(x$subgrad)
-  } else {
-    print(x$subgrad[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
-  }
-
-  cat ("\nAcceptance rate:\n")
-  cat("-----------------------------\n")
-  cat("\t \t \t beta \t subgrad\n")
-  cat("# Accepted\t : \t", paste(x$acceptHistory[1,],"\t"),"\n")
-  cat("# Moved\t\t : \t", paste(x$acceptHistory[2,],"\t"),"\n")
-  cat("Acceptance rate\t : \t", paste(round(x$acceptHistory[1,]/x$acceptHistory[2,],3),"\t"),"\n")
-  # cat ("\nSignChange rate:\n")
-  # cat("-----------------------------\n")
-  # cat("# Accepted\t : \t", paste(x$signchange[1],"\t"),"\n")
-  # cat("# Moved\t\t : \t", paste(x$signchange[2],"\t"),"\n")
-  # cat("# Cdt Accept \t : \t", paste(x$signchange[3],"\t"),"\n")
-  # cat("Acceptance rate\t : \t", paste(round(x$signchange[1]/x$signchange[2],3),"\t"),"\n")
-}
-
-SummBeta <- function ( x ) {
-  c( mean=mean(x) , median = median(x) , s.d = sd(x) , quantile(x,c(.025,.975)) )
-}
-
-SummSign <- function ( x ) {
-  n=length(x)
-  return ( c(Positive.proportion=sum(x>0)/n , Zero.proportion=sum(x==0)/n, Negative.proportion=sum(x<0)/n  ) )
-}
-
-summary.MHLS <- function ( object ) {
-  betasummary <- t(apply(object$beta,2,SummBeta))
-  signsummary <- t(apply(object$beta,2,SummSign))
-  result <- list(beta.summary=betasummary,sign.summary=signsummary,acceptance.rate=as.data.frame(round(object$acceptrate,3)))
-  class(result) <- "summary.MHLS"
-  return(result)
-}
-
-plot.MHLS <- function ( object, A=NULL, skipS=FALSE, ... ) {
-  #	n=nrow(object$beta)
-  p <- ncol(object$beta)
-  niter <- object$niteration
-  burnin <- object$burnin
-
-  if (!skipS) {par(mfrow <- c(2,3))} else {par(mfrow <- c(1,3))}
-
-  if (is.null(A)) { A <- 1:p }
-
-  if (!skipS)	{
-    for ( i in A) {
-      hist(object$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
-      #ts.plot(object$beta[,i],xlab="Iterations",ylab="Samples")
-      plot((burnin+1):niter,object$beta[,i],xlab="Iterations",ylab="Samples",type="l")
-      if ( sum(abs(diff(object$beta[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
-        text(1,0,"Auto correlation plot \n not available",cex=1)} else {
-          acf(object$beta[,i],xlab="Lag",main="")
-        }
-      hist(object$subgrad[,i],breaks=seq(-1-1/10,1,by=1/10)+1/20,prob=T,xlim=c(-1-1/20,1+1/20),xlab=paste("Subgradient_",i,sep=""),ylab="Density",main="")
-      #ts.plot(object$subgrad[,i],xlab=Iterations,ylab="Samples")
-      plot((burnin+1):niter,object$subgrad[,i],xlab="Iterations",ylab="Samples",type="l")
-      if ( sum(abs(diff(object$subgrad[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
-        text(1,0,"Auto correlation plot \n not available",cex=1)} else {
-          acf(object$subgrad[,i],xlab="Lag",main="")
-        }
-      readline("Hit <Return> to see the next plot: ")
-    }
-  } else {
-    for ( i in A) {
-      hist(object$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
-      #ts.plot(object$beta[,i],xlab="Iterations",ylab="Samples")
-      plot((burnin+1):niter,object$beta[,i],xlab="Iterations",ylab="Samples",type="l")
-      if ( sum(abs(diff(object$beta[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
-        text(1,0,"Auto correlation plot \n not available",cex=1)} else {
-          acf(object$beta[,i],xlab="Lag",main="")
-        }
-      readline("Hit <Return> to see the next plot: ")
-    }
-  }
-}

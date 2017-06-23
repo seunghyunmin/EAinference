@@ -47,25 +47,22 @@ Weights <- rep(1, p/10)
 x <- matrix(rnorm(n*p), n)
 
 # Target distribution parameter
-pETarget <- rep(0,p)
+pETarget <- rep(0, p)
 sig2Target <- .5
 lbdTarget <- .37
-
-# Proposal distribution parameter
-pEProp1 <- rep(0,p) ;pEProp2 <- rep(1,p)
-sig2Prop1 <- .5; sig2Prop2 <- 1
-lbdProp1 <- .37; lbdProp2 <- .5
 
 #
 # Using non-mixture distribution
 # ------------------------------
-# Target distribution parameters (coeff, sig2, lbd) = (rep(0,p), .5, .37)
-# Proposal distribution parameters (coeff, sig2, lbd) = (rep(1,p), 1, .5)
-#
-DS <- DirectSampler(X = x, pointEstimate_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
- weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = FALSE)
+## Proposal distribution parameter
+pEProp1 <- rep(1, p)
+sig2Prop1 <- .5
+lbdProp1 <- 1
+DS <- DirectSampler(X = x, pointEstimate_1 = pEProp1, sig2_1 = sig2Prop1,
+ lbd_1 = lbdProp1, weights = Weights, group = Group, niter = Niter,
+ type = "coeff", parallel = FALSE)
 
-hdIS(DS, pETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+hdIS(DS, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
  log = TRUE)
 
 #
@@ -76,17 +73,14 @@ hdIS(DS, pETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
 #  (coeff, sig2, lbd) = (rep(0,p), .5, .37) & (rep(1,p), 1, .5)
 #
 #
-pEProp1 <- rep(0,p)
-pEProp2 <- rep(1,p)
-sig2Prop1 <- .5
-sig2Prop2 <- 1
-lbdProp1 <- .37
-lbdProp2 <- .5
+pEProp1 <- rep(0,p); pEProp2 <- rep(1,p)
+sig2Prop1 <- .5; sig2Prop2 <- 1
+lbdProp1 <- .37; lbdProp2 <- .5
 
 DSMixture <- DirectSampler(X = x, pointEstimate_1 = pEProp1,
  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pEProp2,
  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
  niter = Niter, type = "coeff", parallel = TRUE)
-hdIS(DSMixturem, pETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+hdIS(DSMixturem, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
  log = TRUE)
 }

@@ -5,7 +5,7 @@
 \title{Bootstrapping lasso / group lasso estimator}
 \usage{
 DirectSampler(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, sig2_2, lbd_2,
-  lbd, weights = rep(1, max(group)), group = 1:ncol(X), niter = 2000,
+  weights = rep(1, max(group)), group = 1:ncol(X), niter = 2000,
   type = "coeff", method = "normal", Y, parallel = FALSE, ncores = 2L,
   verbose = FALSE)
 }
@@ -45,6 +45,8 @@ parallel=FALSE.}
 \item{beta}{(group) lasso estimator.}
 
 \item{subgrad}{subgradient.}
+
+\item{X, pointEstimate, sig2, weights, group, method, type, mixture}{Model parameters}
 }
 \description{
 Draw bootstrap samples in parametric or nonparametric way and

@@ -354,37 +354,37 @@ TsA.qr <- function(Q, s, group, A, n, p) { # T(s,A)
   return(Result)
 }
 
-TsA.null <- function(t.XWinv, s, group, A, n, p) { # T(s,A)
-  # even if length(A) == 0, everything will work just fine !!
-  # when length(A) == n, we only compute F2 function.
-  # Updated for Low-dim case
-  if (missing(t.XWinv) && n < p) {
-    stop("When n < p, t.XWinv is needed")
-  }
-
-  nA <- length(A)
-  if (n < p) { # High-dim
-    if (nA !=0) {
-      Subgradient.group.matix <- matrix(0, nA, p)
-      for (i in 1:nA) {
-        Subgradient.group.matix[i, which(group == A[i])] <- s[group == A[i]]
-      }
-      t.XWinv %*% Null(t(Subgradient.group.matix %*% t.XWinv))
-    } else {
-      t.XWinv
-    }
-  } else { # Low-dim
-    if (nA !=0) {
-      Subgradient.group.matix <- matrix(0, nA, p)
-      for (i in 1:nA) {
-        Subgradient.group.matix[i, which(group == A[i])] <- s[group == A[i]]
-      }
-      Null(t(Subgradient.group.matix))
-    } else {
-      diag(p)   # if |A| = 0, T should be pXp identity matrix.
-    }
-  }
-}
+# TsA.null <- function(t.XWinv, s, group, A, n, p) { # T(s,A)
+#   # even if length(A) == 0, everything will work just fine !!
+#   # when length(A) == n, we only compute F2 function.
+#   # Updated for Low-dim case
+#   if (missing(t.XWinv) && n < p) {
+#     stop("When n < p, t.XWinv is needed")
+#   }
+#
+#   nA <- length(A)
+#   if (n < p) { # High-dim
+#     if (nA !=0) {
+#       Subgradient.group.matix <- matrix(0, nA, p)
+#       for (i in 1:nA) {
+#         Subgradient.group.matix[i, which(group == A[i])] <- s[group == A[i]]
+#       }
+#       t.XWinv %*% Null(t(Subgradient.group.matix %*% t.XWinv))
+#     } else {
+#       t.XWinv
+#     }
+#   } else { # Low-dim
+#     if (nA !=0) {
+#       Subgradient.group.matix <- matrix(0, nA, p)
+#       for (i in 1:nA) {
+#         Subgradient.group.matix[i, which(group == A[i])] <- s[group == A[i]]
+#       }
+#       Null(t(Subgradient.group.matix))
+#     } else {
+#       diag(p)   # if |A| = 0, T should be pXp identity matrix.
+#     }
+#   }
+# }
 
 F1 <- function(r, Psi, group) { # r \circ \psi , eq(3.6)
   Result <- Psi
@@ -492,8 +492,8 @@ rUnitBall.inner <- function(p) {
   y <- rexp(1)
   x / sqrt(y+crossprod(x))
 }
-hd.Update.r <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,tau) {}
-hd.Update.S <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,p) {}
+# hd.Update.r <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,tau) {}
+# hd.Update.S <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,p) {}
 #=========================================
 Test.stats <- function(beta, group) {
   Group.norm <- group.norm2(beta,group)
@@ -510,3 +510,102 @@ Test.stats.A <- function(beta, group, A) {
   names(Result) <- c("sum.group.norm","max.group.norm",paste("group.norm",A,sep=""))
   return(Result)
 }
+
+#====================================
+# For MHLS class
+#====================================
+print.MHLS <- function (x) {
+  cat ("===========================\n")
+  cat ("Number of iteration: ", x$niteration,"\n\n")
+  cat ("Burn-in period: ", x$burnin,"\n\n")
+  cat ("Plug-in beta: \n")
+  print(x$pluginbeta)
+
+  cat ("\nLast 10 steps of beta's:\n")
+  if (x$niteration-x$burnin <= 9) {
+    print(x$beta)
+  } else {
+    print(x$beta[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
+  }
+
+  cat ("\nlast 10 steps of subgradients:\n")
+  if (x$niteration-x$burnin <= 9) {
+    print(x$subgrad)
+  } else {
+    print(x$subgrad[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
+  }
+
+  cat ("\nAcceptance rate:\n")
+  cat("-----------------------------\n")
+  cat("\t \t \t beta \t subgrad\n")
+  cat("# Accepted\t : \t", paste(x$acceptHistory[1,],"\t"),"\n")
+  cat("# Moved\t\t : \t", paste(x$acceptHistory[2,],"\t"),"\n")
+  cat("Acceptance rate\t : \t", paste(round(x$acceptHistory[1,]/x$acceptHistory[2,],3),"\t"),"\n")
+  # cat ("\nSignChange rate:\n")
+  # cat("-----------------------------\n")
+  # cat("# Accepted\t : \t", paste(x$signchange[1],"\t"),"\n")
+  # cat("# Moved\t\t : \t", paste(x$signchange[2],"\t"),"\n")
+  # cat("# Cdt Accept \t : \t", paste(x$signchange[3],"\t"),"\n")
+  # cat("Acceptance rate\t : \t", paste(round(x$signchange[1]/x$signchange[2],3),"\t"),"\n")
+}
+
+SummBeta <- function ( x ) {
+  c( mean=mean(x) , median = median(x) , s.d = sd(x) , quantile(x,c(.025,.975)) )
+}
+
+SummSign <- function ( x ) {
+  n=length(x)
+  return ( c(Positive.proportion=sum(x>0)/n , Zero.proportion=sum(x==0)/n, Negative.proportion=sum(x<0)/n  ) )
+}
+
+summary.MHLS <- function ( object ) {
+  betasummary <- t(apply(object$beta,2,SummBeta))
+  signsummary <- t(apply(object$beta,2,SummSign))
+  result <- list(beta.summary=betasummary,sign.summary=signsummary,acceptance.rate=as.data.frame(round(object$acceptrate,3)))
+  class(result) <- "summary.MHLS"
+  return(result)
+}
+
+plot.MHLS <- function ( object, A=NULL, skipS=FALSE, ... ) {
+  #	n=nrow(object$beta)
+  p <- ncol(object$beta)
+  niter <- object$niteration
+  burnin <- object$burnin
+
+  if (!skipS) {par(mfrow <- c(2,3))} else {par(mfrow <- c(1,3))}
+
+  if (is.null(A)) { A <- 1:p }
+
+  if (!skipS)	{
+    for ( i in A) {
+      hist(object$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
+      #ts.plot(object$beta[,i],xlab="Iterations",ylab="Samples")
+      plot((burnin+1):niter,object$beta[,i],xlab="Iterations",ylab="Samples",type="l")
+      if ( sum(abs(diff(object$beta[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
+        text(1,0,"Auto correlation plot \n not available",cex=1)} else {
+          acf(object$beta[,i],xlab="Lag",main="")
+        }
+      hist(object$subgrad[,i],breaks=seq(-1-1/10,1,by=1/10)+1/20,prob=T,xlim=c(-1-1/20,1+1/20),xlab=paste("Subgradient_",i,sep=""),ylab="Density",main="")
+      #ts.plot(object$subgrad[,i],xlab=Iterations,ylab="Samples")
+      plot((burnin+1):niter,object$subgrad[,i],xlab="Iterations",ylab="Samples",type="l")
+      if ( sum(abs(diff(object$subgrad[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
+        text(1,0,"Auto correlation plot \n not available",cex=1)} else {
+          acf(object$subgrad[,i],xlab="Lag",main="")
+        }
+      readline("Hit <Return> to see the next plot: ")
+    }
+  } else {
+    for ( i in A) {
+      hist(object$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
+      #ts.plot(object$beta[,i],xlab="Iterations",ylab="Samples")
+      plot((burnin+1):niter,object$beta[,i],xlab="Iterations",ylab="Samples",type="l")
+      if ( sum(abs(diff(object$beta[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
+        text(1,0,"Auto correlation plot \n not available",cex=1)} else {
+          acf(object$beta[,i],xlab="Lag",main="")
+        }
+      readline("Hit <Return> to see the next plot: ")
+    }
+  }
+}
+
+
