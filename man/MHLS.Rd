@@ -4,9 +4,7 @@
 \alias{MHLS}
 \title{Metropolis-Hastings sampler using estimator augmentation in lasso estimator.}
 \usage{
-MHLS(X, pointEstimate, sig2, lbd, group = 1:ncol(X), weights = rep(1,
-  ncol(X)), B0, S0, A = which(B0 != 0), tau = rep(1, length(A)),
-  niter = 2000, burnin = 0, type = "coeff", ...)
+MHLS(X, ...)
 }
 \arguments{
 \item{X}{n x p matrix of predictors.}
@@ -15,12 +13,16 @@ MHLS(X, pointEstimate, sig2, lbd, group = 1:ncol(X), weights = rep(1,
 
 \item{sig2}{variance of error term.}
 
+\item{weights}{Weight term for each coefficient. Default is rep(1, p).}
+
 \item{lbd}{penalty term of lasso. See the loss function given at details.}
 
 \item{group}{p x 1 vector of consecutive integers.
 The number of groups should be same as max(group).}
 
-\item{weights}{Weight term for each coefficient. Default is rep(1, p).}
+\item{niter}{The number of iterations. Default value is 2000.}
+
+\item{burnin}{The length of burin-in periods. Default value is 0.}
 
 \item{B0}{Initial value of coefficients of length p.
 Make sure to set values to zero for inactive set and non-zero for active set.}
@@ -30,10 +32,6 @@ for subgradients. If not given, it will be generated in defauly way}
 
 \item{tau}{p x 1 vector. Variance parameter for proposal
 distribution of coefficients.}
-
-\item{niter}{The number of iterations. Default value is 2000.}
-
-\item{burnin}{The length of burin-in periods. Default value is 0.}
 
 \item{indexweights}{p x 1 vector. Weights for updating active/inactive Index.}
 

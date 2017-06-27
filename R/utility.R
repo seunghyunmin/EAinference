@@ -512,7 +512,7 @@ Test.stats.A <- function(beta, group, A) {
 }
 
 #====================================
-# For MHLS class
+# MHLS class
 #====================================
 print.MHLS <- function (x) {
   cat ("===========================\n")

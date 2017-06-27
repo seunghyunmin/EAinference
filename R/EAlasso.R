@@ -34,19 +34,48 @@
 #'   \item{subgrad}{subgradient matrix of size N x p.}
 #'  }
 #' @examples
+#' # Low dim
+#' set.seed(123)
 #' n <- 10
-#' p <- 30
-#' lbd <- .5
-#' niter <-  10
-#' group <- rep(1:(p/10), each=10)
-#' Weights <- rep(1,p/10)
-#' x <- matrix(rnorm(n*p), n)
-#' DirectSampler(X = x, pointEstimate = rep(0,p), sig2=1, lbd=.5, weights=Weights,
-#' group=group,N=niter, parallel=FALSE)
-#' DirectSampler(X = x, pointEstimate = rep(0,p), sig2=1, lbd=.5, weights=Weights,
-#' group=group,N=niter, parallel=TRUE)
+#' p <- 5
+#' X <- matrix(rnorm(n*p),n)
+#' Y <- X %*% rep(1,p) + rnorm(n)
+#' sigma2 <- 1
+#' lbd <- .37
+#' weights <- rep(1,p)
+#' LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd,weights = weights)
+#' B0 <- LassoResult$B0
+#' S0 <- LassoResult$S0
+#' MHLS(X = X, pointEstimate = rep(0,p), sig2 = 1, lbd = 1, group = 1:p, weights = weights,
+#'      B0 = B0, S0 = c(S0), niter=50,
+#'      burnin = 0,type="coeff")
+#' MHLS(X = X, pointEstimate = rep(0,n), sig2 = 1, lbd = 1, group = 1:p, weights = weights,
+#'      B0 = B0, S0 = c(S0), niter=50,
+#'      burnin = 0,type="mu")
+#'
+#' # High dim
+#' set.seed(123)
+#' n <- 5
+#' p <- 10
+#' X <- matrix(rnorm(n*p),n)
+#' Y <- X %*% rep(1,p) + rnorm(n)
+#' sigma2 <- 1
+#' lbd <- .37
+#' weights <- rep(1,p)
+#' LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd,weights = weights)
+#' B0 <- LassoResult$B0
+#' S0 <- LassoResult$S0
+#' MHLS(X = X, pointEstimate = rep(0,p), sig2 = 1, lbd = 1, group = 1:p, weights = weights,
+#'      B0 = B0, S0 = c(S0), niter=50,
+#'      burnin = 0,type="coeff")
+#' MHLS(X = X, pointEstimate = rep(0,n), sig2 = 1, lbd = 1, group = 1:p, weights = weights,
+#'      B0 = B0, S0 = c(S0), niter=50,
+#'      burnin = 0,type="mu")
 #' @export
-MHLS <- function (X, pointEstimate, sig2, lbd, group = 1:ncol(X),
+MHLS <-  function (X , ...) UseMethod("MHLS")
+
+#' @export
+MHLS.matrix <- function (X, pointEstimate, sig2, lbd, group = 1:ncol(X),
                   weights = rep(1, ncol(X)), B0, S0, A = which(B0!=0), tau = rep(1, length(A)),
                   niter=2000, burnin=0, type = "coeff", ...)
 {
@@ -84,7 +113,6 @@ MHLS <- function (X, pointEstimate, sig2, lbd, group = 1:ncol(X),
     stop("niter should be a integer greater than 1.")
   }
 
-
   if (all(group == 1:ncol(X))) {
     est <- MHLSswp(X,pointEstimate,sig2,lbd,weights,B0,S0,A,tau,niter,burnin,type,
                     ...)
@@ -99,9 +127,6 @@ MHLS <- function (X, pointEstimate, sig2, lbd, group = 1:ncol(X),
   class(est) <- "MHLS"
   return(est)
 }
-
-
-#MHLS <-  function (X , ...) UseMethod("MHLS")
 
 MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
   B0, S0, A = which(B0 != 0), tau = rep(1, length(A)), niter = 2000,
@@ -133,16 +158,6 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
     stop("Invalid S0. Leave S0 blank, if S0 is unknown.")
   }
 
-  if (type == "coeff") {
-    if (any(c(length(pointEstimate),length(weights)) != p)) {
-      stop("pointEstimate/weights must have a same length with the number of X columns.")
-    }
-  } else {
-    if (any(c(length(pointEstimate),length(weights)) != p)) {
-      stop("pointEstimate/weights must have a same length with the number of X columns.")
-    }
-  }
-
   if (length(tau) != length(A)) {
     stop("tau must have a same length with the active set, A.")
   }
@@ -154,7 +169,12 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
     Cinv <- solve(C) #Inverse Gram matrix
     logdiagC <- log(diag(C))
     Vinv <- n / (2 * sig2) * Cinv # non exponential part of pdf of U
-    CB <- C %*% pointEstimate    # pointEstimate : True beta
+    if (type == "coeff") {
+      CB <- C %*% pointEstimate    # pointEstimate : True beta
+    } else {
+      CB <- crossprod(X, pointEstimate) / n    # pointEstimate : True beta
+    }
+
     lbdwgt <- lbd * weights
     loglbd <- log(lbdwgt)
 
@@ -274,9 +294,6 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
     }
     #nAccept=nAccept/c((niter-1)*selectsize,nProp)
     #nAccept=nAccept/nProp
-    return(list(beta = B[if (burnin != 0){-c(1:burnin)}, ],
-                subgrad = S[if(burnin != 0){-c(1:burnin)}, ],
-                  acceptHistory = rbind(nAccept, nProp)))
   }
   if (n<p) {
     #precalculation---------------------------
@@ -293,7 +310,12 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
     W <- diag(weights)
     LBD <- diag(egC$values[R])
     lbdVRW <- lbd * t(VR) %*% W
-    VRCB <- t(VR) %*% C %*% pointEstimate
+    if (type == "coeff") {
+      VRCB <- t(VR) %*% C %*% pointEstimate
+    } else {
+      VRCB <- t(VR) %*% crossprod(X, pointEstimate) / n
+    }
+
 
     # if (is.missing(B0)) {
     #   if (signBA == NULL)
@@ -324,7 +346,7 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
       H <- rep(-1,2*nI)
       G <- rbind(diag(rep(1,nI)),diag(rep(-1,nI)))
       F1 <- -tVAN.WA%*%sign(B0[A])
-      S0.prop <- lsei(G=G,H=H,E=E,F=F1)
+      S0.prop <- limSolve::lsei(G=G,H=H,E=E,F=F1)
       if (S0.prop$IsError) {
         stop("There exist no solution for the given 'B0'.")
       } else {
@@ -428,12 +450,16 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
         cat(paste("Updating : ", aa*10  ,"%",sep=""),"\n")
       }
     }
-  return(list(beta = B[if (burnin != 0){-c(1:burnin)}, ],
-              subgrad = S[if (burnin != 0){-c(1:burnin)}, ],
-              pluginbeta = pointEstimate,
-              acceptHistory = rbind(nAccept, nProp),
-              signchange=nSignChange)) }
-
+  }
+  return(list(beta = B[if (burnin != 0){-c(1:burnin)} else {1:niter}, ],
+              subgrad = S[if (burnin != 0){-c(1:burnin)} else {1:niter}, ],
+              acceptHistory = rbind(nAccept, nProp)))
+  #
+  # return(list(beta = B[if (burnin != 0){-c(1:burnin)} else {1:niter}, ],
+  #             subgrad = S[if (burnin != 0){-c(1:burnin)} else {1:niter}, ],
+  #             pluginbeta = pointEstimate,
+  #             signchange=nSignChange,
+  #             acceptHistory = rbind(nAccept, nProp)))
 }
 
 fixedA.MCMC <- function(X,pointEstimate,sig2,weights=rep(1,max(group)),lbd,group,niter=2000,A,B0,S0,tau,verbose=FALSE) {
