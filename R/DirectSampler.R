@@ -5,7 +5,7 @@
 #'
 #' @param X Predictor matrix.
 #' @param pointEstimate_1,sig2_1,lbd_1 Parameter of target distribution.
-#' (coefficient estimate, estimated variance of error, lambda). Not required for
+#' (Estimate of true coefficient or E(y) depends on \code{type}, estimated variance of error, lambda). Not required for
 #' \code{method = "normal"}.
 #' @param pointEstimate_2,sig2_2,lbd_2 Additional Parameter of target distribution only
 #' if mixture distribution is used. Not required for \code{method = "normal"}.
@@ -15,6 +15,7 @@
 #' The number of groups should be same as max(group). Default is \code{group = 1:p}
 #' , where \code{p} is number of covariates.
 #' @param niter The number of iterations.
+#' @param type either to be "coeff" or "mu". Decide what kind of \code{pointEstimate} to use.
 #' @param method Bootstrap method, one of \code{"normal"} or \code{"nonparametric"}.
 #' If \code{"normal"}, resample errors from normal distiribution. If \code{"nonparametric"},
 #' resample errors from residuals.

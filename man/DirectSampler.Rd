@@ -13,7 +13,7 @@ DirectSampler(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, sig2_2, lbd_2,
 \item{X}{Predictor matrix.}
 
 \item{pointEstimate_1, sig2_1, lbd_1}{Parameter of target distribution.
-(coefficient estimate, estimated variance of error, lambda). Not required for
+(Estimate of true coefficient or E(y) depends on \code{type}, estimated variance of error, lambda). Not required for
 \code{method = "normal"}.}
 
 \item{pointEstimate_2, sig2_2, lbd_2}{Additional Parameter of target distribution only
@@ -27,6 +27,8 @@ The number of groups should be same as max(group). Default is \code{group = 1:p}
 , where \code{p} is number of covariates.}
 
 \item{niter}{The number of iterations.}
+
+\item{type}{either to be "coeff" or "mu". Decide what kind of \code{pointEstimate} to use.}
 
 \item{method}{Bootstrap method, one of \code{"normal"} or \code{"nonparametric"}.
 If \code{"normal"}, resample errors from normal distiribution. If \code{"nonparametric"},

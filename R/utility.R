@@ -402,15 +402,15 @@ F2 <- function(s, Psi, group) { # \psi \circ \eta , eq(3.7)
   return(Result)
 }
 
-log.Jacobi.partial <- function(X, s, r, Psi, group, A, lam, weights, TSA) { # log(abs(det(X %*% [F2[,A] | (F1 + lam * W) %*% TsA])))
+log.Jacobi.partial <- function(X, s, r, Psi, group, A, lam, W, TSA) { # log(abs(det(X %*% [F2[,A] | (F1 + lam * W) %*% TsA])))
   n <- nrow(X)
   p <- ncol(X)
   table.group <- table(group)
 
-  W <- c()
-  for (i in 1:length(table.group)) {
-    W <- c(W, rep(weights[i], table.group[i]))
-  }
+  # W <- c()
+  # for (i in 1:length(table.group)) {
+  #   W <- c(W, rep(weights[i], table.group[i]))
+  # }
 
   if (nrow(X) < ncol(X)) { # High-dim
     if (n == length(A)) {
@@ -429,21 +429,27 @@ log.Jacobi.partial <- function(X, s, r, Psi, group, A, lam, weights, TSA) { # lo
   }
 }
 
-ld.Update.r <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,tau) {
+ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,tau,type) {
   rprop <- rcur;
   nrUpdate <- 0;
   Bcur <- Bprop <- Scur * rep(rcur,table(group));
   TSA.cur <- TSA.prop <- TsA(,Scur,group,A,n,p);
   for (i in A) {
-    rprop[i] <- rtruncnorm(1, 0, , rcur[i], sqrt(tau[which(A==i)] * rcur[i]) )
+    rprop[i] <- truncnorm::rtruncnorm(1, 0, , rcur[i], sqrt(tau[which(A==i)] * ifelse(rcur[i]!=0,rcur[i],1)))
     Bprop[group==i] <- rprop[i] * Scur[group==i]
-    Hprop <- drop(Psi %*% drop(Bprop - coeff) + lbd * W * drop(S))
+
+    if (type == "coeff") {
+      Hprop <- drop(Psi %*% drop(Bprop - pointEstimate) + lbd * W * drop(Scur))
+    } else {
+      Hprop <- drop(Psi %*% drop(Bprop) - t(X) %*% pointEstimate / n + lbd * W * drop(Scur))
+    }
+
     Hdiff <- Hcur - Hprop
 
     lNormalRatio <- drop(t(Hdiff)%*% inv.Var %*% (Hprop + Hdiff/2))
     #dmvnorm(Hprop,,sig2 / n * Psi,log=T) - dmvnorm(Hcur,,sig2 / n * Psi,log=T)
-    lJacobianRatio <- log.Jacobi.partial(X,Scur,rprop,Psi,group,A,lbd,Weights,TSA.prop) -
-      log.Jacobi.partial(X,Scur,rcur,Psi,group,A,lbd,Weights,TSA.cur)
+    lJacobianRatio <- log.Jacobi.partial(X,Scur,rprop,Psi,group,A,lbd,W,TSA.prop) -
+      log.Jacobi.partial(X,Scur,rcur,Psi,group,A,lbd,W,TSA.cur)
     lProposalRatio <- pnorm(0,rcur[i],sqrt(tau[which(A==i)] * rcur[i]), lower.tail=FALSE, log.p=TRUE) -
       pnorm(0,rprop[i],sqrt(tau[which(A==i)] * rprop[i]), lower.tail=FALSE, log.p=TRUE)
     lAcceptanceRatio <-  lNormalRatio + lJacobianRatio + lProposalRatio
@@ -457,22 +463,27 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,tau) {
   }
   return(list(r = rprop, Hcur = Hcur, nrUpdate = nrUpdate))
 }
-ld.Update.S <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,p) {
+
+ld.Update.S <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,p,type) {
   Sprop <- Scur;
   nSUpdate <- 0;
   #p <- ncol(X)
   for (i in 1:max(group)) {
-    if (i %in% A) {Sprop[group == i] <- rUnitBall(sum(group == i))} else {
-      Sprop[group ==i] <- rUnitBall.inner(sum(group==i))
+    if (i %in% A) {Sprop[group == i] <- rUnitBall.surface(sum(group == i))} else {
+      Sprop[group ==i] <- rUnitBall(sum(group==i))
     }
 
-    Hprop <- drop(Psi %*% drop(Sprop * rep(rcur,table(group)) - coeff) + lbd * W * drop(Sprop))
+    if (type == "coeff") {
+      Hprop <- drop(Psi %*% drop(Sprop * rep(rcur,table(group)) - pointEstimate) + lbd * W * drop(Sprop))
+    } else {
+      Hprop <- drop(Psi %*% drop(Sprop * rep(rcur,table(group))) - t(X) %*% pointEstimate / n + lbd * W * drop(Sprop))
+    }
     Hdiff <- Hcur - Hprop
 
     lNormalRatio <- drop(t(Hdiff)%*% inv.Var %*% (Hprop + Hdiff/2))
     #dmvnorm(Hprop,,sig2 / n * Psi,log=T) - dmvnorm(Hcur,,sig2 / n * Psi,log=T)
-    lJacobianRatio <- log.Jacobi.partial(X,Sprop,rcur,Psi,group,A,lbd,Weights,TsA(,Sprop,group,A,n,p)) -
-      log.Jacobi.partial(X,Scur,rcur,Psi,group,A,lbd,Weights,TsA(,Scur,group,A,n,p))
+    lJacobianRatio <- log.Jacobi.partial(X,Sprop,rcur,Psi,group,A,lbd,W,TsA(,Sprop,group,A,n,p)) -
+      log.Jacobi.partial(X,Scur,rcur,Psi,group,A,lbd,W,TsA(,Scur,group,A,n,p))
     lAcceptanceRatio <-  lNormalRatio + lJacobianRatio
     if (lAcceptanceRatio <= log(runif(1))) { # Reject
       Sprop[group == i] <- Scur[group == i];
@@ -483,11 +494,11 @@ ld.Update.S <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,p) {
   }
   return(list(S = Sprop, Hcur = Hcur, nSUpdate = nSUpdate))
 }
-rUnitBall <- function(p) {
+rUnitBall.surface <- function(p) {
   x <- rnorm(p)
   x / sqrt(crossprod(x))
 }
-rUnitBall.inner <- function(p) {
+rUnitBall <- function(p) {
   x <- rnorm(p,,1/sqrt(2));
   y <- rexp(1)
   x / sqrt(y+crossprod(x))
@@ -514,41 +525,6 @@ Test.stats.A <- function(beta, group, A) {
 #====================================
 # MHLS class
 #====================================
-print.MHLS <- function (x) {
-  cat ("===========================\n")
-  cat ("Number of iteration: ", x$niteration,"\n\n")
-  cat ("Burn-in period: ", x$burnin,"\n\n")
-  cat ("Plug-in beta: \n")
-  print(x$pluginbeta)
-
-  cat ("\nLast 10 steps of beta's:\n")
-  if (x$niteration-x$burnin <= 9) {
-    print(x$beta)
-  } else {
-    print(x$beta[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
-  }
-
-  cat ("\nlast 10 steps of subgradients:\n")
-  if (x$niteration-x$burnin <= 9) {
-    print(x$subgrad)
-  } else {
-    print(x$subgrad[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
-  }
-
-  cat ("\nAcceptance rate:\n")
-  cat("-----------------------------\n")
-  cat("\t \t \t beta \t subgrad\n")
-  cat("# Accepted\t : \t", paste(x$acceptHistory[1,],"\t"),"\n")
-  cat("# Moved\t\t : \t", paste(x$acceptHistory[2,],"\t"),"\n")
-  cat("Acceptance rate\t : \t", paste(round(x$acceptHistory[1,]/x$acceptHistory[2,],3),"\t"),"\n")
-  # cat ("\nSignChange rate:\n")
-  # cat("-----------------------------\n")
-  # cat("# Accepted\t : \t", paste(x$signchange[1],"\t"),"\n")
-  # cat("# Moved\t\t : \t", paste(x$signchange[2],"\t"),"\n")
-  # cat("# Cdt Accept \t : \t", paste(x$signchange[3],"\t"),"\n")
-  # cat("Acceptance rate\t : \t", paste(round(x$signchange[1]/x$signchange[2],3),"\t"),"\n")
-}
-
 SummBeta <- function ( x ) {
   c( mean=mean(x) , median = median(x) , s.d = sd(x) , quantile(x,c(.025,.975)) )
 }
@@ -557,55 +533,3 @@ SummSign <- function ( x ) {
   n=length(x)
   return ( c(Positive.proportion=sum(x>0)/n , Zero.proportion=sum(x==0)/n, Negative.proportion=sum(x<0)/n  ) )
 }
-
-summary.MHLS <- function ( object ) {
-  betasummary <- t(apply(object$beta,2,SummBeta))
-  signsummary <- t(apply(object$beta,2,SummSign))
-  result <- list(beta.summary=betasummary,sign.summary=signsummary,acceptance.rate=as.data.frame(round(object$acceptrate,3)))
-  class(result) <- "summary.MHLS"
-  return(result)
-}
-
-plot.MHLS <- function ( object, A=NULL, skipS=FALSE, ... ) {
-  #	n=nrow(object$beta)
-  p <- ncol(object$beta)
-  niter <- object$niteration
-  burnin <- object$burnin
-
-  if (!skipS) {par(mfrow <- c(2,3))} else {par(mfrow <- c(1,3))}
-
-  if (is.null(A)) { A <- 1:p }
-
-  if (!skipS)	{
-    for ( i in A) {
-      hist(object$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
-      #ts.plot(object$beta[,i],xlab="Iterations",ylab="Samples")
-      plot((burnin+1):niter,object$beta[,i],xlab="Iterations",ylab="Samples",type="l")
-      if ( sum(abs(diff(object$beta[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
-        text(1,0,"Auto correlation plot \n not available",cex=1)} else {
-          acf(object$beta[,i],xlab="Lag",main="")
-        }
-      hist(object$subgrad[,i],breaks=seq(-1-1/10,1,by=1/10)+1/20,prob=T,xlim=c(-1-1/20,1+1/20),xlab=paste("Subgradient_",i,sep=""),ylab="Density",main="")
-      #ts.plot(object$subgrad[,i],xlab=Iterations,ylab="Samples")
-      plot((burnin+1):niter,object$subgrad[,i],xlab="Iterations",ylab="Samples",type="l")
-      if ( sum(abs(diff(object$subgrad[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
-        text(1,0,"Auto correlation plot \n not available",cex=1)} else {
-          acf(object$subgrad[,i],xlab="Lag",main="")
-        }
-      readline("Hit <Return> to see the next plot: ")
-    }
-  } else {
-    for ( i in A) {
-      hist(object$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
-      #ts.plot(object$beta[,i],xlab="Iterations",ylab="Samples")
-      plot((burnin+1):niter,object$beta[,i],xlab="Iterations",ylab="Samples",type="l")
-      if ( sum(abs(diff(object$beta[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
-        text(1,0,"Auto correlation plot \n not available",cex=1)} else {
-          acf(object$beta[,i],xlab="Lag",main="")
-        }
-      readline("Hit <Return> to see the next plot: ")
-    }
-  }
-}
-
-
