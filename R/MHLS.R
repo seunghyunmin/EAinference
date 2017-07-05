@@ -101,7 +101,7 @@
 #'      type = "mu")
 #' @export
 MHLS <-  function(X, pointEstimate, sig2, lbd, group = 1:ncol(X),
-                   weights = rep(1, ncol(X)), B0, S0, A = unique(group[which(B0 != 0)]),
+                   weights = rep(1, max(group)), B0, S0, A = unique(group[which(B0 != 0)]),
                    tau = rep(1, length(A)), niter = 2000, burnin = 0, type = "coeff", updateS.itv = 1, verbose = FALSE, ...)
 {
   MHLSmain(X = X, pointEstimate = pointEstimate, sig2 = sig2, lbd = lbd,
@@ -115,23 +115,40 @@ MHLSmain <- function (X, pointEstimate, sig2, lbd, group,
   #------------------
   # Error handling
   #------------------
+  n <- nrow(X)
+  p <- ncol(X)
   if (type == "coeff" && length(pointEstimate) != p) {
-    stop("pointEstimate must have a same length with the col-number of X, if type = \"coeff\"")
+    stop("length(pointEstimate) must be the same with ncol(X), if type = \"coeff\"")
   }
   if (type == "mu" && length(pointEstimate) != n) {
-    stop("pointEstimate must have a same length with the row-number of X, if type = \"mu\"")
+    stop("length(pointEstimate) must be the same with nrow(X), if type = \"mu\"")
+  }
+  if (length(B0) != p || (!missing(S0) && length(S0) != p)) {
+    stop("length(B0) and/or length(S0) has to be the same with ncol(X)")
+  }
+  if (n < p && length(A) > n) {
+    stop("Invalid active set index, A. Cannot be larger than min(nrow(X),ncol(X)).")
+  }
+  if (length(A) != length(unique(A)) || any(!A %in% 1:max(group))) {
+    stop("Invalid active set index, A.")
   }
   if (!type %in% c("coeff", "mu")) {
     stop("Invalide type input.")
   }
   if (length(group) != p) {
-    stop("group must have a same length with the number of X columns")
+    stop("length(group) has to be the same with ncol(X)")
   }
   if (length(weights) != length(unique(group))) {
-    stop("weights has to have a same length as the number of groups")
+    stop("length(weights) has to be the same with the number of groups")
   }
   if (any(weights < 0)) {
     stop("weights should be non-negative.")
+  }
+  if (sig2 <=0 || lbd <= 0) {
+    stop("sig2 and/or lbd have to be positive.")
+  }
+  if (!all(group == 1:ncol(X)) && missing(S0)) {
+    stop("Missing S0. Use LassoMHLS for a good initial value.")
   }
   if (any(!1:max(group) %in% group)) {
     stop("group index has to be a consecutive integer starting from 1.")
@@ -148,7 +165,7 @@ MHLSmain <- function (X, pointEstimate, sig2, lbd, group,
   if (all(group == 1:ncol(X))) {
     est <- MHLSswp(X = X, pointEstimate = pointEstimate, sig2 = sig2,
       lbd = lbd, weights = weights, B0 = B0, S0 = S0, A = A,
-      tau = tau, niter = niter, burnin = burnin, type = type, updateS.itv, ...)
+      tau = tau, niter = niter, burnin = burnin, type = type, updateS.itv = updateS.itv, verbose = verbose, ...)
     class(est) <- "MHLS"
     class(est) <- append(class(est), "Lasso")
   } else {
@@ -157,7 +174,7 @@ MHLSmain <- function (X, pointEstimate, sig2, lbd, group,
     }
     est <- MHLSgroup(X = X, pointEstimate = pointEstimate, sig2 = sig2,
       lbd = lbd, weights = weights, group = group, B0 = B0, S0 = S0, A = A,
-      tau = tau, niter = niter, burnin = burnin, type = type, updateS.itv = updateS.itv, ...)
+      tau = tau, niter = niter, burnin = burnin, type = type, updateS.itv = updateS.itv, verbose = verbose, ...)
     class(est) <- "MHLS"
     class(est) <- append(class(est), "GroupLasso")
 
@@ -177,11 +194,11 @@ MHLSmain <- function (X, pointEstimate, sig2, lbd, group,
   return(est)
 }
 
-MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
-  B0, S0, A = which(B0 != 0), tau = rep(1, length(A)), niter = 2000,
-  burnin = 0, type = "coeff", FlipSA = A, SFindex,
-  randomSFindex = TRUE, updateSF.itv = round(niter/20), updateS.itv = 1,
-  verbose = FALSE, ...)
+MHLSswp <- function(X, pointEstimate, sig2, lbd, weights,
+  B0, S0, A, tau, niter,
+  burnin, type, FlipSA = A, SFindex,
+  randomSFindex = TRUE, updateSF.itv = round(niter/20), updateS.itv,
+  verbose, ...)
 {
   X <- as.matrix(X)
   n <- nrow(X)
@@ -245,8 +262,8 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
     if (length(setdiff(FlipSA, A))!=0)
       stop("FlipSA has to be a subset of active set, A.")
     A2 <- setdiff(A,FlipSA)
-    if (any(B0[A2]==0))
-      stop("To fix the sign of beta_j, use non-zero B0_j.")
+    # if (any(B0[A2]==0))
+    #   stop("To fix the sign of beta_j, use non-zero B0_j.")
 
     if (length(A2) != 0) {
       LUbounds <- matrix(0, p, 2);
@@ -332,7 +349,7 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
       } else {
         S[t, Ac] <- S[t - 1, Ac]
       }
-      if (sum(t == NN)==1) {
+      if (verbose && sum(t == NN)==1) {
         aa <- which(NN==t)
         cat(paste("Updating : ", aa * 10,"%" ,sep = ""), "\n")
       }
@@ -490,7 +507,7 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
         BDF <- invB_D%*%B_F
       }
 
-      if (sum(t == NN)==1) {
+      if (verbose && sum(t == NN)==1) {
         aa <- which(NN==t)
         cat(paste("Updating : ", aa*10  ,"%",sep=""),"\n")
       }
@@ -510,6 +527,9 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights = rep(1, ncol(X)),
 MHLSgroup <- function(X, pointEstimate, sig2, lbd,
  weights, group, B0, S0, A, tau, niter, burnin, type = "coeff", updateS.itv, verbose)
 {
+  if ( all.equal(group.norm2(S0, group)[A], rep(1, length(A)), tolerance = 1e-04) != TRUE ) {
+    stop("Invalid S0. Use LassoMHLS for a good initial value.")
+  }
   K <- 10
   W <- rep(weights,table(group))
   Psi <- 1/n * crossprod(X)
