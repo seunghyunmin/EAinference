@@ -1,4 +1,8 @@
-#' Provides lasso / group lasso solution.
+#' @title lasso / group lasso estimator
+#'
+#' @description provides lasso / group lasso solutio;
+#' coefficient-estimate and subgradient.
+#'
 #' @param X n x p matrix of predictors.
 #' @param Y n x 1 vector of response.
 #' @param lbd penalty term of lasso. See the loss function given below for more
@@ -15,27 +19,49 @@
 #' every group, it becomes lasso loss function.
 #' @return \item{B0}{a vector of coefficient estimator.}
 #' @return \item{S0}{a vector of subgradient.}
-#' @return \item{S0}{a vector of subgradient.}
-#' @return \item{lbd}{same as input argument.}
-#' @return \item{weights}{same as input argument.}
-#' @return \item{group}{same as input argument.}
+#' @return \item{lbd, weights, grouop}{same as input arguments.}
 #' @examples
 #' set.seed(123)
-#' n <- 5
+#' n <- 50
 #' p <- 10
 #' X <- matrix(rnorm(n*p),n)
-#' Y <- X %*% rep(1,p) + rnorm(n)
-#' sig2 <- 1
-#' lbd <- .37
-#' weights <- rep(1,p)
-#' Lasso.MHLS(X = X,Y = Y,lbd = lbd,weights = rep(1,p),group=1:p)
-#' Lasso.MHLS(X = X,Y = Y,lbd = lbd,weights = rep(1,2),group=rep(1:2,each=5))
+#' Y <- X %*% c(1,1,rep(0,p-2)) + rnorm(n)
+#' #
+#' # lasso
+#' #
+#' Lasso.MHLS(X = X,Y = Y,lbd = .5)
+#' #
+#' # group lasso
+#' #
+#' Lasso.MHLS(X = X,Y = Y,lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
 #' @export
 Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
   group=1:ncol(X))
 {
+  if (lbd <= 0) {
+    stop("lbd has to be positive.")
+  }
+  if (length(group) != p) {
+    stop("length(group) has to be the same with ncol(X)")
+  }
+  if (length(weights) != length(unique(group))) {
+    stop("length(weights) has to be the same with the number of groups")
+  }
+  if (any(weights <= 0)) {
+    stop("weights should be positive.")
+  }
+  if (any(!1:max(group) %in% group)) {
+    stop("group index has to be a consecutive integer starting from 1.")
+  }
+
+  if (length(Y) != n) {
+    stop("dimension of X and Y are not conformable.")
+  }
+
   n <- nrow(X)
   p <- ncol(X)
+  Y <- matrix(Y, , 1)
+
   IndWeights <- rep(weights,table(group))
   # scale X with weights
   X.tilde   <- scale(X,FALSE,scale=IndWeights)
@@ -48,8 +74,11 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
   return(list(B0=B0, S0=c(S0), lbd=lbd, weights=weights, group=group))
 }
 
-#' Provides Confidence intervals for the set of active coefficients from lasso
-#'  estimator.
+#' @title Post-inference for lasso estimator
+#'
+#' @description Provides Confidence intervals for the set of active coefficients
+#' from lasso estimator using Metropolis-Hastings sampler.
+#'
 #' @param X \code{n x p} matrix of predictors.
 #' @param coeff \code{n x 1} vector of estimates of true coefficient.
 #' @param B0 Lasso estimator.
@@ -68,15 +97,15 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
 #' @param parallel Whether to parallelize the code. Default is \code{FALSE}.
 #' @param ncores The number of cores to use for the parallelization. If missing,
 #'  it uses maximum number of cores.
-#' @param MHsamples Boolean value. If true, shows Metropolis Hastings samples.
+#' @param MHsamples Boolean value. If true, print Metropolis-Hastings samples.
 #' @details
 #' We provide Post-selection inference for lasso estimator.
-#' Let active set be the non-zero coefficients from lasso estimator.
 #' Using Metropolis Hastings Sampler with multiple chanin, \code{(1-alpha)}
 #' confidence interval for each active coefficients is generated.
 #' Set \code{MHsamples=TRUE} if one wants to check the samples.
 #' Check the acceptance rate and adjust tau accordingly. Desirable level of
-#' acceptance rate for beta is around \code{0.30 +- 0.10}.
+#' acceptance rate for beta is \code{0.30 +- 0.15}. We recommend to set
+#' nChain >= 10 and niterPerChain >=500.
 #' @return \item{MHsamples}{a list of a class MHLS.}
 #' @return \item{confidenceInterval}{(1-alpha) confidence interval
 #' for each active coefficient.}
@@ -100,8 +129,9 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
 #' sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
 #' parallel=TRUE, MHsamples=TRUE)
 #' @export
-Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights, tau, sig2.hat,
-  alpha=.05, nChain=10, niterPerChain=500, parallel=TRUE, ncores,
+Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
+                               tau = rep(1, sum(B0!=0)), sig2.hat,
+  alpha=.05, nChain=10, niterPerChain=500, parallel=TRUE, ncores = 2L,
   MHsamples=FALSE, ...)
 {
   # nChain : the number of MH chains
@@ -109,49 +139,69 @@ Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights, tau, sig2.hat,
   # B0, S0 : The lasso estimator
   # tau : same as in MHLS function
 
-  if (parallel && !missing(ncores) && ncores == 1) {
-    ncores <- 2
-    warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
-            Set ncores to the maximum number.")
-  }
+  Y <- matrix(Y, , 1)
+  X <- as.matrix(X)
 
   nChain <- as.integer(nChain)
   niterPerChain <- as.integer(niterPerChain)
+
+  #--------------------
+  # Error Handling
+  #--------------------
+  if (nrow(X) != nrow(Y)) {
+    stop("The dimension of X and Y are not conformable.")
+  }
+  if (sig2.hat <=0 || lbd <= 0) {
+    stop("sig2.hat and/or lbd have to be positive.")
+  }
+  if (length(weights) != ncol(X)) {
+    stop("length(weights) has to be the same with col(X).")
+  }
+  if (any(weights <= 0)) {
+    stop("weights should be positive.")
+  }
+  if (alpha <=0 || alpha >=1) {
+    stop("alpha needs to be between 0 and 1.")
+  }
+  if (parallel && !missing(ncores) && ncores == 1) {
+    ncores <- 2
+    warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
+Set ncores to 2.")
+  }
+  if (parallel && (ncores > parallel::detectCores())) {
+    ncores <- parallel::detectCores()
+    warning("ncores is larger than the maximum number of available processes.
+Set it to the maximum possible value.")
+  }
   if (any(c(nChain,niterPerChain) <= 0)) {
     stop("nChain & niterPerChain have to be a positive integer.")
   }
-
-  if (!all.equal(coef(gglasso(X, Y, pf = weights, group = 1:p, loss="ls",
-                              intercept=F, lambda=lbd))[-1],B0) ||
-      !all.equal(((t(X)/weights)%*%Y - (t(X) /weights) %*% X %*% B0)
-                 / n / lbd, S0)) {
-    "Invalid B0 or S0, use Lasso.MHLS to get a valid lasso solution."
+  if (all.equal(coef(gglasso(X, Y, pf = weights, group = 1:p, loss="ls",
+                              intercept=F, lambda=lbd))[-1],B0) != TRUE ||
+      all.equal(c(((t(X)/weights)%*%Y - (t(X) /weights) %*% X %*% B0) / n / lbd)
+                 , S0) != TRUE) {
+    stop("Invalid B0 or S0, use Lasso.MHLS to get a valid lasso solution.")
   }
-
   A <- which(B0!=0)
   # Draw samples of pluginbeta from the 95% confidence
   #  region boundary of restricted lse.
   # If nChain ==1, we just use restricted lse.
-  Pluginbeta.seq <- Pluginbeta.MHLS(X,Y,A,nChain,sqrt(sig2.hat))
-
   if (missing(sig2.hat)) {
+    if (length(A) >= nrow(X)) {
+      stop("If size of active set matches with nrow(X), sig2.hat needs to be provided.")
+    }
     sig2.hat <- summary((lm(Y~X[,A]+0)))$sigma^2
   }
 
+  Pluginbeta.seq <- Pluginbeta.MHLS(X,Y,A,nChain,sqrt(sig2.hat))
+
   FF <- function(x) {
-    MHLS(X = X, coeff = Pluginbeta.seq[x,], sig2 = sig2.hat,
-         weights = weights, lbd = lbd, niter=niterPerChain,
-         burnin = 0, B0 = B0, S0 = S0, tau = tau, verbose=FALSE, ...)
+    MHLS(X = X, pointEstimate = Pluginbeta.seq[x,], sig2 = sig2.hat, lbd = lbd,
+         weights = weights, niter=niterPerChain,
+         burnin = 0, B0 = B0, S0 = S0, tau = tau, type = "coeff", verbose=FALSE, ...)
   }
 
   if (parallel && nChain > 1) {
-    if (missing(ncores)) {
-      ncores <- parallel::detectCores()
-    } else if (ncores > parallel::detectCores()){
-      ncores <- parallel::detectCores()
-      warnings("ncores is larger than the maximum number of available processes.
-               Set it to the maximum possible value.")
-    }
     TEMP <- parallel::mclapply(1:nChain,FF, mc.cores = ncores)
   } else {
     TEMP <- lapply(1:nChain,FF)
@@ -170,7 +220,7 @@ Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights, tau, sig2.hat,
   }
 
   # Using MH samples, refit the coeff.
-  RefitBeta <- Refit.MHLS(X,W,lbd,MCSAMPLE)
+  RefitBeta <- Refit.MHLS(X,weights,lbd,MCSAMPLE)
   if (MHsamples) {
     return(list(MHsamples=TEMP,pluginbeta=Pluginbeta.seq,
                           confidenceInterval=CI.MHLS(betaRefit = RefitBeta,
@@ -182,7 +232,7 @@ Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights, tau, sig2.hat,
 }
 
 # Refit the beta estimator to remove the bias
-Refit.MHLS <- function(X,W,lbd,MHsample) {
+Refit.MHLS <- function(X,weights,lbd,MHsample) {
   # W : diag(weights)
   # MHsample : MH samples from MHLS function
   n <- nrow(X)
@@ -190,7 +240,7 @@ Refit.MHLS <- function(X,W,lbd,MHsample) {
   A <- which(MHsample$beta[1,]!=0)
   # Recover y using KKT condition
   Y.MH <- solve(X%*%t(X))%*%X %*% (crossprod(X) %*% t(MHsample$beta) / n +
-                                     lbd * W %*% t(MHsample$subgrad)) * n
+                                     lbd * weights * t(MHsample$subgrad)) * n
   # Refit y to the restricted set of X
   beta.refit <- solve(t(X[,A])%*%X[,A])%*%t(X[,A]) %*% Y.MH
   return(beta.refit)

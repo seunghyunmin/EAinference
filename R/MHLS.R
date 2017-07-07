@@ -24,14 +24,14 @@
 #' @param verbose verbose
 #' @param ... complementary arguments for MH-sampler for lasso.
 #' \itemize{
-#'  \item{\code{FlipSA}}{the parameter that is needed for the high-dimensional setting.
+#'  \item{\code{FlipSA}}{ the parameter that is needed for the high-dimensional setting.
 #' Has to be a subset of active set, A. If the index is not listed in FlipSA,
 #' the sign of coefficients which corresponds to the index will be fixed.
 #' The default is \code{FlipSA=A}}
-#'  \item{\code{SFindex} }{subgradient index for the free coordinate.}
-#'  \item{\code{randomSFindex} }{logical. If \code{true}, resample \code{SFindex} in every
+#'  \item{\code{SFindex} }{ subgradient index for the free coordinate.}
+#'  \item{\code{randomSFindex} }{ logical. If \code{true}, resample \code{SFindex} in every
 #' \code{updateSF.itv} number.}
-#'  \item{\code{updateSF.itv} }{Specifies how many iterations will be done without
+#'  \item{\code{updateSF.itv} }{ Specifies how many iterations will be done without
 #' updating the \code{SFindex}.}
 #' }
 #'
@@ -141,8 +141,8 @@ MHLSmain <- function (X, pointEstimate, sig2, lbd, group,
   if (length(weights) != length(unique(group))) {
     stop("length(weights) has to be the same with the number of groups")
   }
-  if (any(weights < 0)) {
-    stop("weights should be non-negative.")
+  if (any(weights <= 0)) {
+    stop("weights should be positive.")
   }
   if (sig2 <=0 || lbd <= 0) {
     stop("sig2 and/or lbd have to be positive.")
@@ -669,7 +669,7 @@ print.MHLS <- function (x) {
 #'
 #' @description summary method for class "MHLS"
 #'
-#' @param object an object of class "MHLS", which is a result of \code{\link{lm}}.
+#' @param object an object of class "MHLS", which is a result of \code{\link{MHLS}}.
 #' @details
 #' This function provides a summary of each sampled beta and subgradient.
 #' @return mean, median, s.d., 2.5% quantile and 97.5% quantile for each sampled beta and subgradient.
@@ -700,16 +700,17 @@ summary.MHLS <- function ( object ) {
 
 #' @title Plotting Metropolis-Hastings sampler outputs
 #'
-#' @description For each index, this provides six plots;
+#' @description povides six plots for each covariates index;
 #'  histogram, path plot and acf plot for beta and subgradient.
 #'
-#' @param object an object of class "MHLS", which is a result of \code{\link{lm}}.
-#' @param A an index of covariates that one can plot with.
-#' @param skipS logical. If \code{TRUE}, plot betas only.
+#' @param object an object of class "MHLS", which is a result of \code{\link{MHLS}}.
+#' @param index an index of covariates that one can plot with.
+#' @param skipS logical. If \code{TRUE}, plot beta only.
 #' @details
-#' \code{plot.MHLS} provides summary plots of each sampled beta and subgradient.
+#' \code{plot.MHLS} provides summary plots of sampled beta and subgradient.
 #'  The first column provides histogram of beta and subgradient, while the second
 #'  and the third column provide path plot and acf plot, respectively.
+#'  If \code{skipS = TRUE}, it will provide summary plots for beta only.
 #' @return this function gives mean, median, s.d., 2.5% quantile and 97.5%
 #'  quantile for each sampled beta and subgradient.
 #' @examples
@@ -728,15 +729,19 @@ summary.MHLS <- function ( object ) {
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
 #'      type = "coeff"))
 #' @export
-plot.MHLS <- function(object, A=1:ncol(object$beta), skipS=FALSE, ... ) {
+plot.MHLS <- function(object, index = 1:ncol(object$beta), skipS = FALSE, ... ) {
   #	n=nrow(object$beta)
+  if (any(!index %in% 1:ncol(object$beta))) {
+    stop("Invalid index.")
+  }
+
   niter <- object$niteration
   burnin <- object$burnin
 
   if (!skipS) {par(mfrow = c(2,3))} else {par(mfrow = c(1,3))}
 
   if (!skipS)	{
-    for (i in A) {
+    for (i in index) {
       hist(object$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
       #ts.plot(object$beta[,i],xlab="Iterations",ylab="Samples")
       plot((burnin+1):niter,object$beta[,i],xlab="Iterations",ylab="Path",type="l")
@@ -754,7 +759,7 @@ plot.MHLS <- function(object, A=1:ncol(object$beta), skipS=FALSE, ... ) {
       readline("Hit <Return> to see the next plot: ")
     }
   } else {
-    for (i in A) {
+    for (i in index) {
       hist(object$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
       #ts.plot(object$beta[,i],xlab="Iterations",ylab="Samples")
       plot((burnin+1):niter,object$beta[,i],xlab="Iterations",ylab="Path",type="l")

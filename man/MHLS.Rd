@@ -49,14 +49,14 @@ distribution of active coefficients.}
 
 \item{...}{complementary arguments for MH-sampler for lasso.
 \itemize{
- \item{\code{FlipSA}}{the parameter that is needed for the high-dimensional setting.
+ \item{\code{FlipSA}}{ the parameter that is needed for the high-dimensional setting.
 Has to be a subset of active set, A. If the index is not listed in FlipSA,
 the sign of coefficients which corresponds to the index will be fixed.
 The default is \code{FlipSA=A}}
- \item{\code{SFindex} }{subgradient index for the free coordinate.}
- \item{\code{randomSFindex} }{logical. If \code{true}, resample \code{SFindex} in every
+ \item{\code{SFindex} }{ subgradient index for the free coordinate.}
+ \item{\code{randomSFindex} }{ logical. If \code{true}, resample \code{SFindex} in every
 \code{updateSF.itv} number.}
- \item{\code{updateSF.itv} }{Specifies how many iterations will be done without
+ \item{\code{updateSF.itv} }{ Specifies how many iterations will be done without
 updating the \code{SFindex}.}
 }}
 }

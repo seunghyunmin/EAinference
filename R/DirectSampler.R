@@ -107,8 +107,8 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2,
   if (length(weights) != length(unique(group))) {
     stop("weights has to have a same length as the number of groups")
   }
-  if (any(weights < 0)) {
-    stop("weights should be non-negative.")
+  if (any(weights <= 0)) {
+    stop("weights should be positive.")
   }
   if (any(!1:max(group) %in% group)) {
     stop("group index has to be a consecutive integer starting from 1.")

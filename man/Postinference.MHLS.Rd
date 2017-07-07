@@ -2,12 +2,12 @@
 % Please edit documentation in R/MHInference.R
 \name{Postinference.MHLS}
 \alias{Postinference.MHLS}
-\title{Provides Confidence intervals for the set of active coefficients from lasso
- estimator.}
+\title{Post-inference for lasso estimator}
 \usage{
-Postinference.MHLS(X, Y, B0, S0, lbd, weights, tau, sig2.hat, alpha = 0.05,
-  nChain = 10, niterPerChain = 500, parallel = TRUE, ncores,
-  MHsamples = FALSE, ...)
+Postinference.MHLS(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
+  tau = rep(1, sum(B0 != 0)), sig2.hat, alpha = 0.05, nChain = 10,
+  niterPerChain = 500, parallel = TRUE, ncores = 2L, MHsamples = FALSE,
+  ...)
 }
 \arguments{
 \item{X}{\code{n x p} matrix of predictors.}
@@ -39,7 +39,7 @@ Adjust the value to get relevant level of acceptance rate.}
 \item{ncores}{The number of cores to use for the parallelization. If missing,
 it uses maximum number of cores.}
 
-\item{MHsamples}{Boolean value. If true, shows Metropolis Hastings samples.}
+\item{MHsamples}{Boolean value. If true, print Metropolis-Hastings samples.}
 
 \item{coeff}{\code{n x 1} vector of estimates of true coefficient.}
 }
@@ -50,17 +50,17 @@ it uses maximum number of cores.}
 for each active coefficient.}
 }
 \description{
-Provides Confidence intervals for the set of active coefficients from lasso
- estimator.
+Provides Confidence intervals for the set of active coefficients
+from lasso estimator using Metropolis-Hastings sampler.
 }
 \details{
 We provide Post-selection inference for lasso estimator.
-Let active set be the non-zero coefficients from lasso estimator.
 Using Metropolis Hastings Sampler with multiple chanin, \code{(1-alpha)}
 confidence interval for each active coefficients is generated.
 Set \code{MHsamples=TRUE} if one wants to check the samples.
 Check the acceptance rate and adjust tau accordingly. Desirable level of
-acceptance rate for beta is around \code{0.30 +- 0.10}.
+acceptance rate for beta is \code{0.30 +- 0.15}. We recommend to set
+nChain >= 10 and niterPerChain >=500.
 }
 \examples{
 set.seed(123)

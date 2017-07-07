@@ -2,7 +2,7 @@
 % Please edit documentation in R/MHInference.R
 \name{Lasso.MHLS}
 \alias{Lasso.MHLS}
-\title{Provides lasso / group lasso solution.}
+\title{lasso / group lasso estimator}
 \usage{
 Lasso.MHLS(X, Y, lbd = 0.37, weights = rep(1, max(group)),
   group = 1:ncol(X))
@@ -26,16 +26,11 @@ should be same as max(group).}
 
 \item{S0}{a vector of subgradient.}
 
-\item{S0}{a vector of subgradient.}
-
-\item{lbd}{same as input argument.}
-
-\item{weights}{same as input argument.}
-
-\item{group}{same as input argument.}
+\item{lbd, weights, grouop}{same as input arguments.}
 }
 \description{
-Provides lasso / group lasso solution.
+provides lasso / group lasso solutio;
+coefficient-estimate and subgradient.
 }
 \details{
 Using gglasso package, provide lasso / group lasso solution along with
@@ -46,13 +41,16 @@ every group, it becomes lasso loss function.
 }
 \examples{
 set.seed(123)
-n <- 5
+n <- 50
 p <- 10
 X <- matrix(rnorm(n*p),n)
-Y <- X \%*\% rep(1,p) + rnorm(n)
-sig2 <- 1
-lbd <- .37
-weights <- rep(1,p)
-Lasso.MHLS(X = X,Y = Y,lbd = lbd,weights = rep(1,p),group=1:p)
-Lasso.MHLS(X = X,Y = Y,lbd = lbd,weights = rep(1,2),group=rep(1:2,each=5))
+Y <- X \%*\% c(1,1,rep(0,p-2)) + rnorm(n)
+#
+# lasso
+#
+Lasso.MHLS(X = X,Y = Y,lbd = .5)
+#
+# group lasso
+#
+Lasso.MHLS(X = X,Y = Y,lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
 }

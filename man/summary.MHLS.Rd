@@ -7,7 +7,7 @@
 \method{summary}{MHLS}(object)
 }
 \arguments{
-\item{object}{an object of class "MHLS", which is a result of \code{\link{lm}}.}
+\item{object}{an object of class "MHLS", which is a result of \code{\link{MHLS}}.}
 }
 \value{
 mean, median, s.d., 2.5% quantile and 97.5% quantile for each sampled beta and subgradient.

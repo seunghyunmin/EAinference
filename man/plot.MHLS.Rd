@@ -4,27 +4,28 @@
 \alias{plot.MHLS}
 \title{Plotting Metropolis-Hastings sampler outputs}
 \usage{
-\method{plot}{MHLS}(object, A = 1:ncol(object$beta), skipS = FALSE, ...)
+\method{plot}{MHLS}(object, index = 1:ncol(object$beta), skipS = FALSE, ...)
 }
 \arguments{
-\item{object}{an object of class "MHLS", which is a result of \code{\link{lm}}.}
+\item{object}{an object of class "MHLS", which is a result of \code{\link{MHLS}}.}
 
-\item{A}{an index of covariates that one can plot with.}
+\item{index}{an index of covariates that one can plot with.}
 
-\item{skipS}{logical. If \code{TRUE}, plot betas only.}
+\item{skipS}{logical. If \code{TRUE}, plot beta only.}
 }
 \value{
 this function gives mean, median, s.d., 2.5% quantile and 97.5%
  quantile for each sampled beta and subgradient.
 }
 \description{
-For each index, this provides six plots;
+povides six plots for each covariates index;
  histogram, path plot and acf plot for beta and subgradient.
 }
 \details{
-\code{plot.MHLS} provides summary plots of each sampled beta and subgradient.
+\code{plot.MHLS} provides summary plots of sampled beta and subgradient.
  The first column provides histogram of beta and subgradient, while the second
  and the third column provide path plot and acf plot, respectively.
+ If \code{skipS = TRUE}, it will provide summary plots for beta only.
 }
 \examples{
 #' set.seed(123)
