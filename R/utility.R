@@ -1,4 +1,9 @@
 #' @importFrom gglasso gglasso coef.gglasso
+#' @importFrom msm rtnorm
+#' @importFrom mvtnorm dmvnorm
+#' @import graphics
+#' @import stats
+
 
 # devtools:load_all()
 # Cmd + Shift + L , to load the package.
@@ -250,7 +255,8 @@ group.norm2 <- function(x, group) {
   return(result)
 }
 
-TsA <- function(Q, s, group, A, n, p) { # T(s,A)
+# T(s,A) : p x (n-|A|) matrix s.t. ds = T(s,A)ds_F
+TsA <- function(Q, s, group, A, n, p) {
   # even if length(A) == 0, everything will work just fine !!
   # when lengthI(A) == n, we only compute F2 function.
   if (n < p && missing(Q)) {
@@ -386,7 +392,8 @@ TsA.qr <- function(Q, s, group, A, n, p) { # T(s,A)
 #   }
 # }
 
-F1 <- function(r, Psi, group) { # r \circ \psi , eq(3.6)
+# F1 = r \circ \psi , eq(3.6), p x p matrix
+F1 <- function(r, Psi, group) {
   Result <- Psi
   for (i in 1:length(unique(group))) {
     Result[, group == i] <- Result[, group == i] * r[i]
@@ -394,7 +401,8 @@ F1 <- function(r, Psi, group) { # r \circ \psi , eq(3.6)
   return(Result)
 }
 
-F2 <- function(s, Psi, group) { # \psi \circ \eta , eq(3.7)
+# F2 = \psi \circ \eta , eq(3.7), p x |A| matrix
+F2 <- function(s, Psi, group) {
   Result <- matrix(, nrow(Psi), length(unique(group)))
   for (i in 1:length(unique(group))) {
     Result[, i] = crossprod(t(Psi[, group == i]), s[group == i])
@@ -429,7 +437,7 @@ log.Jacobi.partial <- function(X, s, r, Psi, group, A, lam, W, TSA) { # log(abs(
   }
 }
 
-ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,tau,type) {
+ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,tau,type,n,p) {
   rprop <- rcur;
   nrUpdate <- 0;
   Bcur <- Bprop <- Scur * rep(rcur,table(group));
@@ -464,7 +472,7 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
   return(list(r = rprop, Hcur = Hcur, nrUpdate = nrUpdate))
 }
 
-ld.Update.S <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,p,type) {
+ld.Update.S <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,type,n,p) {
   Sprop <- Scur;
   nSUpdate <- 0;
   #p <- ncol(X)

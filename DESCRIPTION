@@ -12,12 +12,16 @@ LazyData: true
 Depends:
     R (>= 3.3.1)
 Imports:
+    stats,
+    graphics,
+    mvtnorm,
     gglasso,
     msm,
     parallel,
     ggm,
     limSolve,
-    MASS
+    MASS,
+    truncnorm
 RoxygenNote: 6.0.1
 Suggests: knitr,
     rmarkdown,

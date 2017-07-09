@@ -1,6 +1,6 @@
 #' @title MH sampler for lasso / group lasso estimator
 #'
-#' Metropolis-Hastings sampler for lasso / group lasso estimator
+#' @description Metropolis-Hastings sampler for lasso / group lasso estimator
 #' using estimator augmentation.
 #'
 #' @param X \code{n} x \code{p} matrix of predictors, where \code{n} is the
@@ -530,6 +530,9 @@ MHLSgroup <- function(X, pointEstimate, sig2, lbd,
   if ( all.equal(group.norm2(S0, group)[A], rep(1, length(A)), tolerance = 1e-04) != TRUE ) {
     stop("Invalid S0. Use LassoMHLS for a good initial value.")
   }
+  n <- nrow(X)
+  p <- ncol(X)
+
   K <- 10
   W <- rep(weights,table(group))
   Psi <- 1/n * crossprod(X)
@@ -555,13 +558,13 @@ MHLSgroup <- function(X, pointEstimate, sig2, lbd,
 
   if (n >= p) {
     for (i in 2:niter) {
-      r.new <- ld.Update.r(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,tau,type)
+      r.new <- ld.Update.r(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,tau,type,n,p)
       r.seq[i,] <- rcur <- r.new$r
       Hcur <- r.new$Hcur
       if (i > burnin) {nAccept[1] <- nAccept[1] + r.new$nrUpdate}
 
       if (i %% updateS.itv == 0) {
-        S.new <- ld.Update.S (rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,p,type)
+        S.new <- ld.Update.S (rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,type,n,p)
         S.seq[i,] <- Scur <- S.new$S
         Hcur <- S.new$Hcur
       } else {
@@ -599,7 +602,7 @@ MHLSgroup <- function(X, pointEstimate, sig2, lbd,
 }
 
 #' @export
-print.MHLS <- function (x) {
+print.MHLS <- function (x, ...) {
   cat ("===========================\n")
   cat ("Number of iteration: ", x$niteration,"\n\n")
   cat ("Burn-in period: ", x$burnin,"\n\n")
@@ -670,6 +673,8 @@ print.MHLS <- function (x) {
 #' @description summary method for class "MHLS"
 #'
 #' @param object an object of class "MHLS", which is a result of \code{\link{MHLS}}.
+#' @param ... additional arguments affecting the summary produced.
+#'
 #' @details
 #' This function provides a summary of each sampled beta and subgradient.
 #' @return mean, median, s.d., 2.5% quantile and 97.5% quantile for each sampled beta and subgradient.
@@ -689,7 +694,7 @@ print.MHLS <- function (x) {
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
 #'      type = "coeff"))
 #' @export
-summary.MHLS <- function ( object ) {
+summary.MHLS <- function (object, ...) {
   betaSummary <- t(apply(object$beta,2,SummBeta))
   #signsummary <- t(apply(object$beta,2,SummSign))
   subgradSummary <- t(apply(object$subgrad,2,SummBeta))
@@ -703,16 +708,15 @@ summary.MHLS <- function ( object ) {
 #' @description povides six plots for each covariates index;
 #'  histogram, path plot and acf plot for beta and subgradient.
 #'
-#' @param object an object of class "MHLS", which is a result of \code{\link{MHLS}}.
+#' @param x an object of class "MHLS", which is a result of \code{\link{MHLS}}.
 #' @param index an index of covariates that one can plot with.
 #' @param skipS logical. If \code{TRUE}, plot beta only.
+#' @param ... ...	further arguments passed to or from other methods.
 #' @details
 #' \code{plot.MHLS} provides summary plots of sampled beta and subgradient.
 #'  The first column provides histogram of beta and subgradient, while the second
 #'  and the third column provide path plot and acf plot, respectively.
 #'  If \code{skipS = TRUE}, it will provide summary plots for beta only.
-#' @return this function gives mean, median, s.d., 2.5% quantile and 97.5%
-#'  quantile for each sampled beta and subgradient.
 #' @examples
 #' #' set.seed(123)
 #' n <- 10
@@ -729,43 +733,43 @@ summary.MHLS <- function ( object ) {
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
 #'      type = "coeff"))
 #' @export
-plot.MHLS <- function(object, index = 1:ncol(object$beta), skipS = FALSE, ... ) {
-  #	n=nrow(object$beta)
-  if (any(!index %in% 1:ncol(object$beta))) {
+plot.MHLS <- function(x, index = 1:ncol(x$beta), skipS = FALSE, ...) {
+  #	n=nrow(x$beta)
+  if (any(!index %in% 1:ncol(x$beta))) {
     stop("Invalid index.")
   }
 
-  niter <- object$niteration
-  burnin <- object$burnin
+  niter <- x$niteration
+  burnin <- x$burnin
 
   if (!skipS) {par(mfrow = c(2,3))} else {par(mfrow = c(1,3))}
 
   if (!skipS)	{
     for (i in index) {
-      hist(object$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
-      #ts.plot(object$beta[,i],xlab="Iterations",ylab="Samples")
-      plot((burnin+1):niter,object$beta[,i],xlab="Iterations",ylab="Path",type="l")
-      if ( sum(abs(diff(object$beta[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
+      hist(x$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
+      #ts.plot(x$beta[,i],xlab="Iterations",ylab="Samples")
+      plot((burnin+1):niter,x$beta[,i],xlab="Iterations",ylab="Path",type="l")
+      if ( sum(abs(diff(x$beta[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
         text(1,0,"Auto correlation plot \n not available",cex=1)} else {
-          acf(object$beta[,i],xlab="Lag",main="")
+          acf(x$beta[,i],xlab="Lag",main="")
         }
-      hist(object$subgrad[,i],breaks=seq(-1-1/10,1,by=1/10)+1/20,prob=T,xlim=c(-1-1/20,1+1/20),xlab=paste("Subgradient_",i,sep=""),ylab="Density",main="")
-      #ts.plot(object$subgrad[,i],xlab=Iterations,ylab="Samples")
-      plot((burnin+1):niter,object$subgrad[,i],xlab="Iterations",ylab="Samples",type="l")
-      if ( sum(abs(diff(object$subgrad[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
+      hist(x$subgrad[,i],breaks=seq(-1-1/10,1,by=1/10)+1/20,prob=T,xlim=c(-1-1/20,1+1/20),xlab=paste("Subgradient_",i,sep=""),ylab="Density",main="")
+      #ts.plot(x$subgrad[,i],xlab=Iterations,ylab="Samples")
+      plot((burnin+1):niter,x$subgrad[,i],xlab="Iterations",ylab="Samples",type="l")
+      if ( sum(abs(diff(x$subgrad[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
         text(1,0,"Auto correlation plot \n not available",cex=1)} else {
-          acf(object$subgrad[,i],xlab="Lag",main="")
+          acf(x$subgrad[,i],xlab="Lag",main="")
         }
       readline("Hit <Return> to see the next plot: ")
     }
   } else {
     for (i in index) {
-      hist(object$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
-      #ts.plot(object$beta[,i],xlab="Iterations",ylab="Samples")
-      plot((burnin+1):niter,object$beta[,i],xlab="Iterations",ylab="Path",type="l")
-      if ( sum(abs(diff(object$beta[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
+      hist(x$beta[,i],breaks=20,prob=T,xlab=paste("Beta_",i,sep=""),ylab="Density",main="")
+      #ts.plot(x$beta[,i],xlab="Iterations",ylab="Samples")
+      plot((burnin+1):niter,x$beta[,i],xlab="Iterations",ylab="Path",type="l")
+      if ( sum(abs(diff(x$beta[,i]))) == 0 ) { plot( 0,type="n",axes=F,xlab="",ylab="")
         text(1,0,"Auto correlation plot \n not available",cex=1)} else {
-          acf(object$beta[,i],xlab="Lag",main="")
+          acf(x$beta[,i],xlab="Lag",main="")
         }
       readline("Hit <Return> to see the next plot: ")
     }

@@ -38,6 +38,11 @@
 Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
   group=1:ncol(X))
 {
+  n <- nrow(X)
+  p <- ncol(X)
+  X <- as.matrix(X)
+  Y <- matrix(Y, , 1)
+
   if (lbd <= 0) {
     stop("lbd has to be positive.")
   }
@@ -58,9 +63,7 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
     stop("dimension of X and Y are not conformable.")
   }
 
-  n <- nrow(X)
-  p <- ncol(X)
-  Y <- matrix(Y, , 1)
+
 
   IndWeights <- rep(weights,table(group))
   # scale X with weights
@@ -79,15 +82,15 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
 #' @description Provides Confidence intervals for the set of active coefficients
 #' from lasso estimator using Metropolis-Hastings sampler.
 #'
-#' @param X \code{n x p} matrix of predictors.
-#' @param coeff \code{n x 1} vector of estimates of true coefficient.
+#' @param X predictors matrix.
+#' @param Y response vector.
 #' @param B0 Lasso estimator.
 #' @param S0 Subgradient which corresponds to B0.
 #' @param lbd penalty term of lasso. See the loss function given below for
 #' more details.
 #' @param weights Weight term for each group. Default is
 #' \code{rep(1, max(group))}.
-#' @param tau \code{|A| x 1} vector. Standard deviaion of proposal distribution
+#' @param tau numeric vector. Standard deviaion of proposal distribution
 #'  for each active beta.
 #' Adjust the value to get relevant level of acceptance rate.
 #' @param sig2.hat variance of error term.
@@ -97,18 +100,19 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
 #' @param parallel Whether to parallelize the code. Default is \code{FALSE}.
 #' @param ncores The number of cores to use for the parallelization. If missing,
 #'  it uses maximum number of cores.
-#' @param MHsamples Boolean value. If true, print Metropolis-Hastings samples.
+#' @param printSamples Boolean value. If true, print Metropolis-Hastings samples.
+#' @param ... auxiliary \code{link{MHLS}} arguments.
 #' @details
 #' We provide Post-selection inference for lasso estimator.
 #' Using Metropolis Hastings Sampler with multiple chanin, \code{(1-alpha)}
 #' confidence interval for each active coefficients is generated.
-#' Set \code{MHsamples=TRUE} if one wants to check the samples.
+#' Set \code{printSamples=TRUE} if one wants to check the samples.
 #' Check the acceptance rate and adjust tau accordingly. Desirable level of
 #' acceptance rate for beta is \code{0.30 +- 0.15}. We recommend to set
 #' nChain >= 10 and niterPerChain >=500.
 #' @return \item{MHsamples}{a list of a class MHLS.}
 #' @return \item{confidenceInterval}{(1-alpha) confidence interval
-#' for each active coefficient.}
+#' of each active coefficient.}
 #' @examples
 #' set.seed(123)
 #' n <- 5
@@ -127,12 +131,12 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
 #' sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20, parallel=TRUE)
 #' Postinference.MHLS(X, Y, B0, S0, lbd, weights, tau=rep(1, sum(B0!=0)),
 #' sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
-#' parallel=TRUE, MHsamples=TRUE)
+#' parallel=TRUE, printSamples=TRUE)
 #' @export
 Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
                                tau = rep(1, sum(B0!=0)), sig2.hat,
   alpha=.05, nChain=10, niterPerChain=500, parallel=TRUE, ncores = 2L,
-  MHsamples=FALSE, ...)
+  printSamples=FALSE, ...)
 {
   # nChain : the number of MH chains
   # niterPerChain : the number of iteration for each chain
@@ -141,6 +145,8 @@ Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
 
   Y <- matrix(Y, , 1)
   X <- as.matrix(X)
+  n <- nrow(X)
+  p <- ncol(X)
 
   nChain <- as.integer(nChain)
   niterPerChain <- as.integer(niterPerChain)
@@ -163,7 +169,7 @@ Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
   if (alpha <=0 || alpha >=1) {
     stop("alpha needs to be between 0 and 1.")
   }
-  if (parallel && !missing(ncores) && ncores == 1) {
+  if (parallel && ncores == 1) {
     ncores <- 2
     warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
 Set ncores to 2.")
@@ -201,7 +207,7 @@ Set it to the maximum possible value.")
          burnin = 0, B0 = B0, S0 = S0, tau = tau, type = "coeff", verbose=FALSE, ...)
   }
 
-  if (parallel && nChain > 1) {
+  if (parallel) {
     TEMP <- parallel::mclapply(1:nChain,FF, mc.cores = ncores)
   } else {
     TEMP <- lapply(1:nChain,FF)
@@ -221,7 +227,7 @@ Set it to the maximum possible value.")
 
   # Using MH samples, refit the coeff.
   RefitBeta <- Refit.MHLS(X,weights,lbd,MCSAMPLE)
-  if (MHsamples) {
+  if (printSamples) {
     return(list(MHsamples=TEMP,pluginbeta=Pluginbeta.seq,
                           confidenceInterval=CI.MHLS(betaRefit = RefitBeta,
                           pluginbeta = Pluginbeta.seq, alpha=alpha)))
@@ -253,8 +259,8 @@ CI.MHLS <- function(betaRefit, pluginbeta, alpha=.05) {
   # beta.refit : refitted beta via Refit.MHLS, a niter x |A| matrix.
   # alpha : significant level.
   A <- which(pluginbeta[1,]!=0)
-  Quantile <- apply(betaRefit - pluginbeta[1,A], 1, quantile,
-                    prob=c(alpha/2, 1 - alpha/2))
+  Quantile <- apply(betaRefit - pluginbeta[1,A], 1, function(x)
+    {quantile(x,prob=c(alpha/2, 1 - alpha/2))})
   Result <- rbind(LowerBound = -Quantile[2,] + pluginbeta[1,A] ,
                   UpperBound = -Quantile[1,] + pluginbeta[1,A])
   colnames(Result) <- paste("beta", A, sep="")
@@ -266,7 +272,6 @@ Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat) {
   # nPlugin : number of pluginbeta's want to generate
   # sigma.hat : estimator of sigma , \epsilon ~ N(0, sigma^2)
   #             If missing, use default way to generate it
-  A <- which(B0!=0)
   if (length(A)==0) stop("The lasso solution has an empty active set.")
 
   if (missing(sigma.hat)) {
@@ -280,7 +285,7 @@ Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat) {
     xy <- matrix(rnorm(length(A)*(nPlugin-1)), nPlugin-1)
     lambda <- 1 / sqrt(rowSums(xy^2))
     xy <- xy * lambda * sqrt(qchisq(0.95, df=length(A)))
-    coeff.seq <- matrix(0,nPlugin,p)
+    coeff.seq <- matrix(0,nPlugin,ncol(X))
     coeff.seq[,A]  <- rbind(beta.refit,t(t(xy%*%chol(solve(crossprod(X[,A])))) *
                                            sigma.hat + beta.refit))
     return(coeff.seq=coeff.seq)

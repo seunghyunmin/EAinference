@@ -34,7 +34,7 @@ The number of groups should be same as max(group). Default is \code{group = 1:p}
 If \code{"normal"}, resample errors from normal distiribution. If \code{"nonparametric"},
 resample errors from residuals.}
 
-\item{Y}{Response vector. Needed only if \code{method="nonparametric"}.}
+\item{Y}{response vector. Needed only if \code{method="nonparametric"}.}
 
 \item{parallel}{Logical. If \code{TRUE}, use parallelization.}
 

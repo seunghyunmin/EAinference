@@ -66,7 +66,7 @@
 #'  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pEProp2,
 #'  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
 #'  niter = Niter, type = "coeff", parallel = TRUE)
-#' hdIS(DSMixturem, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+#' hdIS(DSMixture, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
 #'  log = TRUE)
 #' @export
 hdIS=function(DirectSample, pETarget, sig2Target, lbdTarget,
@@ -222,13 +222,13 @@ hdIS=function(DirectSample, pETarget, sig2Target, lbdTarget,
           TSA <- TsA.select(Q, Subgrad, group, A, n, p)
 
           log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = T)) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, weights, TSA) )
+            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, W, TSA) )
           if (Mixture) {
             log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = T)) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, weights, TSA) )
+              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, W, TSA) )
           }
           log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = T)) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, weights, TSA) )
+            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, W, TSA) )
 
           if (!Mixture) {
             if (log) {Weight <- log.f0 - log.f1} else {

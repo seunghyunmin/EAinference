@@ -2,10 +2,7 @@
 % Please edit documentation in R/MHLS.R
 \name{MHLS}
 \alias{MHLS}
-\title{MH sampler for lasso / group lasso estimator
-
-Metropolis-Hastings sampler for lasso / group lasso estimator
-using estimator augmentation.}
+\title{MH sampler for lasso / group lasso estimator}
 \usage{
 MHLS(X, pointEstimate, sig2, lbd, group = 1:ncol(X), weights = rep(1,
   max(group)), B0, S0, A = unique(group[which(B0 != 0)]), tau = rep(1,
@@ -69,6 +66,10 @@ The functions \code{summary} and \code{plot} are used for a breif summary and ge
 \item{niteration}{number of iteration}
 \item{burnin}{length of burn-in period}
 \item{pointEstimate, group, type}{same as function arguments}
+}
+\description{
+Metropolis-Hastings sampler for lasso / group lasso estimator
+using estimator augmentation.
 }
 \details{
 If futype="normal", it generate

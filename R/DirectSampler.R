@@ -19,7 +19,7 @@
 #' @param method Bootstrap method, one of \code{"normal"} or \code{"nonparametric"}.
 #' If \code{"normal"}, resample errors from normal distiribution. If \code{"nonparametric"},
 #' resample errors from residuals.
-#' @param Y Response vector. Needed only if \code{method="nonparametric"}.
+#' @param Y response vector. Needed only if \code{method="nonparametric"}.
 #' @param parallel Logical. If \code{TRUE}, use parallelization.
 #' @param ncores Integer. The number of cores to use for the parallelization.
 #' @param verbose Whether to show the process. Default is FALSE. Only works when
@@ -85,7 +85,7 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2,
     stop("method needs to be either normal or nonparametric")
   }
 
-  if (parallel && !missing(ncores) && ncores == 1) {
+  if (parallel && ncores == 1) {
     ncores <- 2
     warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
             Set ncores to 2.")
@@ -181,17 +181,18 @@ DirectSamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, 
   n <- nrow(X);
   p <- ncol(X);
 
+  # Error Handling
+
+  if (length(sig2) !=1 || length(lbd) != 1) {
+    stop("sig2/lbd should be a scalar.")
+  }
+
   if (sig2 <= 0) {
     stop("sig2 should be positive.")
   }
 
   if (lbd < 0) {
     stop("lbd should be non-negative.")
-  }
-
-
-  if (length(sig2) !=1 || length(lbd) != 1) {
-    stop("sig2/lbd should be a scalar.")
   }
 
   if (parallel && verbose) {
