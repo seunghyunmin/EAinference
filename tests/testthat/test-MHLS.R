@@ -91,7 +91,7 @@ S0 <- LassoResult$S0
 
 test_that("Low dimensional setting under group lasso setting", {
   # Expect NA
-  expect_error(MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1,
+  expect_error(MHLS(X = X, pointEstimate = rep(0, 5), sig2 = 1, lbd = 1,
                     B0 = B0, S0 = S0, group = group, niter = 50,
                     burnin = 0, type = "coeff", verbose = FALSE), NA)
   expect_error(MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1,

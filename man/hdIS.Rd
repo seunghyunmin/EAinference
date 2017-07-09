@@ -81,6 +81,6 @@ DSMixture <- DirectSampler(X = x, pointEstimate_1 = pEProp1,
  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pEProp2,
  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
  niter = Niter, type = "coeff", parallel = TRUE)
-hdIS(DSMixturem, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+hdIS(DSMixture, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
  log = TRUE)
 }

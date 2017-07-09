@@ -4,10 +4,12 @@
 \alias{summary.MHLS}
 \title{Summarizing Metropolis-Hastings sampler outputs}
 \usage{
-\method{summary}{MHLS}(object)
+\method{summary}{MHLS}(object, ...)
 }
 \arguments{
 \item{object}{an object of class "MHLS", which is a result of \code{\link{MHLS}}.}
+
+\item{...}{additional arguments affecting the summary produced.}
 }
 \value{
 mean, median, s.d., 2.5% quantile and 97.5% quantile for each sampled beta and subgradient.

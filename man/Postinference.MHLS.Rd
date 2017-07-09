@@ -6,11 +6,13 @@
 \usage{
 Postinference.MHLS(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
   tau = rep(1, sum(B0 != 0)), sig2.hat, alpha = 0.05, nChain = 10,
-  niterPerChain = 500, parallel = TRUE, ncores = 2L, MHsamples = FALSE,
-  ...)
+  niterPerChain = 500, parallel = TRUE, ncores = 2L,
+  printSamples = FALSE, ...)
 }
 \arguments{
-\item{X}{\code{n x p} matrix of predictors.}
+\item{X}{predictors matrix.}
+
+\item{Y}{response vector.}
 
 \item{B0}{Lasso estimator.}
 
@@ -22,7 +24,7 @@ more details.}
 \item{weights}{Weight term for each group. Default is
 \code{rep(1, max(group))}.}
 
-\item{tau}{\code{|A| x 1} vector. Standard deviaion of proposal distribution
+\item{tau}{numeric vector. Standard deviaion of proposal distribution
  for each active beta.
 Adjust the value to get relevant level of acceptance rate.}
 
@@ -39,15 +41,15 @@ Adjust the value to get relevant level of acceptance rate.}
 \item{ncores}{The number of cores to use for the parallelization. If missing,
 it uses maximum number of cores.}
 
-\item{MHsamples}{Boolean value. If true, print Metropolis-Hastings samples.}
+\item{printSamples}{Boolean value. If true, print Metropolis-Hastings samples.}
 
-\item{coeff}{\code{n x 1} vector of estimates of true coefficient.}
+\item{...}{auxiliary \code{link{MHLS}} arguments.}
 }
 \value{
 \item{MHsamples}{a list of a class MHLS.}
 
 \item{confidenceInterval}{(1-alpha) confidence interval
-for each active coefficient.}
+of each active coefficient.}
 }
 \description{
 Provides Confidence intervals for the set of active coefficients
@@ -57,7 +59,7 @@ from lasso estimator using Metropolis-Hastings sampler.
 We provide Post-selection inference for lasso estimator.
 Using Metropolis Hastings Sampler with multiple chanin, \code{(1-alpha)}
 confidence interval for each active coefficients is generated.
-Set \code{MHsamples=TRUE} if one wants to check the samples.
+Set \code{printSamples=TRUE} if one wants to check the samples.
 Check the acceptance rate and adjust tau accordingly. Desirable level of
 acceptance rate for beta is \code{0.30 +- 0.15}. We recommend to set
 nChain >= 10 and niterPerChain >=500.
@@ -80,5 +82,5 @@ Postinference.MHLS(X, Y, B0, S0, lbd, weights, tau=rep(1, sum(B0!=0)),
 sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20, parallel=TRUE)
 Postinference.MHLS(X, Y, B0, S0, lbd, weights, tau=rep(1, sum(B0!=0)),
 sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
-parallel=TRUE, MHsamples=TRUE)
+parallel=TRUE, printSamples=TRUE)
 }

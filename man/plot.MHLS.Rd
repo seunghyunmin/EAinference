@@ -4,18 +4,16 @@
 \alias{plot.MHLS}
 \title{Plotting Metropolis-Hastings sampler outputs}
 \usage{
-\method{plot}{MHLS}(object, index = 1:ncol(object$beta), skipS = FALSE, ...)
+\method{plot}{MHLS}(x, index = 1:ncol(x$beta), skipS = FALSE, ...)
 }
 \arguments{
-\item{object}{an object of class "MHLS", which is a result of \code{\link{MHLS}}.}
+\item{x}{an object of class "MHLS", which is a result of \code{\link{MHLS}}.}
 
 \item{index}{an index of covariates that one can plot with.}
 
 \item{skipS}{logical. If \code{TRUE}, plot beta only.}
-}
-\value{
-this function gives mean, median, s.d., 2.5% quantile and 97.5%
- quantile for each sampled beta and subgradient.
+
+\item{...}{...    further arguments passed to or from other methods.}
 }
 \description{
 povides six plots for each covariates index;
