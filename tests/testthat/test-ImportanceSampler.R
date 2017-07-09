@@ -47,7 +47,7 @@ x <- matrix(rnorm(n*p), n)
 
 DSMixture <- DirectSampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
               pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights,
-              group = Group, niter = Niter, parallel = TRUE)
+              group = Group, niter = Niter, parallel = FALSE)
 test_that("Mixture", {
   expect_error(hdIS(DirectSample = DSMixture, pETarget = rep(0,p),
     sig2Target = .5, lbdTarget = .37, log = TRUE), NA)

@@ -74,6 +74,12 @@ DirectSampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2,
   n <- nrow(X)
   p <- ncol(X)
 
+  if(.Platform$OS.type == "windows" && parallel == TRUE){
+    n.cores <- 1L
+    parallel <- FALSE
+    warning("Under Windows platform, parallel computing cannot be executed.")
+  }
+
   #--------------------
   # Error Handling
   #--------------------

@@ -134,14 +134,19 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
 #' parallel=TRUE, printSamples=TRUE)
 #' @export
 Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
-                               tau = rep(1, sum(B0!=0)), sig2.hat,
-  alpha=.05, nChain=10, niterPerChain=500, parallel=TRUE, ncores = 2L,
-  printSamples=FALSE, ...)
+  tau = rep(1, sum(B0!=0)), sig2.hat, alpha = .05, nChain = 10,
+  niterPerChain = 500, parallel = FALSE, ncores = 2L, printSamples=FALSE, ...)
 {
   # nChain : the number of MH chains
   # niterPerChain : the number of iteration for each chain
   # B0, S0 : The lasso estimator
   # tau : same as in MHLS function
+
+  if(.Platform$OS.type == "windows" && parallel == TRUE){
+    n.cores <- 1L
+    parallel <- FALSE
+    warning("Under Windows platform, parallel computing cannot be executed.")
+  }
 
   Y <- matrix(Y, , 1)
   X <- as.matrix(X)

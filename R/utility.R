@@ -4,9 +4,8 @@
 #' @import graphics
 #' @import stats
 
-
-# devtools:load_all()
-# Cmd + Shift + L , to load the package.
+# devtools::check()
+# devtools::build_win() : to check package under Window enviornment
 #-------------------------------------------
 # Utility functions for Individual Lasso
 #-------------------------------------------

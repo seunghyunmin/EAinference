@@ -97,19 +97,37 @@ test_that("method is either nonparametric or normal", {
                , NA)
 })
 
-test_that("parallel", {
-  expect_warning(DirectSampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                             weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = TRUE,
-                             ncores = 1)
-               , "Set ncores to 2")
-  # expect_warning(DirectSampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-  #                              weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = TRUE,
-  #                              ncores = 100000)
-  #                , "maximum possible value")
-  expect_warning(DirectSampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                               weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = TRUE,
-                               ncores = 2)
-                , NA)
-})
+if(.Platform$OS.type != "windows"){
+  test_that("parallel", {
+    expect_warning(DirectSampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+                                 weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = TRUE,
+                                 ncores = 1)
+                   , "Set ncores to 2")
+    # expect_warning(DirectSampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+    #                              weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = TRUE,
+    #                              ncores = 100000)
+    #                , "maximum possible value")
+    expect_warning(DirectSampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+                                 weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = TRUE,
+                                 ncores = 2)
+                   , NA)
+  })
+} else {
+  test_that("parallel", {
+    expect_warning(DirectSampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+                                 weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = TRUE,
+                                 ncores = 1)
+                   , "Under Windows platform")
+    # expect_warning(DirectSampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+    #                              weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = TRUE,
+    #                              ncores = 100000)
+    #                , "maximum possible value")
+    expect_warning(DirectSampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+                                 weights = Weights, group = Group, niter = Niter, type = "coeff", parallel = TRUE,
+                                 ncores = 2)
+                   , "Under Windows platform")
+  })
+}
+
 
 

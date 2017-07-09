@@ -6,7 +6,7 @@
 \usage{
 Postinference.MHLS(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
   tau = rep(1, sum(B0 != 0)), sig2.hat, alpha = 0.05, nChain = 10,
-  niterPerChain = 500, parallel = TRUE, ncores = 2L,
+  niterPerChain = 500, parallel = FALSE, ncores = 2L,
   printSamples = FALSE, ...)
 }
 \arguments{
