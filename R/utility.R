@@ -442,7 +442,8 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
   Bcur <- Bprop <- Scur * rep(rcur,table(group));
   TSA.cur <- TSA.prop <- TsA(,Scur,group,A,n,p);
   for (i in A) {
-    rprop[i] <- truncnorm::rtruncnorm(1, 0, , rcur[i], sqrt(tau[which(A==i)] * ifelse(rcur[i]!=0,rcur[i],1)))
+      #rprop[i] <- truncnorm::rtruncnorm(1, 0, , rcur[i], sqrt(tau[which(A==i)] * ifelse(rcur[i]!=0,rcur[i],1)))
+    rprop[i] <- rtnorm(n = 1, mean = rcur[i], sd = sqrt(tau[which(A==i)] * ifelse(rcur[i]!=0,rcur[i],1)), lower = 0, upper = Inf)
     Bprop[group==i] <- rprop[i] * Scur[group==i]
 
     if (type == "coeff") {

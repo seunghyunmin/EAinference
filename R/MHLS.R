@@ -300,7 +300,7 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights,
 
         if (length(A2)!=0) {
           for (j in A2) {
-            b_prop <- msm::rtnorm(1, mean = B[t - 1, j], sd = tau[which(A == j)],
+            b_prop <- rtnorm(1, mean = B[t - 1, j], sd = tau[which(A == j)],
                              lower = LUbounds[j, 1],
                              upper = LUbounds[j, 2])
             Ccur <- pnorm(0,mean=B[t-1, j],sd=tau[which(A == j)],lower.tail=(B[t-1,j]<0),log.p=FALSE);
