@@ -84,8 +84,6 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
 #'
 #' @param X predictors matrix.
 #' @param Y response vector.
-#' @param B0 Lasso estimator.
-#' @param S0 Subgradient which corresponds to B0.
 #' @param lbd penalty term of lasso. See the loss function given below for
 #' more details.
 #' @param weights Weight term for each group. Default is
@@ -123,17 +121,13 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
 #' lbd <- .37
 #' weights <- rep(1,p)
 #' group <- 1:p
-#' LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd,group=group,
-#' weights = weights)
-#' B0 <- LassoResult$B0
-#' S0 <- LassoResult$S0
-#' Postinference.MHLS(X, Y, B0, S0, lbd, weights, tau=rep(1, sum(B0!=0)),
+#' Postinference.MHLS(X, Y, lbd, weights, tau=rep(1, sum(B0!=0)),
 #' sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20, parallel=TRUE)
-#' Postinference.MHLS(X, Y, B0, S0, lbd, weights, tau=rep(1, sum(B0!=0)),
+#' Postinference.MHLS(X, Y, lbd, weights, tau=rep(1, sum(B0!=0)),
 #' sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
 #' parallel=TRUE, printSamples=TRUE)
 #' @export
-Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
+Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, length(B0)),
   tau = rep(1, sum(B0!=0)), sig2.hat, alpha = .05, nChain = 10,
   niterPerChain = 500, parallel = FALSE, ncores = 2L, printSamples=FALSE, ...)
 {
@@ -141,6 +135,15 @@ Postinference.MHLS <- function(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
   # niterPerChain : the number of iteration for each chain
   # B0, S0 : The lasso estimator
   # tau : same as in MHLS function
+
+  LassoEst <- Lasso.MHLS(X, Y, lbd=lbd, weights=weights)
+  B0 <- LassoEst$B0
+  S0 <- LassoEst$S0
+  A <- which(B0!=0)
+
+  if (length(A)==0) {
+    stop("Given lbd, active set is empty.")
+  }
 
   if(.Platform$OS.type == "windows" && parallel == TRUE){
     n.cores <- 1L
@@ -187,13 +190,12 @@ Set it to the maximum possible value.")
   if (any(c(nChain,niterPerChain) <= 0)) {
     stop("nChain & niterPerChain have to be a positive integer.")
   }
-  if (all.equal(coef(gglasso(X, Y, pf = weights, group = 1:p, loss="ls",
-                              intercept=F, lambda=lbd))[-1],B0) != TRUE ||
-      all.equal(c(((t(X)/weights)%*%Y - (t(X) /weights) %*% X %*% B0) / n / lbd)
-                 , S0) != TRUE) {
-    stop("Invalid B0 or S0, use Lasso.MHLS to get a valid lasso solution.")
-  }
-  A <- which(B0!=0)
+  # if (all.equal(coef(gglasso(X, Y, pf = weights, group = 1:p, loss="ls",
+  #                             intercept=F, lambda=lbd))[-1],B0) != TRUE ||
+  #     all.equal(c(((t(X)/weights)%*%Y - (t(X) /weights) %*% X %*% B0) / n / lbd)
+  #                , S0) != TRUE) {
+  #   stop("Invalid B0 or S0, use Lasso.MHLS to get a valid lasso solution.")
+  # }
   # Draw samples of pluginbeta from the 95% confidence
   #  region boundary of restricted lse.
   # If nChain ==1, we just use restricted lse.

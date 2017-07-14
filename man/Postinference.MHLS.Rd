@@ -4,19 +4,14 @@
 \alias{Postinference.MHLS}
 \title{Post-inference for lasso estimator}
 \usage{
-Postinference.MHLS(X, Y, B0, S0, lbd, weights = rep(1, length(B0)),
-  tau = rep(1, sum(B0 != 0)), sig2.hat, alpha = 0.05, nChain = 10,
-  niterPerChain = 500, parallel = FALSE, ncores = 2L,
-  printSamples = FALSE, ...)
+Postinference.MHLS(X, Y, lbd, weights = rep(1, length(B0)), tau = rep(1,
+  sum(B0 != 0)), sig2.hat, alpha = 0.05, nChain = 10, niterPerChain = 500,
+  parallel = FALSE, ncores = 2L, printSamples = FALSE, ...)
 }
 \arguments{
 \item{X}{predictors matrix.}
 
 \item{Y}{response vector.}
-
-\item{B0}{Lasso estimator.}
-
-\item{S0}{Subgradient which corresponds to B0.}
 
 \item{lbd}{penalty term of lasso. See the loss function given below for
 more details.}
@@ -74,13 +69,9 @@ sig2 <- 1
 lbd <- .37
 weights <- rep(1,p)
 group <- 1:p
-LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd,group=group,
-weights = weights)
-B0 <- LassoResult$B0
-S0 <- LassoResult$S0
-Postinference.MHLS(X, Y, B0, S0, lbd, weights, tau=rep(1, sum(B0!=0)),
+Postinference.MHLS(X, Y, lbd, weights, tau=rep(1, sum(B0!=0)),
 sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20, parallel=TRUE)
-Postinference.MHLS(X, Y, B0, S0, lbd, weights, tau=rep(1, sum(B0!=0)),
+Postinference.MHLS(X, Y, lbd, weights, tau=rep(1, sum(B0!=0)),
 sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
 parallel=TRUE, printSamples=TRUE)
 }

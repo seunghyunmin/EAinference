@@ -1,11 +1,11 @@
 #' @title Computing importance weights under high-dimensional setting
 #'
 #' @description \code{hdIS} is used to computes importance weights using samples
-#' drawn by \code{\link{DirectSampler}}. For group lasso, we provide the option
+#' drawn by \code{\link{PBsampler}}. For group lasso, we provide the option
 #' to use mixture distribution as a proposal distribution. See the examples
 #' below for more details
 #'
-#' @param DirectSample Bootstrap samples of class \code{DS} from \code{DirectSampler}
+#' @param PBsample Bootstrap samples of class \code{PB} from \code{PBsampler}
 #' @param pETarget,sig2Target,lbdTarget Parameter of target distribution.
 #' (point estimate of beta or mu, estimated variance of error, lambda)
 #' @param TsA.method Way to construct T(eta(s),A) matrix. See Zhou and Min(2016)
@@ -43,11 +43,11 @@
 #' sig2Prop1 <- .5
 #' lbdProp1 <- 1
 
-#' DS <- DirectSampler(X = x, pointEstimate_1 = pEProp1, sig2_1 = sig2Prop1,
+#' PB <- PBsampler(X = x, pointEstimate_1 = pEProp1, sig2_1 = sig2Prop1,
 #'  lbd_1 = lbdProp1, weights = Weights, group = Group, niter = Niter,
 #'  type = "coeff")
 #'
-#' hdIS(DS, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+#' hdIS(PB, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
 #'  log = TRUE)
 #'
 #' #
@@ -62,14 +62,14 @@
 #' sig2Prop1 <- .5; sig2Prop2 <- 1
 #' lbdProp1 <- .37; lbdProp2 <- .5
 #'
-#' DSMixture <- DirectSampler(X = x, pointEstimate_1 = pEProp1,
+#' PBMixture <- PBsampler(X = x, pointEstimate_1 = pEProp1,
 #'  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pEProp2,
 #'  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
 #'  niter = Niter, type = "coeff")
-#' hdIS(DSMixture, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+#' hdIS(PBMixture, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
 #'  log = TRUE)
 #' @export
-hdIS=function(DirectSample, pETarget, sig2Target, lbdTarget,
+hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
             TsA.method = "default", log = TRUE, parallel = FALSE, ncores = 2L)
 {
   if(.Platform$OS.type == "windows" && parallel == TRUE){
@@ -78,38 +78,38 @@ hdIS=function(DirectSample, pETarget, sig2Target, lbdTarget,
     warning("Under Windows platform, parallel computing cannot be executed.")
   }
 
-  if (class(DirectSample) != "DS") {
-    stop("Use EAlasso::DirectSampler to generate DirectSample.")
+  if (class(PBsample) != "PB") {
+    stop("Use EAlasso::PBsampler to generate Bootstrap samples")
   }
 
   if (any(missing(pETarget), missing(sig2Target), missing(lbdTarget))) {
     stop("provide all the parameters for the target distribution")
   }
 
-  X <- DirectSample$X
+  X <- PBsample$X
   n <- nrow(X)
   p <- ncol(X)
 
-  if (DirectSample$mixture) {
-    pEProp1 <- DirectSample$pointEstimate[1,]
-    pEProp2 <- DirectSample$pointEstimate[2,]
-    sig2Prop1 <- DirectSample$sig2[1]
-    sig2Prop2 <- DirectSample$sig2[2]
-    lbdProp1 <- DirectSample$lbd[1]
-    lbdProp2 <- DirectSample$lbd[2]
+  if (PBsample$mixture) {
+    pEProp1 <- PBsample$pointEstimate[1,]
+    pEProp2 <- PBsample$pointEstimate[2,]
+    sig2Prop1 <- PBsample$sig2[1]
+    sig2Prop2 <- PBsample$sig2[2]
+    lbdProp1 <- PBsample$lbd[1]
+    lbdProp2 <- PBsample$lbd[2]
   } else {
-    pEProp1 <- DirectSample$pointEstimate
-    sig2Prop1 <- DirectSample$sig2
-    lbdProp1 <- DirectSample$lbd
+    pEProp1 <- PBsample$pointEstimate
+    sig2Prop1 <- PBsample$sig2
+    lbdProp1 <- PBsample$lbd
   }
 
-  type <- DirectSample$type
-  method <- DirectSample$method
-  group <- DirectSample$group
-  weights <- DirectSample$weights
+  type <- PBsample$type
+  method <- PBsample$method
+  group <- PBsample$group
+  weights <- PBsample$weights
 
-  B <- DirectSample$beta
-  S <- DirectSample$subgrad
+  B <- PBsample$beta
+  S <- PBsample$subgrad
   niter <- nrow(B)
 
   if (n >= p) {
@@ -175,7 +175,7 @@ hdIS=function(DirectSample, pETarget, sig2Target, lbdTarget,
       stop("TsA.method should be either \"default\" or \"qr\"")
     }
 
-    if (!DirectSample$mixture) {
+    if (!PBsample$mixture) {
       Mixture <- FALSE
       lbdProp2 <- lbdProp1
     } else {

@@ -4,11 +4,11 @@
 \alias{hdIS}
 \title{Computing importance weights under high-dimensional setting}
 \usage{
-hdIS(DirectSample, pETarget, sig2Target, lbdTarget, TsA.method = "default",
+hdIS(PBsample, pETarget, sig2Target, lbdTarget, TsA.method = "default",
   log = TRUE, parallel = FALSE, ncores = 2L)
 }
 \arguments{
-\item{DirectSample}{Bootstrap samples of class \code{DS} from \code{DirectSampler}}
+\item{PBsample}{Bootstrap samples of class \code{PB} from \code{PBsampler}}
 
 \item{pETarget, sig2Target, lbdTarget}{Parameter of target distribution.
 (point estimate of beta or mu, estimated variance of error, lambda)}
@@ -27,7 +27,7 @@ for more detail.}
 }
 \description{
 \code{hdIS} is used to computes importance weights using samples
-drawn by \code{\link{DirectSampler}}. For group lasso, we provide the option
+drawn by \code{\link{PBsampler}}. For group lasso, we provide the option
 to use mixture distribution as a proposal distribution. See the examples
 below for more details
 }
@@ -58,11 +58,11 @@ lbdTarget <- .37
 pEProp1 <- rep(1, p)
 sig2Prop1 <- .5
 lbdProp1 <- 1
-DS <- DirectSampler(X = x, pointEstimate_1 = pEProp1, sig2_1 = sig2Prop1,
+PB <- PBsampler(X = x, pointEstimate_1 = pEProp1, sig2_1 = sig2Prop1,
  lbd_1 = lbdProp1, weights = Weights, group = Group, niter = Niter,
  type = "coeff")
 
-hdIS(DS, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+hdIS(PB, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
  log = TRUE)
 
 #
@@ -77,10 +77,10 @@ pEProp1 <- rep(0,p); pEProp2 <- rep(1,p)
 sig2Prop1 <- .5; sig2Prop2 <- 1
 lbdProp1 <- .37; lbdProp2 <- .5
 
-DSMixture <- DirectSampler(X = x, pointEstimate_1 = pEProp1,
+PBMixture <- PBsampler(X = x, pointEstimate_1 = pEProp1,
  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pEProp2,
  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
  niter = Niter, type = "coeff")
-hdIS(DSMixture, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+hdIS(PBMixture, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
  log = TRUE)
 }
