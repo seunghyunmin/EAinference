@@ -35,13 +35,25 @@
 #' #
 #' Lasso.MHLS(X = X,Y = Y,lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
 #' @export
-Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
-  group=1:ncol(X))
+Lasso.MHLS <- function(X, Y, type = "lasso", lbd=.37, weights=rep(1,max(group)),
+  group=1:ncol(X), ...)
 {
   n <- nrow(X)
   p <- ncol(X)
   X <- as.matrix(X)
   Y <- matrix(Y, , 1)
+
+  if (!type %in% c("lasso", "grlasso", "slasso", "sgrlasso")) {
+    stop("type has to be either lasso, grlasso, slasso or sgrlasso.")
+  }
+
+  if (!all(group==1:p) && (!type %in% c("grlasso", "sgrlasso"))) {
+    stop("Choose type to be either grlasso or sgrlasso if group-structure exists.")
+  }
+
+  if (all(group==1:p) && (!type %in% c("lasso", "slasso"))) {
+    stop("Choose type to be either lasso or slasso if group-structure does not exist.")
+  }
 
   if (lbd <= 0) {
     stop("lbd has to be positive.")
@@ -63,18 +75,74 @@ Lasso.MHLS <- function(X, Y, lbd=.37, weights=rep(1,max(group)),
     stop("dimension of X and Y are not conformable.")
   }
 
-
-
   IndWeights <- rep(weights,table(group))
   # scale X with weights
   X.tilde   <- scale(X,FALSE,scale=IndWeights)
-  # compute group lasso estimator B0 and S0
-  B0 <- coef(gglasso(X.tilde, Y, pf = rep(1,max(group)), group = group,
-                     loss="ls", intercept=F, lambda=lbd))[-1] / IndWeights
-  S0 <- (t(X.tilde) %*% Y - t(X.tilde) %*% X.tilde %*%
-           (B0 * IndWeights)) / n / lbd
-  #A <- which(B0!=0)
-  return(list(B0=B0, S0=c(S0), lbd=lbd, weights=weights, group=group))
+
+  slassoLoss <- function(X,Y,beta,sig,lbd) {
+    n <- nrow(X)
+    crossprod(Y-X%*%beta) / 2 / n / sig + sig / 2 + lbd * sum(abs(beta))
+  }
+
+  if (type %in% c("lasso", "grlasso")) {
+    # compute group lasso estimator B0 and S0
+    B0 <- coef(gglasso(X.tilde, Y, pf = rep(1,max(group)), group = group,
+                       loss="ls", intercept=F, lambda=lbd))[-1] / IndWeights
+    S0 <- (t(X.tilde) %*% Y - t(X.tilde) %*% X.tilde %*%
+             (B0 * IndWeights)) / n / lbd
+    #A <- which(B0!=0)
+    return(list(B0=B0, S0=c(S0), lbd=lbd, weights=weights, group=group))
+  } else {
+    TEMP <- slassoFit.tilde(X.tilde = X.tilde, Y=Y, lbd=lbd, group=group, ...)
+    return(list(B0=TEMP$B0, S0=TEMP$S0, sigmaHat=TEMP$hsigma, lbd=lbd, weights=weights, group=group))
+  }
+}
+
+# Scaled lasso / group lasso function, use scaled X matrix.
+slassoFit.tilde <- function(X.tilde, Y, lbd, group, verbose=FALSE){
+  n <- nrow(X)
+  p <- ncol(X)
+
+  # if(is.null(lbd)){
+  #   if(p > 10^6){
+  #     lbd = "univ"
+  #   } else lbd = "quantile"
+  # }
+  # if(lbd == "univ" | lbd == "universal")
+  #   lbd=sqrt(2*log(p)/n)
+  # if(lbd=="quantile"){
+  #   L=0.1; Lold=0
+  #   while(abs(L-Lold)>0.001){
+  #     k=(L^4+2*L^2); Lold=L; L=-qnorm(min(k/p,0.99)); L=(L+Lold)/2
+  #   }
+  #   if(p==1) L=0.5
+  #   lbd = sqrt(2/n)*L
+  # }
+
+  if (verbose) {
+    cat("niter \t Loss \t hat.sigma \n")
+    cat("-------------------------------\n")
+  }
+  sig <- .1
+  K <- 1 ; niter <- 0
+  while(K == 1 & niter < 1000){
+    sig <- signew;
+    lam <- lbd * sig
+    B0 <- coef(gglasso::gglasso(X.tilde,Y,1:p,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
+    signew <- sqrt(crossprod(Y-X.tilde %*% B0) / n)
+
+    niter <- niter + 1
+    if (abs(signew - sig) < 1e-04) {K <- 0}
+    if (verbose) {
+      cat(flag, "\t", sprintf("%.3f", slassoLoss(X,Y,B0,signew,lbd)),"\t",
+          sprintf("%.3f", signew), "\n")
+    }
+  }
+  hsigma=signew; hlam=lam
+  S0 <- t(X.tilde) %*% (Y - X.tilde %*% B0) / n / lbd / hsigma
+  B0 <- B0 / rep(weights,table(group))
+  #hy=X%*%hbeta
+  return(list(B0=B0, S0=c(S0), hsigma=hsigma,lbd=lbd))
 }
 
 #' @title Post-inference for lasso estimator
@@ -136,7 +204,7 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, length(B0)),
   # B0, S0 : The lasso estimator
   # tau : same as in MHLS function
 
-  LassoEst <- Lasso.MHLS(X, Y, lbd=lbd, weights=weights)
+  LassoEst <- Lasso.MHLS(X=X, Y=Y, lbd=lbd, weights=weights)
   B0 <- LassoEst$B0
   S0 <- LassoEst$S0
   A <- which(B0!=0)
