@@ -35,8 +35,8 @@
 #' #
 #' Lasso.MHLS(X = X,Y = Y,lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
 #' @export
-Lasso.MHLS <- function(X, Y, type = "lasso", lbd=.37, weights=rep(1,max(group)),
-  group=1:ncol(X), ...)
+Lasso.MHLS <- function(X, Y, type = "lasso", lbd=.37,
+  group=1:ncol(X), weights=rep(1,max(group)), ...)
 {
   n <- nrow(X)
   p <- ncol(X)
@@ -93,15 +93,15 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd=.37, weights=rep(1,max(group)),
     #A <- which(B0!=0)
     return(list(B0=B0, S0=c(S0), lbd=lbd, weights=weights, group=group))
   } else {
-    TEMP <- slassoFit.tilde(X.tilde = X.tilde, Y=Y, lbd=lbd, group=group, ...)
+    TEMP <- slassoFit.tilde(X.tilde = X.tilde, Y=Y, lbd=lbd, group=group, weights = weights, ...)
     return(list(B0=TEMP$B0, S0=TEMP$S0, sigmaHat=TEMP$hsigma, lbd=lbd, weights=weights, group=group))
   }
 }
 
 # Scaled lasso / group lasso function, use scaled X matrix.
-slassoFit.tilde <- function(X.tilde, Y, lbd, group, verbose=FALSE){
-  n <- nrow(X)
-  p <- ncol(X)
+slassoFit.tilde <- function(X.tilde, Y, lbd, group, weights, verbose=FALSE){
+  n <- nrow(X.tilde)
+  p <- ncol(X.tilde)
 
   # if(is.null(lbd)){
   #   if(p > 10^6){
@@ -123,22 +123,27 @@ slassoFit.tilde <- function(X.tilde, Y, lbd, group, verbose=FALSE){
     cat("niter \t Loss \t hat.sigma \n")
     cat("-------------------------------\n")
   }
-  sig <- .1
+  sig <- signew <- .1
   K <- 1 ; niter <- 0
+
+  #if (lbd*signew < .001) {signew <- .001 / lbd}
+  #while(K == 1 & niter < 1000 & lbd*signew >= .001){
   while(K == 1 & niter < 1000){
     sig <- signew;
     lam <- lbd * sig
-    B0 <- coef(gglasso::gglasso(X.tilde,Y,1:p,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
+    B0 <- coef(gglasso(X.tilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
     signew <- sqrt(crossprod(Y-X.tilde %*% B0) / n)
 
     niter <- niter + 1
     if (abs(signew - sig) < 1e-04) {K <- 0}
     if (verbose) {
-      cat(flag, "\t", sprintf("%.3f", slassoLoss(X,Y,B0,signew,lbd)),"\t",
+      cat(niter, "\t", sprintf("%.3f", slassoLoss(X,Y,B0,signew,lbd)),"\t",
           sprintf("%.3f", signew), "\n")
     }
   }
-  hsigma=signew; hlam=lam
+  lam <- lbd * signew
+  B0 <- coef(gglasso(X.tilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
+  hsigma <- c(signew)
   S0 <- t(X.tilde) %*% (Y - X.tilde %*% B0) / n / lbd / hsigma
   B0 <- B0 / rep(weights,table(group))
   #hy=X%*%hbeta
@@ -204,7 +209,7 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, length(B0)),
   # B0, S0 : The lasso estimator
   # tau : same as in MHLS function
 
-  LassoEst <- Lasso.MHLS(X=X, Y=Y, lbd=lbd, weights=weights)
+  LassoEst <- Lasso.MHLS(X=X, Y=Y, type = "lasso", lbd=lbd, weights=weights)
   B0 <- LassoEst$B0
   S0 <- LassoEst$S0
   A <- which(B0!=0)

@@ -5,7 +5,7 @@
 #'
 #' @param X Predictor matrix.
 #' @param pointEstimate_1,sig2_1,lbd_1 Parameter of target distribution.
-#' (Estimate of true coefficient or E(y) depends on \code{type}, estimated variance of error, lambda).
+#' (Estimate of true coefficient or E(y) depends on \code{PEtype}, estimated variance of error, lambda).
 #' @param pointEstimate_2,sig2_2,lbd_2 Additional Parameter of target distribution only
 #' if mixture distribution is used.
 #' @param weights Weight vector in length of the number of groups. Default is
@@ -14,7 +14,8 @@
 #' The number of groups should be same as max(group). Default is \code{group = 1:p}
 #' , where \code{p} is number of covariates.
 #' @param niter The number of iterations.
-#' @param type either to be "coeff" or "mu". Decide what kind of \code{pointEstimate} to use.
+#' @param type type of penalty, either to be "lasso", "grlasso", "slasso" or "sgrlasso".
+#' @param PEtype either to be "coeff" or "mu". Decide what kind of \code{pointEstimate} to use.
 #' @param parallel Logical. If \code{TRUE}, use parallelization.
 #' @param ncores Integer. The number of cores to use for the parallelization.
 #' @param verbose Whether to show the process. Default is FALSE. Only works when
@@ -25,6 +26,9 @@
 #' First, we generate \code{y_new} by \code{X * pointEstimate + error_new}, while \code{error_new}
 #' is generated from N(0, sig2). See Zhou(2014) and Zhou and Min(2016) for more details.
 #'
+#' Four distict penalties can be used; "lasso" for lasso, "grlasso" for group lasso, "slasso" for scaled lasso
+#' and "sgrlasso" for scaled group lasso.
+#'
 #' If non-mixture distribution is used, the distribution with parameters \code{(pointEstimate_1, sig2_1, lbd_1)}
 #' will be used.
 #' If one uses mixture distribution by providing \code{(pointEstimate_2, sig2_2, lbd_2)},
@@ -34,7 +38,7 @@
 #'
 #' @return \item{beta}{(group) lasso estimator.}
 #' @return \item{subgrad}{subgradient.}
-#' @return \item{X, pointEstimate, sig2, weights, group, type, mixture}{Model parameters}
+#' @return \item{X, pointEstimate, sig2, weights, group, type, PEtype, mixture}{Model parameters}
 #' @examples
 #' set.seed(1234)
 #' n <- 10
@@ -47,20 +51,20 @@
 #' # Using non-mixture distribution
 #' #
 #' PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-#'  weights = Weights, group = Group, niter = Niter, parallel = FALSE)
+#'  weights = Weights, group = Group, type = "grlasso", niter = Niter, parallel = FALSE)
 #' PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-#'  weights = Weights, group = Group, niter = Niter, parallel = TRUE)
+#'  weights = Weights, group = Group, type = "grlasso", niter = Niter, parallel = TRUE)
 #' #
 #' # Using mixture distribution
 #' #
 #' PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
 #'  pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights,
-#'  group = Group, niter = Niter, parallel = TRUE)
+#'  group = Group, type = "grlasso", niter = Niter, parallel = TRUE)
 #' @export
 #'
 PBsampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2,
   sig2_2, lbd_2, weights = rep(1, max(group)), group = 1:ncol(X), niter = 2000,
-  type = "coeff", parallel = FALSE, ncores = 2L,
+  type, PEtype = "coeff", parallel = FALSE, ncores = 2L,
   verbose = FALSE)
 {
   n <- nrow(X)
@@ -75,8 +79,20 @@ PBsampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2,
   #--------------------
   # Error Handling
   #--------------------
-  if (!type %in% c("coeff", "mu")) {
-    stop("Invalide type input.")
+  if (!type %in% c("lasso", "grlasso", "slasso", "sgrlasso")) {
+    stop("type has to be either lasso, grlasso, slasso or sgrlasso.")
+  }
+
+  if (!all(group==1:p) && (!type %in% c("grlasso", "sgrlasso"))) {
+    stop("Choose type to be either grlasso or sgrlasso if group-structure exists.")
+  }
+
+  if (all(group==1:p) && (!type %in% c("lasso", "slasso"))) {
+    stop("Choose type to be either lasso or slasso if group-structure does not exist.")
+  }
+
+  if (!PEtype %in% c("coeff", "mu")) {
+    stop("Invalide PEtype input.")
   }
 
   if (parallel && ncores == 1) {
@@ -127,31 +143,46 @@ PBsampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2,
 
     PB1 <- PBsamplerMain(X = X, pointEstimate = pointEstimate_1, sig2 = sig2_1,
                          lbd = lbd_1, weights = weights, group = group, niter = niter1,
-                         type = type, parallel = parallel, ncores = ncores, verbose = verbose)
+                         type = type, PEtype = PEtype, parallel = parallel, ncores = ncores, verbose = verbose)
     PB2 <- PBsamplerMain(X = X, pointEstimate = pointEstimate_2, sig2 = sig2_1,
                          lbd = lbd_1, weights = weights, group = group, niter = niter2,
-                         type = type, parallel = parallel, ncores = ncores, verbose = verbose)
-    RESULT <- list(beta = rbind(PB1$beta, PB2$beta),
-        subgrad = rbind(PB1$subgrad, PB2$subgrad), X = X,
-        pointEstimate = rbind(pointEstimate_1, pointEstimate_2),
-        sig2 = c(sig2_1, sig2_2), lbd = c(lbd_1, lbd_2), weights = weights, group = group,
-        type = type, mixture = Mixture)
+                         type = type, PEtype = PEtype, parallel = parallel, ncores = ncores, verbose = verbose)
+    if (type %in% c("lasso", "grlasso")) {
+      RESULT <- list(beta = rbind(PB1$beta, PB2$beta),
+                     subgrad = rbind(PB1$subgrad, PB2$subgrad), X = X,
+                     pointEstimate = rbind(pointEstimate_1, pointEstimate_2),
+                     sig2 = c(sig2_1, sig2_2), lbd = c(lbd_1, lbd_2), weights = weights, group = group,
+                     type = type, PEtype = PEtype, mixture = Mixture)
+    } else {
+      RESULT <- list(beta = rbind(PB1$beta, PB2$beta),
+                     subgrad = rbind(PB1$subgrad, PB2$subgrad), hsigma = c(PB1$hsigma, PB2$hsigma), X = X,
+                     pointEstimate = rbind(pointEstimate_1, pointEstimate_2),
+                     sig2 = c(sig2_1, sig2_2), lbd = c(lbd_1, lbd_2), weights = weights, group = group,
+                     type = type, PEtype = PEtype, mixture = Mixture)
+    }
   } else {
     PB <- PBsamplerMain(X = X, pointEstimate = pointEstimate_1,
       sig2 = sig2_1, lbd = lbd_1, weights = weights, group = group,
-      niter = niter, type = type, parallel = parallel,
+      niter = niter, type = type, PEtype = PEtype, parallel = parallel,
       ncores = ncores, verbose = verbose)
-    RESULT <- list(beta = PB$beta, subgrad = PB$subgrad, X = X,
-      pointEstimate = pointEstimate_1, sig2 = sig2_1, lbd = lbd_1, weights = weights, group = group,
-      type = type, mixture = Mixture)
+    if (type %in% c("lasso", "grlasso")) {
+      RESULT <- list(beta = PB$beta, subgrad = PB$subgrad, X = X,
+                     pointEstimate = pointEstimate_1, sig2 = sig2_1, lbd = lbd_1, weights = weights, group = group,
+                     type = type, PEtype = PEtype, mixture = Mixture)
+    } else {
+      RESULT <- list(beta = PB$beta, subgrad = PB$subgrad, hsigma = PB$hsigma, X = X,
+                     pointEstimate = pointEstimate_1, sig2 = sig2_1, lbd = lbd_1, weights = weights, group = group,
+                     type = type, PEtype = PEtype, mixture = Mixture)
+    }
+
   }
   class(RESULT) <- "PB"
   return(RESULT)
 }
 
-PBsamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, max(group)),
- group = 1:ncol(X), niter = 2000, type = "coeff", parallel = FALSE,
- ncores = 2L, verbose = FALSE)
+PBsamplerMain <- function(X, pointEstimate, sig2, lbd, weights = rep(1, max(group)),
+ group, niter, type, PEtype, parallel,
+ ncores, verbose)
 {
   n <- nrow(X);
   p <- ncol(X);
@@ -174,16 +205,15 @@ PBsamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, max(
     warning("Note that verbose only works when parallel=FALSE")
   }
 
-  if (type == "coeff" && length(pointEstimate) != p) {
-    stop("pointEstimate must have a same length with the col-number of X, if type = \"coeff\"")
+  if (PEtype == "coeff" && length(pointEstimate) != p) {
+    stop("pointEstimate must have a same length with the col-number of X, if PEtype = \"coeff\"")
   }
 
-  if (type == "mu" && length(pointEstimate) != n) {
-    stop("pointEstimate must have a same length with the row-number of X, if type = \"mu\"")
+  if (PEtype == "mu" && length(pointEstimate) != n) {
+    stop("pointEstimate must have a same length with the row-number of X, if PEtype = \"mu\"")
   }
 
   if(verbose) {
-    ptm <- proc.time();
     niter.seq <- round(seq(1, niter, length.out = 11))[-1]
   }
 
@@ -195,35 +225,72 @@ PBsamplerMain <- function(X, pointEstimate, mu, sig2, lbd, weights = rep(1, max(
   Lassobeta <- matrix(0, niter, p)
   Subgrad   <- matrix(0, niter, p)
   Ysample   <- numeric(n)
-  if (type == "coeff") {
+  if (PEtype == "coeff") {
     Yexpect <- X %*% pointEstimate
   } else {
     Yexpect <- pointEstimate
   }
+  if (type %in% c("lasso", "grlasso")) {
+    FF <- function(x) {
+      epsilon <- rnorm(n, mean = 0, sd = sig2^0.5)
+      Ysample <- Yexpect + epsilon;
+      #if(center){Ysample=Ysample-mean(Ysample);}
 
-  FF <- function(x) {
-    epsilon <- rnorm(n, mean = 0, sd = sig2^0.5)
-    Ysample <- Yexpect + epsilon;
-    #if(center){Ysample=Ysample-mean(Ysample);}
-
-    LassoFit <- gglasso(X.tilde, Ysample, pf = rep(1, max(group)),
-                  group = group, loss = "ls", intercept = FALSE, lambda = lbd)
-    Lassobeta <- coef(LassoFit)[-1] / W
-    return(c(Lassobeta, (t.X.tilde %*% Ysample -
-                           GramMat %*% (Lassobeta * W)) / n / lbd))
-  }
-
-  if (parallel == FALSE) {
-    TEMP      <- lapply(1:niter, FF)
-    TEMP      <- do.call(rbind, TEMP)
-    Lassobeta <- TEMP[, 1:p]
-    Subgrad   <- TEMP[, -c(1:p)]
+      LassoFit <- gglasso(X.tilde, Ysample, pf = rep(1, max(group)),
+                          group = group, loss = "ls", intercept = FALSE, lambda = lbd)
+      Lassobeta <- coef(LassoFit)[-1] / W
+      return(c(Lassobeta, (t.X.tilde %*% Ysample -
+                             GramMat %*% (Lassobeta * W)) / n / lbd))
+    }
   } else {
-    TEMP <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
-    TEMP <- do.call(rbind, TEMP)
-    Lassobeta <- TEMP[, 1:p]
-    Subgrad <- TEMP[, -c(1:p)]
+    FF <- function(x) {
+      epsilon <- rnorm(n, mean = 0, sd = sig2^0.5)
+      Ysample <- Yexpect + epsilon;
+      #if(center){Ysample=Ysample-mean(Ysample);}
+
+      sig <- signew <- .5
+      K <- 1 ; niter <- 0
+      while(K == 1 & niter < 1000){
+        sig <- signew;
+        lam <- lbd * sig
+        B0 <- coef(gglasso::gglasso(X.tilde,Ysample,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
+        signew <- sqrt(crossprod(Ysample-X.tilde %*% B0) / n)
+
+        niter <- niter + 1
+        if (abs(signew - sig) < 1e-04) {K <- 0}
+        if (verbose) {
+          cat(niter, "\t", sprintf("%.3f", slassoLoss(X.tilde,Ysample,B0,signew,lbd)),"\t",
+              sprintf("%.3f", signew), "\n")
+        }
+      }
+      hsigma <- c(signew)
+      S0 <- (t.X.tilde %*% (Ysample - X.tilde %*% B0)) / n / lbd / hsigma
+      B0 <- B0 / rep(weights,table(group))
+      return(c(B0, S0, hsigma))
+    }
   }
-  if (verbose) {print(proc.time() - ptm)}
-  return(list(beta = Lassobeta, subgrad = Subgrad));
+
+  if (type %in% c("lasso", "grlasso")) {
+    if (parallel == FALSE) {
+      TEMP      <- lapply(1:niter, FF)
+      TEMP      <- do.call(rbind, TEMP)
+      Lassobeta <- TEMP[, 1:p]
+      Subgrad   <- TEMP[, 1:p + p]
+    } else {
+      TEMP <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
+      TEMP <- do.call(rbind, TEMP)
+      Lassobeta <- TEMP[, 1:p]
+      Subgrad <- TEMP[, 1:p + p]
+    }
+    return(list(beta = TEMP[, 1:p], subgrad = TEMP[, 1:p + p]));
+  } else {
+    if (parallel == FALSE) {
+      TEMP      <- lapply(1:niter, FF)
+      TEMP      <- do.call(rbind, TEMP)
+    } else {
+      TEMP <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
+      TEMP <- do.call(rbind, TEMP)
+    }
+    return(list(beta = TEMP[, 1:p], subgrad = TEMP[, 1:p + p], hsigma = TEMP[, 2*p + 1]));
+  }
 }

@@ -56,7 +56,7 @@
 #' sigma2 <- 1
 #' lbd <- .37
 #' weights <- rep(1, p)
-#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, weights = weights)
+#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
 #' MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
@@ -68,7 +68,7 @@
 #'
 #' Group <- c(1, 1, 2, 2, 2)
 #' weights <- rep(1,max(Group))
-#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, weights = weights,
+#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "grlasso", weights = weights,
 #'                           group = Group)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
@@ -90,7 +90,7 @@
 #' sigma2 <- 1
 #' lbd <- .37
 #' weights <- rep(1,p)
-#' LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd,weights = weights)
+#' LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd, type = "lasos", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
 #' MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
@@ -687,7 +687,7 @@ print.MHLS <- function (x, ...) {
 #' sigma2 <- 1
 #' lbd <- .37
 #' weights <- rep(1, p)
-#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, weights = weights)
+#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
 #' summary(MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
@@ -726,7 +726,7 @@ summary.MHLS <- function (object, ...) {
 #' sigma2 <- 1
 #' lbd <- .37
 #' weights <- rep(1, p)
-#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, weights = weights)
+#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type="lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
 #' plot(MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,

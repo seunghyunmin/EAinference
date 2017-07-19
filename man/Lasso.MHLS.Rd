@@ -4,8 +4,8 @@
 \alias{Lasso.MHLS}
 \title{lasso / group lasso estimator}
 \usage{
-Lasso.MHLS(X, Y, lbd = 0.37, weights = rep(1, max(group)),
-  group = 1:ncol(X))
+Lasso.MHLS(X, Y, type = "lasso", lbd = 0.37, group = 1:ncol(X),
+  weights = rep(1, max(group)), ...)
 }
 \arguments{
 \item{X}{n x p matrix of predictors.}
@@ -15,11 +15,11 @@ Lasso.MHLS(X, Y, lbd = 0.37, weights = rep(1, max(group)),
 \item{lbd}{penalty term of lasso. See the loss function given below for more
 details.}
 
-\item{weights}{Weight term for each group. Default is
-\code{rep(1, max(group))}.}
-
 \item{group}{p x 1 vector of consecutive integers. The number of groups
 should be same as max(group).}
+
+\item{weights}{Weight term for each group. Default is
+\code{rep(1, max(group))}.}
 }
 \value{
 \item{B0}{a vector of coefficient estimator.}

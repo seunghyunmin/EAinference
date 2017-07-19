@@ -5,14 +5,14 @@
 \title{Parameteric Bootstrapping lasso / group lasso estimator}
 \usage{
 PBsampler(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2, sig2_2, lbd_2,
-  weights = rep(1, max(group)), group = 1:ncol(X), niter = 2000,
-  type = "coeff", parallel = FALSE, ncores = 2L, verbose = FALSE)
+  weights = rep(1, max(group)), group = 1:ncol(X), niter = 2000, type,
+  PEtype = "coeff", parallel = FALSE, ncores = 2L, verbose = FALSE)
 }
 \arguments{
 \item{X}{Predictor matrix.}
 
 \item{pointEstimate_1, sig2_1, lbd_1}{Parameter of target distribution.
-(Estimate of true coefficient or E(y) depends on \code{type}, estimated variance of error, lambda).}
+(Estimate of true coefficient or E(y) depends on \code{PEtype}, estimated variance of error, lambda).}
 
 \item{pointEstimate_2, sig2_2, lbd_2}{Additional Parameter of target distribution only
 if mixture distribution is used.}
@@ -26,7 +26,9 @@ The number of groups should be same as max(group). Default is \code{group = 1:p}
 
 \item{niter}{The number of iterations.}
 
-\item{type}{either to be "coeff" or "mu". Decide what kind of \code{pointEstimate} to use.}
+\item{type}{type of penalty, either to be "lasso", "grlasso", "slasso" or "sgrlasso".}
+
+\item{PEtype}{either to be "coeff" or "mu". Decide what kind of \code{pointEstimate} to use.}
 
 \item{parallel}{Logical. If \code{TRUE}, use parallelization.}
 
@@ -40,7 +42,7 @@ parallel=FALSE.}
 
 \item{subgrad}{subgradient.}
 
-\item{X, pointEstimate, sig2, weights, group, type, mixture}{Model parameters}
+\item{X, pointEstimate, sig2, weights, group, type, PEtype, mixture}{Model parameters}
 }
 \description{
 Draw bootstrap samples in parametric way and
@@ -51,6 +53,9 @@ This function provides bootstrap samples for (group) lasso estimator
 and its subgradient. The sampling distribution is chracterized by \code{(pointEstimate, sig2, lbd)}.
 First, we generate \code{y_new} by \code{X * pointEstimate + error_new}, while \code{error_new}
 is generated from N(0, sig2). See Zhou(2014) and Zhou and Min(2016) for more details.
+
+Four distict penalties can be used; "lasso" for lasso, "grlasso" for group lasso, "slasso" for scaled lasso
+and "sgrlasso" for scaled group lasso.
 
 If non-mixture distribution is used, the distribution with parameters \code{(pointEstimate_1, sig2_1, lbd_1)}
 will be used.
@@ -71,13 +76,13 @@ x <- matrix(rnorm(n*p), n)
 # Using non-mixture distribution
 #
 PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
- weights = Weights, group = Group, niter = Niter, parallel = FALSE)
+ weights = Weights, group = Group, type = "grlasso", niter = Niter, parallel = FALSE)
 PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
- weights = Weights, group = Group, niter = Niter, parallel = TRUE)
+ weights = Weights, group = Group, type = "grlasso", niter = Niter, parallel = TRUE)
 #
 # Using mixture distribution
 #
 PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
  pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights,
- group = Group, niter = Niter, parallel = TRUE)
+ group = Group, type = "grlasso", niter = Niter, parallel = TRUE)
 }
