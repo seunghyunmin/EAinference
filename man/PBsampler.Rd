@@ -42,6 +42,8 @@ parallel=FALSE.}
 
 \item{subgrad}{subgradient.}
 
+\item{hsigma}{standard deviation estimator, for type="slasso" or type="sgrlasso" only.}
+
 \item{X, pointEstimate, sig2, weights, group, type, PEtype, mixture}{Model parameters}
 }
 \description{

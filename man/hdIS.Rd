@@ -60,7 +60,7 @@ sig2Prop1 <- .5
 lbdProp1 <- 1
 PB <- PBsampler(X = x, pointEstimate_1 = pEProp1, sig2_1 = sig2Prop1,
  lbd_1 = lbdProp1, weights = Weights, group = Group, niter = Niter,
- type = "coeff")
+ type="grlasso", PEtype = "coeff")
 
 hdIS(PB, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
  log = TRUE)
@@ -80,7 +80,7 @@ lbdProp1 <- .37; lbdProp2 <- .5
 PBMixture <- PBsampler(X = x, pointEstimate_1 = pEProp1,
  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pEProp2,
  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
- niter = Niter, type = "coeff")
+ niter = Niter, type="grlasso", PEtype = "coeff")
 hdIS(PBMixture, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
  log = TRUE)
 }

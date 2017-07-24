@@ -6,7 +6,7 @@
 #' @param X \code{n} x \code{p} matrix of predictors, where \code{n} is the
 #' number of samples and \code{p} is the number of covariates.
 #' @param pointEstimate numeric vector. Estimates of true coefficient for
-#' \code{type="coeff"} or E(y) for \code{type="mu"}.
+#' \code{PEtype="coeff"} or E(y) for \code{PEtype="mu"}.
 #' @param sig2 numeric. variance of error term.
 #' @param lbd numeric. penalty term of lasso. See the loss function given at details.
 #' @param group \code{p} x \code{1} vector. Consecutive integers should be used for indexing groups.
@@ -20,7 +20,7 @@
 #' @param niter numeric. The number of iterations.
 #' @param burnin numeric. The length of burin-in periods
 #' @param updateS.itv numeric. Update subgradients in every \code{updateS.itv} iterations. Set this value larger than \code{niter} if one wants to skip updating subgradients.
-#' @param type either to be "coeff" or "mu". Decide what kind of \code{pointEstimate} to use.
+#' @param PEtype either to be "coeff" or "mu". Decide what kind of \code{pointEstimate} to use.
 #' @param verbose verbose
 #' @param ... complementary arguments for MH-sampler for lasso.
 #' \itemize{
@@ -35,7 +35,8 @@
 #' updating the \code{SFindex}.}
 #' }
 #'
-#' @details If futype="normal", it generate
+#' @details Given appropriate initial value, provides Metropolis-Hastings samples.
+#'
 #' @return \code{MHLS} returns an object of \code{\link{class}} \code{c("MHLS", "Lasso")} or \code{c("MHLS", "GroupLasso")}
 #' The functions \code{summary} and \code{plot} are used for a breif summary and generating plots.
 #' \item{beta}{lasso / group lasso samples}
@@ -61,10 +62,10 @@
 #' S0 <- LassoResult$S0
 #' MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-#'      type = "coeff")
+#'      PEtype = "coeff")
 #' MHLS(X = X, pointEstimate = rep(0, n), sig2 = 1, lbd = 1, group = 1:p,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-#'      type = "mu")
+#'      PEtype = "mu")
 #'
 #' Group <- c(1, 1, 2, 2, 2)
 #' weights <- rep(1,max(Group))
@@ -74,10 +75,10 @@
 #' S0 <- LassoResult$S0
 #' MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1, group = Group,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-#'      type = "coeff")
+#'      PEtype = "coeff")
 #' MHLS(X = X, pointEstimate = rep(0, n), sig2 = 1, lbd = 1, group = Group,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-#'      type = "mu")
+#'      PEtype = "mu")
 #'
 #' #-------------------------
 #' # High dim
@@ -90,38 +91,38 @@
 #' sigma2 <- 1
 #' lbd <- .37
 #' weights <- rep(1,p)
-#' LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd, type = "lasos", weights = weights)
+#' LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd, type = "lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
 #' MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-#'      type = "coeff")
+#'      PEtype = "coeff")
 #' MHLS(X = X, pointEstimate = rep(0, n), sig2 = 1, lbd = 1, group = 1:p,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-#'      type = "mu")
+#'      PEtype = "mu")
 #' @export
 MHLS <-  function(X, pointEstimate, sig2, lbd, group = 1:ncol(X),
                    weights = rep(1, max(group)), B0, S0, A = unique(group[which(B0 != 0)]),
-                   tau = rep(1, length(A)), niter = 2000, burnin = 0, type = "coeff", updateS.itv = 1, verbose = FALSE, ...)
+                   tau = rep(1, length(A)), niter = 2000, burnin = 0, PEtype = "coeff", updateS.itv = 1, verbose = FALSE, ...)
 {
   MHLSmain(X = X, pointEstimate = pointEstimate, sig2 = sig2, lbd = lbd,
     group = group, weights = weights, B0 = B0, S0 = S0, A = A,
-           tau = tau, niter = niter, burnin = burnin, type = type, updateS.itv = updateS.itv, verbose = verbose, ...)
+           tau = tau, niter = niter, burnin = burnin, PEtype = PEtype, updateS.itv = updateS.itv, verbose = verbose, ...)
 }
 
 MHLSmain <- function (X, pointEstimate, sig2, lbd, group,
-  weights, B0, S0, A, tau, niter, burnin, type, updateS.itv, verbose, ...)
+  weights, B0, S0, A, tau, niter, burnin, PEtype, updateS.itv, verbose, ...)
 {
   #------------------
   # Error handling
   #------------------
   n <- nrow(X)
   p <- ncol(X)
-  if (type == "coeff" && length(pointEstimate) != p) {
-    stop("length(pointEstimate) must be the same with ncol(X), if type = \"coeff\"")
+  if (PEtype == "coeff" && length(pointEstimate) != p) {
+    stop("length(pointEstimate) must be the same with ncol(X), if PEtype = \"coeff\"")
   }
-  if (type == "mu" && length(pointEstimate) != n) {
-    stop("length(pointEstimate) must be the same with nrow(X), if type = \"mu\"")
+  if (PEtype == "mu" && length(pointEstimate) != n) {
+    stop("length(pointEstimate) must be the same with nrow(X), if PEtype = \"mu\"")
   }
   if (length(B0) != p || (!missing(S0) && length(S0) != p)) {
     stop("length(B0) and/or length(S0) has to be the same with ncol(X)")
@@ -132,8 +133,8 @@ MHLSmain <- function (X, pointEstimate, sig2, lbd, group,
   if (length(A) != length(unique(A)) || any(!A %in% 1:max(group))) {
     stop("Invalid active set index, A.")
   }
-  if (!type %in% c("coeff", "mu")) {
-    stop("Invalide type input.")
+  if (!PEtype %in% c("coeff", "mu")) {
+    stop("Invalide PEtype input.")
   }
   if (length(group) != p) {
     stop("length(group) has to be the same with ncol(X)")
@@ -165,7 +166,7 @@ MHLSmain <- function (X, pointEstimate, sig2, lbd, group,
   if (all(group == 1:ncol(X))) {
     est <- MHLSswp(X = X, pointEstimate = pointEstimate, sig2 = sig2,
       lbd = lbd, weights = weights, B0 = B0, S0 = S0, A = A,
-      tau = tau, niter = niter, burnin = burnin, type = type, updateS.itv = updateS.itv, verbose = verbose, ...)
+      tau = tau, niter = niter, burnin = burnin, PEtype = PEtype, updateS.itv = updateS.itv, verbose = verbose, ...)
     class(est) <- "MHLS"
     class(est) <- append(class(est), "Lasso")
   } else {
@@ -174,7 +175,7 @@ MHLSmain <- function (X, pointEstimate, sig2, lbd, group,
     }
     est <- MHLSgroup(X = X, pointEstimate = pointEstimate, sig2 = sig2,
       lbd = lbd, weights = weights, group = group, B0 = B0, S0 = S0, A = A,
-      tau = tau, niter = niter, burnin = burnin, type = type, updateS.itv = updateS.itv, verbose = verbose, ...)
+      tau = tau, niter = niter, burnin = burnin, PEtype = PEtype, updateS.itv = updateS.itv, verbose = verbose, ...)
     class(est) <- "MHLS"
     class(est) <- append(class(est), "GroupLasso")
 
@@ -190,13 +191,13 @@ MHLSmain <- function (X, pointEstimate, sig2, lbd, group,
   est$burnin <- burnin
   est$pointEstimate <- pointEstimate
   est$group <- group
-  est$type <- type
+  est$PEtype <- PEtype
   return(est)
 }
 
 MHLSswp <- function(X, pointEstimate, sig2, lbd, weights,
   B0, S0, A, tau, niter,
-  burnin, type, FlipSA = A, SFindex,
+  burnin, PEtype, FlipSA = A, SFindex,
   randomSFindex = TRUE, updateSF.itv = round(niter/20), updateS.itv,
   verbose, ...)
 {
@@ -231,7 +232,7 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights,
     Cinv <- solve(C) #Inverse Gram matrix
     logdiagC <- log(diag(C))
     Vinv <- n / (2 * sig2) * Cinv # non exponential part of pdf of U
-    if (type == "coeff") {
+    if (PEtype == "coeff") {
       CB <- C %*% pointEstimate    # pointEstimate : True beta
     } else {
       CB <- crossprod(X, pointEstimate) / n    # pointEstimate : True beta
@@ -372,7 +373,7 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights,
     W <- diag(weights)
     LBD <- diag(egC$values[R])
     lbdVRW <- lbd * t(VR) %*% W
-    if (type == "coeff") {
+    if (PEtype == "coeff") {
       VRCB <- t(VR) %*% C %*% pointEstimate
     } else {
       VRCB <- t(VR) %*% crossprod(X, pointEstimate) / n
@@ -525,7 +526,7 @@ MHLSswp <- function(X, pointEstimate, sig2, lbd, weights,
 }
 
 MHLSgroup <- function(X, pointEstimate, sig2, lbd,
- weights, group, B0, S0, A, tau, niter, burnin, type = "coeff", updateS.itv, verbose)
+ weights, group, B0, S0, A, tau, niter, burnin, PEtype = "coeff", updateS.itv, verbose)
 {
   if ( all.equal(group.norm2(S0, group)[A], rep(1, length(A)), tolerance = 1e-04) != TRUE ) {
     stop("Invalid S0. Use LassoMHLS for a good initial value.")
@@ -550,7 +551,7 @@ MHLSgroup <- function(X, pointEstimate, sig2, lbd,
   r.seq[1, ] <- rcur
   S.seq[1, ] <- Scur <- S0
 
-  if (type == "coeff") {
+  if (PEtype == "coeff") {
     Hcur <- drop(Psi %*% drop(B0 - pointEstimate) + lbd * W * drop(S0))
   } else {
     Hcur <- drop(Psi %*% drop(B0) - t(X) %*% pointEstimate / n + lbd * W * drop(S0))
@@ -558,13 +559,13 @@ MHLSgroup <- function(X, pointEstimate, sig2, lbd,
 
   if (n >= p) {
     for (i in 2:niter) {
-      r.new <- ld.Update.r(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,tau,type,n,p)
+      r.new <- ld.Update.r(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,tau,PEtype,n,p)
       r.seq[i,] <- rcur <- r.new$r
       Hcur <- r.new$Hcur
       if (i > burnin) {nAccept[1] <- nAccept[1] + r.new$nrUpdate}
 
       if (i %% updateS.itv == 0) {
-        S.new <- ld.Update.S (rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,type,n,p)
+        S.new <- ld.Update.S (rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,PEtype,n,p)
         S.seq[i,] <- Scur <- S.new$S
         Hcur <- S.new$Hcur
       } else {
@@ -608,8 +609,8 @@ print.MHLS <- function (x, ...) {
   cat ("Burn-in period: ", x$burnin,"\n\n")
   cat ("Plug-in pointEstimate: \n")
   print(x$pointEstimate)
-  cat ("type: \n")
-  print(x$type)
+  cat ("PEtype: \n")
+  print(x$PEtype)
 
   # if (inherits(x,"Group")) {
   #   Group.matrix <- matrix(0, length(unique(x$group)), p)

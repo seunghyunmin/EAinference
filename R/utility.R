@@ -231,7 +231,7 @@ CalTmat <- function(p,n,V,LBD,W,lbd,R,N,A,I)
   {
     BNul=as.matrix(svd(t(V_IN)%*%as.matrix(W[I,I]),nv=length(I))$v[,(p-n+1):length(I)]);
     Tmat=cbind(LBD%*%t(V_AR),lbd*t(V_IR)%*%as.matrix(W[I,I])%*%BNul);
-    # QQ : LBD%*%t(V_AR)?
+    #LBD%*%t(V_AR) == t(VR)%*%C[,A]
   }else{
     BNul=NULL;
     Tmat=LBD%*%t(V_AR);
@@ -400,7 +400,7 @@ F1 <- function(r, Psi, group) {
   return(Result)
 }
 
-# F2 = \psi \circ \eta , eq(3.7), p x |A| matrix
+# F2 = \psi \circ \eta , eq(3.7), p x J matrix, where J is the number of groups
 F2 <- function(s, Psi, group) {
   Result <- matrix(, nrow(Psi), length(unique(group)))
   for (i in 1:length(unique(group))) {
@@ -436,7 +436,7 @@ log.Jacobi.partial <- function(X, s, r, Psi, group, A, lam, W, TSA) { # log(abs(
   }
 }
 
-ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,tau,type,n,p) {
+ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,tau,PEtype,n,p) {
   rprop <- rcur;
   nrUpdate <- 0;
   Bcur <- Bprop <- Scur * rep(rcur,table(group));
@@ -446,7 +446,7 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
     rprop[i] <- rtnorm(n = 1, mean = rcur[i], sd = sqrt(tau[which(A==i)] * ifelse(rcur[i]!=0,rcur[i],1)), lower = 0, upper = Inf)
     Bprop[group==i] <- rprop[i] * Scur[group==i]
 
-    if (type == "coeff") {
+    if (PEtype == "coeff") {
       Hprop <- drop(Psi %*% drop(Bprop - pointEstimate) + lbd * W * drop(Scur))
     } else {
       Hprop <- drop(Psi %*% drop(Bprop) - t(X) %*% pointEstimate / n + lbd * W * drop(Scur))
@@ -471,8 +471,7 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
   }
   return(list(r = rprop, Hcur = Hcur, nrUpdate = nrUpdate))
 }
-
-ld.Update.S <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,type,n,p) {
+ld.Update.S <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,PEtype,n,p) {
   Sprop <- Scur;
   nSUpdate <- 0;
   #p <- ncol(X)
@@ -481,7 +480,7 @@ ld.Update.S <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
       Sprop[group ==i] <- rUnitBall(sum(group==i))
     }
 
-    if (type == "coeff") {
+    if (PEtype == "coeff") {
       Hprop <- drop(Psi %*% drop(Sprop * rep(rcur,table(group)) - pointEstimate) + lbd * W * drop(Sprop))
     } else {
       Hprop <- drop(Psi %*% drop(Sprop * rep(rcur,table(group))) - t(X) %*% pointEstimate / n + lbd * W * drop(Sprop))
@@ -513,26 +512,9 @@ rUnitBall <- function(p) {
 }
 # hd.Update.r <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,tau) {}
 # hd.Update.S <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,p) {}
-#=========================================
-Test.stats <- function(beta, group) {
-  Group.norm <- group.norm2(beta,group)
-  Result <- c(sum(Group.norm), max(Group.norm), Group.norm[1], Group.norm[2])
-  #names(Result) <- paste("T", 1:4, sep = "")
-  names(Result) <- c("sum.group.norm","max.group.norm","1st.group.norm","2nd.group.norm")
-  return(Result)
-}
-#=========================================
-Test.stats.A <- function(beta, group, A) {
-  Group.norm <- group.norm2(beta,group)
-  Result <- c(sum(Group.norm), max(Group.norm), Group.norm[A])
-  #names(Result) <- paste("T", 1:4, sep = "")
-  names(Result) <- c("sum.group.norm","max.group.norm",paste("group.norm",A,sep=""))
-  return(Result)
-}
-
-#====================================
-# MHLS class
-#====================================
+#-------------------------------------------
+# Utility functions for MHLS summary
+#-------------------------------------------
 SummBeta <- function ( x ) {
   c( mean=mean(x) , median = median(x) , s.d = sd(x) , quantile(x,c(.025,.975)) )
 }
@@ -541,3 +523,77 @@ SummSign <- function ( x ) {
   n=length(x)
   return ( c(Positive.proportion=sum(x>0)/n , Zero.proportion=sum(x==0)/n, Negative.proportion=sum(x<0)/n  ) )
 }
+#-------------------------------------------
+# Utility functions for scaled lasso / scaled group lasso
+#-------------------------------------------
+TsA.slasso <- function(SVD.temp, Q, s, W, group, A, n, p) {
+  # even if length(A) == 0, everything will work just fine !!
+  # when lengthI(A) == n, we only compute F2 function.
+  if (n < p && missing(Q)) {
+    stop("High dimensional setting needs Q")
+  }
+  nA <- length(A)
+  Subgradient.group.matix <- matrix(0, nA, p)
+
+  IndWeights <- W
+  if (nA != 0) {
+    for (i in 1:nA) {
+      Subgradient.group.matix[i, which(group == A[i])] = s[group == A[i]]
+    }
+  }
+  #Subgradient.group.matix <- Subgradient.group.matix[A, ,drop=FALSE]
+
+  #all.equal(V%*%diag(1/D^2)%*%t(V) , t(X) %*% solve(tcrossprod(X)) %*% solve(tcrossprod(X)) %*% X)
+  #all.equal(U%*%diag(D)%*%t(V) , X)
+
+  B <- rbind(t(Q), Subgradient.group.matix,
+             t(s * IndWeights) %*% SVD.temp %*% diag(IndWeights))
+
+  if (nA != 0 ) {
+    P <- matrix(0, p, p)
+    Permute.order <- 1:p
+
+    # if (n < p) {nrowB <- p - n + nA} else
+    # {nrowB <- nA}
+    for (i in 1:nrow(B)) {
+      if (B[i, n - nA - 1 + i] == 0) {
+        W1 <- which(B[i,] !=0)[1]
+        #Permute.order[c(W1,n-length(A)+i)] = Permute.order[c(n-length(A)+i,W1)]
+        Permute.order[c(which(Permute.order == W1),n-nA-1+i)] =
+          Permute.order[c(n-nA-1+i,which(Permute.order == W1))]
+        #print(Permute.order)
+      }
+    }
+    for ( i in 1:p) {
+      P[Permute.order[i], i] <- 1
+    }
+    B <- (B%*%P)
+  } else {
+    P <- diag(p)
+  }
+
+  if (n-nA-1 >= 1) { # n-nA-1 : # of free coordinate
+    BF <- B[, 1:(n - nA - 1),drop=FALSE]
+    BD <- B[, -c(1:(n - nA - 1)),drop=FALSE]
+    #Result <- P %*% rbind(diag(n-length(A)), -solve(BD)%*%BF)
+    Result <- P %*% rbind(diag(n-nA-1), -solve(BD,BF))
+  } else {
+    Result <- -solve(B)
+  }
+  return(Result)
+}
+log.Jacobi.partial.slasso <- function(X, s, r, Psi, group, A, lam, hsigma, W, TSA) { # log(abs(det(X %*% [F2[,A] | (F1 + lam * W) %*% TsA])))
+  # This function is only for high-dimensional cases.
+  n <- nrow(X)
+  p <- ncol(X)
+  table.group <- table(group)
+  if (n > p) stop("High dimensional setting is required.")
+  if (n == (length(A)-1)) {
+    log.Det <- determinant(X %*% cbind(F2(s, Psi, group)[,A], diag(lam * hsigma * W) %*% s))
+  } else {
+    log.Det <- determinant(X %*% cbind(F2(s, Psi, group)[, A], (F1(r, Psi, group)
+                                                                + diag(lam * hsigma * W)) %*% TSA,diag(lam * W) %*% s))
+  }
+  return(log.Det[[1]][1]);
+}
+

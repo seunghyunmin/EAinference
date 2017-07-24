@@ -38,6 +38,7 @@
 #'
 #' @return \item{beta}{(group) lasso estimator.}
 #' @return \item{subgrad}{subgradient.}
+#' @return \item{hsigma}{standard deviation estimator, for type="slasso" or type="sgrlasso" only.}
 #' @return \item{X, pointEstimate, sig2, weights, group, type, PEtype, mixture}{Model parameters}
 #' @examples
 #' set.seed(1234)
@@ -123,10 +124,10 @@ PBsampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2,
   if (any(missing(pointEstimate_1), missing(sig2_1), missing(lbd_1))) {
     stop("provide all the parameters for the distribution")
   }
-  if (all(group==1:p) && !sum(c(missing(sig2_2), missing(lbd_2),
-                                missing(pointEstimate_2)))==3) {
-    stop("Mixture distribution can be only used under group lasso.")
-  }
+  # if (type == "lasso" && !sum(c(missing(sig2_2), missing(lbd_2),
+  #                               missing(pointEstimate_2)))==3) {
+  #   stop("Mixture distribution can be only used under group lasso.")
+  # }
 
   if (!sum(c(missing(sig2_2), missing(lbd_2), missing(pointEstimate_2)))
       %in% c(0, 3)) {
@@ -144,8 +145,8 @@ PBsampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2,
     PB1 <- PBsamplerMain(X = X, pointEstimate = pointEstimate_1, sig2 = sig2_1,
                          lbd = lbd_1, weights = weights, group = group, niter = niter1,
                          type = type, PEtype = PEtype, parallel = parallel, ncores = ncores, verbose = verbose)
-    PB2 <- PBsamplerMain(X = X, pointEstimate = pointEstimate_2, sig2 = sig2_1,
-                         lbd = lbd_1, weights = weights, group = group, niter = niter2,
+    PB2 <- PBsamplerMain(X = X, pointEstimate = pointEstimate_2, sig2 = sig2_2,
+                         lbd = lbd_2, weights = weights, group = group, niter = niter2,
                          type = type, PEtype = PEtype, parallel = parallel, ncores = ncores, verbose = verbose)
     if (type %in% c("lasso", "grlasso")) {
       RESULT <- list(beta = rbind(PB1$beta, PB2$beta),

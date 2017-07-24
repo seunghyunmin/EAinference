@@ -41,14 +41,33 @@ set.seed(1234)
 n <- 10
 p <- 30
 Niter <-  10
-Group <- rep(1:(p/10), each = 10)
-Weights <- rep(1, p/10)
+Group1 <- rep(1:(p/10), each = 10)
+Weights1 <- rep(1, p/10)
+Group2 <- 1:p
+Weights2 <- rep(1, p)
+
 x <- matrix(rnorm(n*p), n)
 
-PBMixture <- PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-              pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights,
-              group = Group, type = "grlasso", PEtype = "coeff", niter = Niter, parallel = FALSE)
-test_that("Mixture", {
-  expect_error(hdIS(PBsample = PBMixture, pETarget = rep(0,p),
+PBMixture1 <- PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+              pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights1,
+              group = Group1, type = "grlasso", PEtype = "coeff", niter = Niter, parallel = FALSE)
+PBMixture2 <- PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+                       pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights2,
+                       group = Group2, type = "lasso", PEtype = "coeff", niter = Niter, parallel = FALSE)
+PBMixture3 <- PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = 1,
+                        pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = 2, weights = Weights1,
+                        group = Group1, type = "sgrlasso", PEtype = "coeff", niter = Niter, parallel = FALSE)
+PBMixture4 <- PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = 1,
+                        pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = 2, weights = Weights2,
+                        group = Group2, type = "slasso", PEtype = "coeff", niter = Niter, parallel = FALSE)
+
+test_that("Mixture under four types", {
+  expect_error(hdIS(PBsample = PBMixture1, pETarget = rep(0,p),
     sig2Target = .5, lbdTarget = .37, log = TRUE), NA)
+  expect_error(hdIS(PBsample = PBMixture2, pETarget = rep(0,p),
+                    sig2Target = .5, lbdTarget = .37, log = TRUE), NA)
+  expect_error(hdIS(PBsample = PBMixture3, pETarget = rep(0,p),
+                    sig2Target = .5, lbdTarget = .37, log = TRUE), NA)
+  expect_error(hdIS(PBsample = PBMixture4, pETarget = rep(0,p),
+                    sig2Target = .5, lbdTarget = .37, log = TRUE), NA)
 })

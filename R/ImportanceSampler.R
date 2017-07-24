@@ -104,13 +104,24 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
   }
 
   type <- PBsample$type
+  PEtype <- PBsample$PEtype
   method <- PBsample$method
   group <- PBsample$group
   weights <- PBsample$weights
 
   B <- PBsample$beta
   S <- PBsample$subgrad
+  if (type %in% c("slasso", "sgrlasso")) {
+    hSigma <- PBsample$hsigma
+  }
   niter <- nrow(B)
+
+  if (!PBsample$mixture) {
+    Mixture <- FALSE
+    lbdProp2 <- lbdProp1
+  } else {
+    Mixture <- TRUE
+  }
 
   if (n >= p) {
     stop("High dimensional setting is required, i.e. nrow(X) < ncol(X) required.")
@@ -126,222 +137,305 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
     warning("ncores is larger than the maximum number of available processes.
              Set it to the maximum possible value.")
   }
+  if (type %in% c("lasso", "grlasso")) {
+    if (all(group==1:p)) {
+      #=========================================================================
+      #-------------------
+      # Lasso
+      #-------------------
+      #=========================================================================
+      ## precalculation
+      C <- t(X) %*% X / n
+      egC <- eigen(C)
+      V <- egC$vectors
+      R <- 1:n
+      N <- (n+1):p
+      InvVarR     <- 1 / (egC$values[R] * sig2Target / n) #inverse of (sig2Target*Lambda_i/n)
+      InvVarRprop <- 1 / (egC$values[R] * sig2Prop1 / n) #inverse of (sig2Prop1*Lambda_i/n)
+      VR <-matrix(V[, R], p, n)
+      VRC <- VRCprop <- t(VR)%*%C
+      W <- diag(weights)
+      LBD <- LBDprop <- diag(egC$values[R])
+      VRW <- VRWprop <- t(VR)%*%W
+      if (PEtype == "coeff") {
+        VRCB     <- t(VR) %*% C %*% pETarget
+        VRCBprop <- t(VR) %*% C %*% pEProp1
+      } else {
+        VRCB     <- t(VR) %*% t(X) %*% pETarget / n
+        VRCBprop <- t(VR) %*% t(X) %*% pEProp1 / n
+      }
 
-  if (all(group==1:p)) {
-    #-------------------
-    # Lasso
-    #-------------------
-    ## precalculation
-    C <- t(X) %*% X / n
-    egC <- eigen(C)
-    V <- egC$vectors
-    R <- 1:n
-    N <- (n+1):p
-    InvVarR     <- 1 / (egC$values[R] * sig2Target / n) #inverse of (sig2Target*Lambda_i/n)
-    InvVarRprop <- 1 / (egC$values[R] * sig2Prop1 / n) #inverse of (sig2Prop1*Lambda_i/n)
-    VR <-matrix(V[, R], p, n)
-    VRC <- VRCprop <- t(VR)%*%C
-    W <- diag(weights)
-    LBD <- LBDprop <- diag(egC$values[R])
-    VRW <- VRWprop <- t(VR)%*%W
-    if (type == "coeff") {
-      VRCB     <- t(VR) %*% C %*% pETarget
-      VRCBprop <- t(VR) %*% C %*% pEProp1
-    } else {
-      VRCB     <- t(VR) %*% t(X) %*% pETarget / n
-      VRCBprop <- t(VR) %*% t(X) %*% pEProp1 / n
-    }
-
-    logISweights <- numeric(niter)
-    FF <- function(x) {
-      (n - sum(B[x,] != 0)) * log(lbdTarget / lbdProp1) - 0.5 * sum((VRC %*% B[x, ] + lbdTarget * VRW %*% S[x, ] -
-      VRCB)^2 * InvVarR) + 0.5 * sum((VRCprop %*% B[x, ] + lbdProp1 * VRWprop %*% S[x, ] - VRCBprop)^2 * InvVarRprop)
-    }
-    if (!parallel) {
-      for (t in 1:niter) {
-        logISweights[t] <- FF(t)
+      Weight <- numeric(niter)
+      FF <- function(x) {
+        log.f0 <- -0.5 * sum((VRC %*% B[x, ] + lbdTarget * VRW %*% S[x, ] -
+          VRCB)^2 * InvVarR) + log(lbdTarget) *
+          (n - sum(B[x,] != 0)) - 0.5 * ( n * log(sig2Target/n) )
+        log.f1 <- -0.5 * sum((VRCprop1 %*% B[x, ] + lbdProp1 *
+          VRWprop1 %*% S[x, ] - VRCBprop1)^2 * InvVarRprop1) + log(lbdProp1) *
+          (n - sum(B[x,] != 0)) - 0.5 * ( n * log(sig2Prop1/n) )
+        if (Mixture) {
+          log.f2 <- -0.5 * sum((VRCprop2 %*% B[x, ] + lbdProp2 *
+            VRWprop2 %*% S[x, ] - VRCBprop2)^2 * InvVarRprop2) + log(lbdProp2) *
+            (n - sum(B[x,] != 0)) - 0.5 * ( n * log(sig2Prop2/n) )
+        }
+        if (!Mixture) {
+          if (log) {Weight <- log.f0 - log.f1} else {
+            Weight <- exp(log.f0 - log.f1)
+          }
+        } else {
+          if (log) {
+            Weight <- - log(exp(-log(2) + log.f1 - log.f0) +
+                            exp(-log(2) + log.f2 - log.f0))
+          } else {
+            Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) +
+                            exp(-log(2) + log.f2 - log.f0))
+          }
+        }
+        return(Weight)
+        # (n - sum(B[x,] != 0)) * log(lbdTarget / lbdProp1) -
+        #   0.5 * sum((VRC %*% B[x, ] + lbdTarget * VRW %*% S[x, ] -
+        #   VRCB)^2 * InvVarR) + 0.5 * sum((VRCprop %*% B[x, ] +
+        #   lbdProp1 * VRWprop %*% S[x, ] - VRCBprop)^2 * InvVarRprop)
       }
     } else {
-      logISweights <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
-      logISweights <- do.call(c,Weight)
-     }
-    logISweights <- logISweights - n / 2 * (log(sig2Target / sig2Prop1))
-    return(ifelse(log, logISweights, exp(logISweights)))
-  } else {
-    #-------------------
-    # Group Lasso
-    #-------------------
-    if (!TsA.method %in% c("default", "qr")) {
-      stop("TsA.method should be either \"default\" or \"qr\"")
-    }
+      #=========================================================================
+      #-------------------
+      # Group Lasso
+      #-------------------
+      #=========================================================================
+      if (!TsA.method %in% c("default", "qr")) {
+        stop("TsA.method should be either \"default\" or \"qr\"")
+      }
 
-    if (!PBsample$mixture) {
-      Mixture <- FALSE
-      lbdProp2 <- lbdProp1
-    } else {
-      Mixture <- TRUE
-    }
-    #TsA.select <- switch(TsA.method, null = TsA.null, qr = TsA.qr, default = TsA)
-    TsA.select <- switch(TsA.method, qr = TsA.qr, default = TsA)
-    Psi <- t(X)%*%X / n
-
-    #precaculation
-    if (n < p) {
+      #TsA.select <- switch(TsA.method, null = TsA.null, qr = TsA.qr, default = TsA)
+      TsA.select <- switch(TsA.method, qr = TsA.qr, default = TsA)
+      Psi <- t(X)%*%X / n
       ginv.tX <- solve(tcrossprod(X)) %*% X
-    }
+      #precaculation
+      W <- rep(weights, table(group))
 
+      if (!all(lbdTarget == c(lbdProp1, lbdProp2)) && TsA.method != "null") {
+        Q <- MASS::Null(t(X)/W)#round(Null(t(X)/W),5)
+      }
+      t.XWinv <- t(X)/W
+      Weight <- numeric(niter)
+
+      FF <- function(x) {
+        Beta <- B[x,]
+        Subgrad <- S[x,]
+        if (n < p) {
+          if (PEtype == "coeff") {
+            H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pETarget) + lbdTarget * W * Subgrad) #H.tilde
+            H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp1) + lbdProp1 * W * Subgrad) #H.tilde proposed1
+            if (Mixture) {
+              H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp2) + lbdProp2 * W * Subgrad) #H.tilde proposed2
+            }
+          } else {
+            H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdTarget * W * Subgrad) - pETarget / sqrt(n) #H.tilde
+            H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp1 * W * Subgrad) - pEProp1 / sqrt(n)  #H.tilde proposed1
+            if (Mixture) {
+              H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp2 * W * Subgrad) - pEProp2 / sqrt(n)   #H.tilde proposed2
+            }
+          }
+
+          r <- group.norm2(Beta, group)
+          A <- unique(group[Beta != 0])
+
+          if (!all(lbdTarget == c(lbdProp1, lbdProp2))) {
+            #           if (TsA.method == "null") {
+            #             TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
+            #           } else {
+            #             TSA <- TsA.select(Q, Subgrad, group, A, n, p)
+            #           }
+            TSA <- TsA.select(Q, Subgrad, group, A, n, p)
+
+            log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = T)) +
+              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, W, TSA) )
+            if (Mixture) {
+              log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = T)) +
+                (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, W, TSA) )
+            }
+            log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = T)) +
+              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, W, TSA) )
+
+            if (!Mixture) {
+              if (log) {Weight <- log.f0 - log.f1} else {
+                Weight <- exp(log.f0 - log.f1)
+              }
+            } else {
+              if (log) {
+                Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+              } else {
+                Weight <- 1 / (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+              }
+            }
+          } else {
+            log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = TRUE))
+            if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = TRUE))}
+            log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = TRUE))
+
+            if (!Mixture) {
+              if (log) {Weight <- log.f0 - log.f1} else {
+                Weight <- exp(log.f0 - log.f1)
+              }
+            } else {
+              if (log) {
+                Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+              } else {
+                Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+              }
+            }
+          }
+        }
+        else {
+          if (PEtype == "coeff") {
+            H.target <- Psi %*% (Beta - pETarget) + lbdTarget * W * Subgrad #H.tilde
+            H.prop1 <-  Psi %*% (Beta - pEProp1) + lbdProp1 * W * Subgrad #H.tilde proposed1
+            if (Mixture) H.prop2 <-  Psi %*% (Beta - pEProp2) + lbdProp2 * W * Subgrad #H.tilde proposed2
+          } else {
+            H.target <- Psi %*% Beta + lbdTarget * W * Subgrad - t(X) %*% pETarget / n #H.tilde
+            H.prop1 <-  Psi %*% Beta + lbdProp1 * W * Subgrad - t(X) %*% pEProp1 / n  #H.tilde proposed1
+            if (Mixture) H.prop2 <-  Psi %*% Beta + lbdProp2 * W * Subgrad - t(X) %*% pEProp2 / n  #H.tilde proposed2
+          }
+
+          r <- group.norm2(Beta, group)
+          A <- unique(group[Beta != 0])
+
+          if (!all(lbdTarget == c(lbdProp1, lbdProp2))) {
+
+            if (TsA.method == "null") {
+              TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
+            } else {
+              TSA <- TsA.select(Q, Subgrad, group, A, n, p)
+            }
+
+            log.f1 <- dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = T) +
+              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, weights, TSA) )
+            if (Mixture) {
+              log.f2 <- dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = T) +
+                (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, weights, TSA) )
+            }
+            log.f0 <- dmvnorm(drop(H.target), , sig2Target/n * Psi, log = T) +
+              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, weights, TSA) )
+
+            if (!Mixture) {
+              if (log) {Weight <- log.f0 - log.f1} else {
+                Weight <- exp(log.f0 - log.f1)
+              }
+            } else {
+              if (log) {
+                Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+              } else {
+                Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+              }
+            }
+          } else {
+            log.f1 <- sum(dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = TRUE))
+            if (Mixture) {
+              log.f2 <- sum(dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = TRUE))
+            }
+            log.f0 <- sum(dmvnorm(drop(H.target), , sig2Target/n * Psi, log = TRUE))
+
+            if (!Mixture) {
+              if (log) {Weight <- log.f0 - log.f1} else {
+                Weight <- exp(log.f0 - log.f1)
+              }
+            } else {
+              if (log) {
+                Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+              } else {
+                Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+              }
+            }
+          }
+        }
+        return(Weight)
+      }
+    }
+  } else {
+    #===========================================================================
+    #-------------------
+    # scaled lasso, scaled group lasso
+    #-------------------
+    #===========================================================================
+    SVD <- svd(X)
+    Psi <- t(X)%*%X / n
+    ginv.tX <- solve(tcrossprod(X)) %*% X
+    #precaculation
     W <- rep(weights, table(group))
 
-    if (!all(lbdTarget == c(lbdProp1, lbdProp2)) && TsA.method != "null") {
+    if (!all(lbdTarget == c(lbdProp1, lbdProp2))) {
       Q <- MASS::Null(t(X)/W)#round(Null(t(X)/W),5)
     }
     t.XWinv <- t(X)/W
     Weight <- numeric(niter)
+    SVD.temp <- SVD$v %*% diag(1/SVD$d^2)%*%t(SVD$v)
 
     FF <- function(x) {
       Beta <- B[x,]
       Subgrad <- S[x,]
-      if (n < p) {
-        if (type == "coeff") {
-          H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pETarget) + lbdTarget * W * Subgrad) #H.tilde
-          H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp1) + lbdProp1 * W * Subgrad) #H.tilde proposed1
-          if (Mixture) {
-            H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp2) + lbdProp2 * W * Subgrad) #H.tilde proposed2
-          }
-        } else {
-          H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdTarget * W * Subgrad) - pETarget / sqrt(n) #H.tilde
-          H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp1 * W * Subgrad) - pEProp1 / sqrt(n)  #H.tilde proposed1
-          if (Mixture) {
-            H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp2 * W * Subgrad) - pEProp2 / sqrt(n)   #H.tilde proposed2
-          }
+      hatSigma <- hSigma[x]
+      if (PEtype == "coeff") {
+        H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pETarget) +
+                                                   lbdTarget * hatSigma * W * Subgrad) #H.tilde
+        H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp1) +
+                                                  lbdProp1 * hatSigma * W * Subgrad) #H.tilde proposed1
+        if (Mixture) {
+          H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp2) +
+                                                    lbdProp2 * hatSigma * W * Subgrad) #H.tilde proposed2
         }
-
-        r <- group.norm2(Beta, group)
-        A <- unique(group[Beta != 0])
-
-        if (!all(lbdTarget == c(lbdProp1, lbdProp2))) {
-#           if (TsA.method == "null") {
-#             TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
-#           } else {
-#             TSA <- TsA.select(Q, Subgrad, group, A, n, p)
-#           }
-          TSA <- TsA.select(Q, Subgrad, group, A, n, p)
-
-          log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = T)) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, W, TSA) )
-          if (Mixture) {
-            log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = T)) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, W, TSA) )
-          }
-          log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = T)) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, W, TSA) )
-
-          if (!Mixture) {
-            if (log) {Weight <- log.f0 - log.f1} else {
-              Weight <- exp(log.f0 - log.f1)
-            }
-          } else {
-            if (log) {
-              Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-            } else {
-              Weight <- 1 / (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-            }
-          }
-        } else {
-          log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = TRUE))
-          if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = TRUE))}
-          log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = TRUE))
-
-          if (!Mixture) {
-            if (log) {Weight <- log.f0 - log.f1} else {
-              Weight <- exp(log.f0 - log.f1)
-            }
-          } else {
-            if (log) {
-              Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-            } else {
-              Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-            }
-          }
+      } else {
+        H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% Beta +
+                                                   lbdTarget * hatSigma * W * Subgrad) - pETarget / sqrt(n) #H.tilde
+        H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta +
+                                                  lbdProp1 * hatSigma * W * Subgrad) - pEProp1 / sqrt(n)  #H.tilde proposed1
+        if (Mixture) {
+          H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta +
+                                                    lbdProp2 * hatSigma * W * Subgrad) - pEProp2 / sqrt(n)   #H.tilde proposed2
         }
       }
-      else {
-        if (type == "coeff") {
-          H.target <- Psi %*% (Beta - pETarget) + lbdTarget * W * Subgrad #H.tilde
-          H.prop1 <-  Psi %*% (Beta - pEProp1) + lbdProp1 * W * Subgrad #H.tilde proposed1
-          if (Mixture) H.prop2 <-  Psi %*% (Beta - pEProp2) + lbdProp2 * W * Subgrad #H.tilde proposed2
-        } else {
-          H.target <- Psi %*% Beta + lbdTarget * W * Subgrad - t(X) %*% pETarget / n #H.tilde
-          H.prop1 <-  Psi %*% Beta + lbdProp1 * W * Subgrad - t(X) %*% pEProp1 / n  #H.tilde proposed1
-          if (Mixture) H.prop2 <-  Psi %*% Beta + lbdProp2 * W * Subgrad - t(X) %*% pEProp2 / n  #H.tilde proposed2
+
+      r <- group.norm2(Beta, group)
+      A <- unique(group[Beta != 0])
+
+      if (!all(lbdTarget == c(lbdProp1, lbdProp2))) { # Jacobian terms stay
+        TSA <- TsA.slasso(SVD.temp = SVD.temp, Q = Q, s = Subgrad, W = W, group = group,
+                          A = A, n = n, p = p)
+        log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = T)) +
+          (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdProp1, hsigma = hatSigma, W = W, TSA = TSA))
+        if (Mixture) {
+          log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = T)) +
+            (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdProp2, hsigma = hatSigma, W = W, TSA = TSA))
         }
-
-        r <- group.norm2(Beta, group)
-        A <- unique(group[Beta != 0])
-
-        if (!all(lbdTarget == c(lbdProp1, lbdProp2))) {
-
-          if (TsA.method == "null") {
-            TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
-          } else {
-            TSA <- TsA.select(Q, Subgrad, group, A, n, p)
-          }
-
-          log.f1 <- dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = T) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, weights, TSA) )
-          if (Mixture) {
-            log.f2 <- dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = T) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, weights, TSA) )
-          }
-          log.f0 <- dmvnorm(drop(H.target), , sig2Target/n * Psi, log = T) +
-            (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, weights, TSA) )
-
-          if (!Mixture) {
-            if (log) {Weight <- log.f0 - log.f1} else {
-              Weight <- exp(log.f0 - log.f1)
-            }
-          } else {
-            if (log) {
-              Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-            } else {
-              Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-            }
-          }
+        log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = T)) +
+          (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdTarget, hsigma = hatSigma, W = W, TSA = TSA))
+      } else { # Jacobian terms cancel out
+        log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = TRUE))
+        if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = TRUE))}
+        log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = TRUE))
+      }
+      if (!Mixture) {
+        if (log) {Weight <- log.f0 - log.f1} else {
+          Weight <- exp(log.f0 - log.f1)
+        }
+      } else {
+        if (log) {
+          Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
         } else {
-          log.f1 <- sum(dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = TRUE))
-          if (Mixture) {
-            log.f2 <- sum(dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = TRUE))
-          }
-          log.f0 <- sum(dmvnorm(drop(H.target), , sig2Target/n * Psi, log = TRUE))
-
-          if (!Mixture) {
-            if (log) {Weight <- log.f0 - log.f1} else {
-              Weight <- exp(log.f0 - log.f1)
-            }
-          } else {
-            if (log) {
-              Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-            } else {
-              Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-            }
-          }
+          Weight <- 1 / (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
         }
       }
       return(Weight)
     }
-
-    if (!parallel) {
-      for (t in 1:niter) {
-        Weight[t] <- FF(t)
-      }
-    } else {
-      Weight <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
-      Weight <- do.call(c,Weight)
-    }
-    return(Weight)
   }
+
+  if (!parallel) {
+    for (t in 1:niter) {
+      Weight[t] <- FF(t)
+    }
+  } else {
+    Weight <- parallel::mclapply(1:niter, FF, mc.cores = ncores)
+    Weight <- do.call(c,Weight)
+  }
+  return(Weight)
 }
-# hdIS=function(X, pETarget, sig2Target, lbdTarget, pEProp1, sig2Prop1,
-#   lbdProp1, pEProp2, sig2Prop2, lbdProp2, proposalsample, group,
-#   weights = rep(1, length(unique(group))), type = "coeff", TsA.method = "default", log = TRUE,
-#   parallel = FALSE, ncores)
