@@ -62,7 +62,6 @@
 #'  pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights,
 #'  group = Group, type = "grlasso", niter = Niter, parallel = TRUE)
 #' @export
-#'
 PBsampler <- function(X, pointEstimate_1, sig2_1, lbd_1, pointEstimate_2,
   sig2_2, lbd_2, weights = rep(1, max(group)), group = 1:ncol(X), niter = 2000,
   type, PEtype = "coeff", parallel = FALSE, ncores = 2L,
@@ -295,3 +294,120 @@ PBsamplerMain <- function(X, pointEstimate, sig2, lbd, weights = rep(1, max(grou
     return(list(beta = TEMP[, 1:p], subgrad = TEMP[, 1:p + p], hsigma = TEMP[, 2*p + 1]));
   }
 }
+
+#' @title Provide \code{(1-alpha)%} confidence interval of each coefficients
+#'
+#' @description Using samples drawn by \code{\link{PBsampler}}, compute
+#' \code{(1-alpha)%} confidence interval of each coefficients.
+#'
+#' @param PBsample Bootstrap samples of class \code{PB} from \code{PBsampler}
+#' @param alpha significance level.
+#' @param method bias-correction method. Either to be "none" or "debias".
+#' @param parallel Logical. If \code{TRUE}, use parallelization.
+#' @param ncores Integer. The number of cores to use for the parallelization.
+#'
+#' @details If \code{method==none}, \code{\link{PB.CI}} simply compute
+#' the quantile of the sampled coefficients. If \code{method==debias}, we use
+#' debiased estimator to compute confidence interval.
+#'
+#' @return \code{(1-alpha)%} confidence interval of each coefficients
+#'
+#' @references
+#' Zhang, C., Zhang, S. (2014) Confidence intervals for low dimensional
+#' parameters in high dimensional linear models. Journal of the Royal
+#' Statistical Society: Series B 76, 217–242.
+#'
+#' @examples
+set.seed(1234)
+n <- 40
+p <- 50
+Niter <-  10
+Group <- rep(1:(p/10), each = 10)
+Weights <- rep(1, p/10)
+X <- matrix(rnorm(n*p), n)
+object <- PBsampler(X,c(1,1,rep(0,p-2)),1,.5,niter=1000,type="lasso", parallel=TRUE, ncores = 8)
+PB.CI(object = object, alpha = .05, method = "debias", parallel = TRUE, ncores = 8)
+
+#' @export
+PB.CI <- function(object, alpha = .05, method = "debias", parallel=TRUE, ncores=2L) {
+
+  if (class(object)!="PB") {
+    stop("object class has to be \"PB\".")
+  }
+
+  if (parallel && ncores == 1) {
+    ncores <- 2
+    warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
+            Set ncores to 2.")
+  }
+
+  if (parallel && (ncores > parallel::detectCores())) {
+    ncores <- parallel::detectCores()
+    warning("ncores is larger than the maximum number of available processes.
+            Set it to the maximum possible value.")
+  }
+
+  X <- object$X
+  weights <- object$weights
+  lbd <- object$lbd
+  group <- object$group
+
+  if (!method %in% c("none", "debias")) {
+    stop("method should be either \"default\" or \"debias\".")
+  }
+  if (method == "none") {
+    Result <- apply(object$beta,2,quantile,prob=c(alpha/2,1-alpha/2))
+  } else { # debiased estimator
+    B <- object$beta # niter x p matrix
+    S <- object$subgrad # niter x p matrix
+    refitB <- matrix(0,nrow(B),ncol(B))
+    W <- rep(weights, table(group))
+
+    refitY <- solve(X%*%t(X))%*%X %*% (crossprod(X) %*% t(B) / n +
+                                       lbd * W * t(S)) * n # n x niter matrix
+
+    # Compute Z matrix, see Zhang, C. H. and Zhang S. S. (2014) JRSSB
+    nodewiselasso.out <- score.nodewiselasso(x = X,
+                                             parallel = parallel,
+                                             ncores = ncores)
+    Z <- nodewiselasso.out$out$Z
+    scaleZ <- nodewiselasso.out$out$scaleZ
+    Z <- scale(Z,center=FALSE,scale=1/scaleZ)
+    #hdiFit <- hdi::lasso.proj(x = X, y = refitY[,1], standardize = FALSE, parallel = TRUE, return.Z = TRUE)
+    #Z <- hdiFit$Z
+    #hdiFit$bhat
+
+    ZY <- crossprod(Z, refitY) # p x niter
+    ZX <- colSums(Z * X) # length p
+    ZXcomp <- matrix(0,p-1,p)
+    for (i in 1:p) {
+      ZXcomp[,i] <- crossprod(Z[,i], X[, -i])
+    }
+
+    refitB <- matrix(0,nrow(B),ncol(B))
+
+    FF <- function(x) {
+      TEMP <- c()
+      for (j in 1:ncol(B)) {
+        TEMP[j] <- (ZY[j,x] - ZXcomp[,j] %*% B[x,-j]) / ZX[j]
+      }
+      return(TEMP)
+    }
+
+    if (parallel) {
+      refitB <- mcmapply(FF, 1:nrow(B), mc.cores = ncores)
+    } else {
+      refitB <- mapply(FF, 1:nrow(B))
+    }
+    # for (i in 1:nrow(B)) {
+    #   for (j in 1:ncol(B)) {
+    #     refitB[i,j] <- (ZY[j,i] - ZXcomp[,j] %*% B[i,-j]) / ZX[j]
+    #   }
+    # }
+    Result <- apply(refitB,1,quantile,prob=c(alpha/2,1-alpha/2))
+  }
+  colnames(Result) <- paste("beta", 1:ncol(object$X), sep = "")
+  #class(Result) <- "PB.CI"
+  return(Result)
+}
+# HDI$bhat[j] == HDI$betahat[j] + t(Z[,j])%*%(Y-X%*%HDI$betahat) / crossprod(Z[,j],X[,j])
