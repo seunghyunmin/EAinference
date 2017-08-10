@@ -705,8 +705,8 @@ score.getThetaforlambda <- function(x, lambda, parallel = FALSE, ncores = 8,
   if(oldschool){
     message("doing getThetaforlambda oldschool")
     for(i in 1:p){
-      glmnetfit <- glmnet(x[,-i], x[,i])
-      coeffs <- as.vector(predict(glmnetfit,x[,-i], type = "coefficients",
+      glmnetfit <- glmnet::glmnet(x[,-i], x[,i])
+      coeffs <- as.vector(glmnet::predict.glmnet(glmnetfit,x[,-i], type = "coefficients",
                                   s = lambda))[-1]
       ## we just leave out the intercept
 
@@ -719,7 +719,7 @@ score.getThetaforlambda <- function(x, lambda, parallel = FALSE, ncores = 8,
       }else{
         ##print("now doing the new way of calculating tau^2")
         T2[i] <- as.numeric((x[,i] %*%
-                               (x[,i] - predict(glmnetfit,x[,-i],s =lambda)))/n)
+                               (x[,i] - glmnet::predict.glmnet(glmnetfit,x[,-i],s =lambda)))/n)
       }
     }
   }else{
@@ -757,14 +757,14 @@ score.getZforlambda <- function(x, lambda, parallel = FALSE, ncores = 8,
   if(oldschool){
     message("doing getZforlambda oldschool")
     for(i in 1:p){
-      glmnetfit <- glmnet(x[,-i],x[,i])
-      prediction <- predict(glmnetfit,x[,-i],s=lambda)
+      glmnetfit <- glmnet::glmnet(x[,-i],x[,i])
+      prediction <- glmnet::predict.glmnet(glmnetfit,x[,-i],s=lambda)
       Z[,i] <- x[,i] - prediction
     }
   }else{
     ## REPLACING THE FOR LOOP
     if(parallel){
-      Z <- mcmapply(score.getZforlambda.unitfunction, i = 1:p, x = list(x = x),
+      Z <- parallel::mcmapply(score.getZforlambda.unitfunction, i = 1:p, x = list(x = x),
                     lambda = lambda, mc.cores = ncores)
 
     }else{
@@ -786,8 +786,8 @@ score.getZforlambda.unitfunction <- function(i, x, lambda)
   ## Arguments:
   ## ----------------------------------------------------------------------
   ## Author: Ruben Dezeure, Date: 27 Nov 2012 (initial version),
-  glmnetfit  <- glmnet(x[,-i],x[,i])
-  prediction <- predict(glmnetfit,x[,-i],s=lambda)
+  glmnetfit  <- glmnet::glmnet(x[,-i],x[,i])
+  prediction <- glmnet::predict.glmnet(glmnetfit,x[,-i],s=lambda)
   return(x[,i] - prediction)
 }
 
@@ -821,7 +821,7 @@ nodewise.getlambdasequence <- function(x)
 
   lambdas <- c()
   for(c in 1:p){
-    lambdas <- c(lambdas,glmnet(x[,-c],x[,c])$lambda)
+    lambdas <- c(lambdas,glmnet::glmnet(x[,-c],x[,c])$lambda)
   }
 
   lambdas <- quantile(lambdas, probs = seq(0, 1, length.out = nlambda))
@@ -872,7 +872,7 @@ cv.nodewise.stderr <- function(K, x, dataselects, lambda, parallel, ncores)
   ## Author: Ruben Dezeure, Date: 27 Nov 2012 (initial version),
   p <- ncol(x)
   if(parallel){
-    totalerr <- mcmapply(cv.nodewise.totalerr,
+    totalerr <- parallel::mcmapply(cv.nodewise.totalerr,
                          c = 1:p,
                          K = K,
                          dataselects = list(dataselects = dataselects),
@@ -910,10 +910,10 @@ cv.nodewise.totalerr <- function(c, K, dataselects, x, lambdas)
   for(i in 1:K){ ## loop over the test sets
     whichj <- dataselects == i ##the test part of the data
 
-    glmnetfit <- glmnet(x = x[!whichj,-c, drop = FALSE],
+    glmnetfit <- glmnet::glmnet(x = x[!whichj,-c, drop = FALSE],
                         y = x[!whichj, c, drop = FALSE],
                         lambda = lambdas)
-    predictions  <- predict(glmnetfit, newx = x[whichj, -c, drop = FALSE],
+    predictions  <- glmnet::predict.glmnet(glmnetfit, newx = x[whichj, -c, drop = FALSE],
                             s = lambdas)
     totalerr[, i] <- apply((x[whichj, c] - predictions)^2, 2, mean)
   }
@@ -952,9 +952,9 @@ cv.nodewise.bestlambda <- function(lambdas, x, K = 10, parallel = FALSE,
       for(i in 1:K){ ## loop over the test sets
         whichj <- dataselects == i ## the test part of the data
 
-        glmnetfit <- glmnet(x[!whichj,-c,drop=FALSE], x[!whichj,c,drop=FALSE],
+        glmnetfit <- glmnet::glmnet(x[!whichj,-c,drop=FALSE], x[!whichj,c,drop=FALSE],
                             lambda=lambdas)
-        predictions <- predict(glmnetfit,x[whichj, -c, drop = FALSE],
+        predictions <- glmnet::predict.glmnet(glmnetfit,x[whichj, -c, drop = FALSE],
                                s = lambdas)
         totalerr <- totalerr + apply((x[whichj,c]-predictions)^2, 2, mean)
       }
@@ -967,7 +967,7 @@ cv.nodewise.bestlambda <- function(lambdas, x, K = 10, parallel = FALSE,
     ##totalerr <- matrix(nrow = l, ncol = p)
 
     if(parallel){
-      totalerr <- mcmapply(cv.nodewise.err.unitfunction,
+      totalerr <- parallel::mcmapply(cv.nodewise.err.unitfunction,
                            c = 1:p,
                            K = K,
                            dataselects = list(dataselects = dataselects),
@@ -1031,7 +1031,7 @@ nodewise.getlambdasequence.old <- function(x,verbose=FALSE)
   minlambda <- 100
 
   for(c in 1:p){
-    lambdas <- glmnet(x[,-c],x[,c])$lambda
+    lambdas <- glmnet::glmnet(x[,-c],x[,c])$lambda
 
     ##DEBUG
     if(verbose || is.nan(max(lambdas))){

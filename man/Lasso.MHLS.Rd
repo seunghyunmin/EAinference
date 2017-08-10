@@ -5,12 +5,14 @@
 \title{lasso / group lasso estimator}
 \usage{
 Lasso.MHLS(X, Y, type = "lasso", lbd = 0.37, group = 1:ncol(X),
-  weights = rep(1, max(group)), ...)
+  weights = rep(1, max(group)), verbose)
 }
 \arguments{
 \item{X}{n x p matrix of predictors.}
 
 \item{Y}{n x 1 vector of response.}
+
+\item{type}{type of penalty, either to be "lasso", "grlasso", "slasso" or "sgrlasso".}
 
 \item{lbd}{penalty term of lasso. See the loss function given below for more
 details.}
@@ -20,6 +22,8 @@ should be same as max(group).}
 
 \item{weights}{Weight term for each group. Default is
 \code{rep(1, max(group))}.}
+
+\item{verbose}{verbose for type = "slasso" or "sgrlasso".}
 }
 \value{
 \item{B0}{a vector of coefficient estimator.}
@@ -52,5 +56,5 @@ Lasso.MHLS(X = X,Y = Y,lbd = .5)
 #
 # group lasso
 #
-Lasso.MHLS(X = X,Y = Y,lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
+Lasso.MHLS(X = X,Y = Y, type="grlasso", lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
 }

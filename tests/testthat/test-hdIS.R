@@ -19,7 +19,7 @@ pEProp1 <- rep(0, p) ;pEProp2 <- rep(1, p)
 sig2Prop1 <- .5; sig2Prop2 <- 1
 lbdProp1 <- .37; lbdProp2 <- .5
 
-PB <- PBsampler(X = x, pointEstimate_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
+PB <- PBsampler(X = x, PE_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
  weights = Weights, group = Group, niter = Niter, type = "lasso", PEtype = "coeff", parallel = FALSE)
 
 test_that("Low dimensional setting", {
@@ -48,17 +48,17 @@ Weights2 <- rep(1, p)
 
 x <- matrix(rnorm(n*p), n)
 
-PBMixture1 <- PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-              pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights1,
+PBMixture1 <- PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+              PE_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights1,
               group = Group1, type = "grlasso", PEtype = "coeff", niter = Niter, parallel = FALSE)
-PBMixture2 <- PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                       pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights2,
+PBMixture2 <- PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
+                       PE_2 = rep(1, p), sig2_2 = 2, lbd_2 = .3, weights = Weights2,
                        group = Group2, type = "lasso", PEtype = "coeff", niter = Niter, parallel = FALSE)
-PBMixture3 <- PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = 1,
-                        pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = 2, weights = Weights1,
+PBMixture3 <- PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = 1,
+                        PE_2 = rep(1, p), sig2_2 = 2, lbd_2 = 2, weights = Weights1,
                         group = Group1, type = "sgrlasso", PEtype = "coeff", niter = Niter, parallel = FALSE)
-PBMixture4 <- PBsampler(X = x, pointEstimate_1 = rep(0, p), sig2_1 = 1, lbd_1 = 1,
-                        pointEstimate_2 = rep(1, p), sig2_2 = 2, lbd_2 = 2, weights = Weights2,
+PBMixture4 <- PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = 1,
+                        PE_2 = rep(1, p), sig2_2 = 2, lbd_2 = 2, weights = Weights2,
                         group = Group2, type = "slasso", PEtype = "coeff", niter = Niter, parallel = FALSE)
 
 test_that("Mixture under four types", {

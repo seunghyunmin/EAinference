@@ -4,17 +4,17 @@
 \alias{MHLS}
 \title{MH sampler for lasso / group lasso estimator}
 \usage{
-MHLS(X, pointEstimate, sig2, lbd, group = 1:ncol(X), weights = rep(1,
-  max(group)), B0, S0, A = unique(group[which(B0 != 0)]), tau = rep(1,
-  length(A)), niter = 2000, burnin = 0, type = "coeff", updateS.itv = 1,
+MHLS(X, PE, sig2, lbd, group = 1:ncol(X), weights = rep(1, max(group)), B0,
+  S0, A = unique(group[which(B0 != 0)]), tau = rep(1, length(A)),
+  niter = 2000, burnin = 0, PEtype = "coeff", updateS.itv = 1,
   verbose = FALSE, ...)
 }
 \arguments{
 \item{X}{\code{n} x \code{p} matrix of predictors, where \code{n} is the
 number of samples and \code{p} is the number of covariates.}
 
-\item{pointEstimate}{numeric vector. Estimates of true coefficient for
-\code{type="coeff"} or E(y) for \code{type="mu"}.}
+\item{PE}{numeric vector. Estimates of true coefficient for
+\code{PEtype="coeff"} or E(y) for \code{PEtype="mu"}.}
 
 \item{sig2}{numeric. variance of error term.}
 
@@ -38,7 +38,7 @@ distribution of active coefficients.}
 
 \item{burnin}{numeric. The length of burin-in periods}
 
-\item{type}{either to be "coeff" or "mu". Decide what kind of \code{pointEstimate} to use.}
+\item{PEtype}{either to be "coeff" or "mu". Decide what kind of \code{PE} to use.}
 
 \item{updateS.itv}{numeric. Update subgradients in every \code{updateS.itv} iterations. Set this value larger than \code{niter} if one wants to skip updating subgradients.}
 
@@ -65,14 +65,14 @@ The functions \code{summary} and \code{plot} are used for a breif summary and ge
 \item{acceptHistory}{number of acceptance and proposed}
 \item{niteration}{number of iteration}
 \item{burnin}{length of burn-in period}
-\item{pointEstimate, group, type}{same as function arguments}
+\item{PE, group, type}{same as function arguments}
 }
 \description{
 Metropolis-Hastings sampler for lasso / group lasso estimator
 using estimator augmentation.
 }
 \details{
-If futype="normal", it generate
+Given appropriate initial value, provides Metropolis-Hastings samples.
 }
 \examples{
 #-------------------------
@@ -89,12 +89,12 @@ weights <- rep(1, p)
 LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
-MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
+MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-     type = "coeff")
-MHLS(X = X, pointEstimate = rep(0, n), sig2 = 1, lbd = 1, group = 1:p,
+     PEtype = "coeff")
+MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1, group = 1:p,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-     type = "mu")
+     PEtype = "mu")
 
 Group <- c(1, 1, 2, 2, 2)
 weights <- rep(1,max(Group))
@@ -102,12 +102,12 @@ LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "grlasso", weights = w
                           group = Group)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
-MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1, group = Group,
+MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = Group,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-     type = "coeff")
-MHLS(X = X, pointEstimate = rep(0, n), sig2 = 1, lbd = 1, group = Group,
+     PEtype = "coeff")
+MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1, group = Group,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-     type = "mu")
+     PEtype = "mu")
 
 #-------------------------
 # High dim
@@ -120,13 +120,13 @@ Y <- X \%*\% rep(1,p) + rnorm(n)
 sigma2 <- 1
 lbd <- .37
 weights <- rep(1,p)
-LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd, type = "lasos", weights = weights)
+LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd, type = "lasso", weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
-MHLS(X = X, pointEstimate = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
+MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-     type = "coeff")
-MHLS(X = X, pointEstimate = rep(0, n), sig2 = 1, lbd = 1, group = 1:p,
+     PEtype = "coeff")
+MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1, group = 1:p,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-     type = "mu")
+     PEtype = "mu")
 }

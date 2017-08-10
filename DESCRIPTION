@@ -14,13 +14,14 @@ Depends:
 Imports:
     stats,
     graphics,
-    mvtnorm,
     gglasso,
     msm,
+    mvtnorm,
     parallel,
     ggm,
     limSolve,
-    MASS
+    MASS,
+    glmnet
 RoxygenNote: 6.0.1
 Suggests: knitr,
     rmarkdown,

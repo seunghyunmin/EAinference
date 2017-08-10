@@ -43,7 +43,7 @@
 #' sig2Prop1 <- .5
 #' lbdProp1 <- 1
 
-#' PB <- PBsampler(X = x, pointEstimate_1 = pEProp1, sig2_1 = sig2Prop1,
+#' PB <- PBsampler(X = x, PE_1 = pEProp1, sig2_1 = sig2Prop1,
 #'  lbd_1 = lbdProp1, weights = Weights, group = Group, niter = Niter,
 #'  type="grlasso", PEtype = "coeff")
 #'
@@ -62,8 +62,8 @@
 #' sig2Prop1 <- .5; sig2Prop2 <- 1
 #' lbdProp1 <- .37; lbdProp2 <- .5
 #'
-#' PBMixture <- PBsampler(X = x, pointEstimate_1 = pEProp1,
-#'  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, pointEstimate_2 = pEProp2,
+#' PBMixture <- PBsampler(X = x, PE_1 = pEProp1,
+#'  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, PE_2 = pEProp2,
 #'  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
 #'  niter = Niter, type="grlasso", PEtype = "coeff")
 #' hdIS(PBMixture, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
@@ -90,42 +90,64 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
   n <- nrow(X)
   p <- ncol(X)
 
-  if (PBsample$mixture) {
-    pEProp1 <- PBsample$pointEstimate[1,]
-    pEProp2 <- PBsample$pointEstimate[2,]
-    sig2Prop1 <- PBsample$sig2[1]
-    sig2Prop2 <- PBsample$sig2[2]
-    lbdProp1 <- PBsample$lbd[1]
-    lbdProp2 <- PBsample$lbd[2]
-  } else {
-    pEProp1 <- PBsample$pointEstimate
-    sig2Prop1 <- PBsample$sig2
-    lbdProp1 <- PBsample$lbd
+  if (n >= p) {
+    stop("High dimensional setting is required, i.e. nrow(X) < ncol(X) required.")
   }
 
+  Mixture <- PBsample$mixture
+  Btype <- PBsample$Btype
   type <- PBsample$type
   PEtype <- PBsample$PEtype
   method <- PBsample$method
   group <- PBsample$group
   weights <- PBsample$weights
-
   B <- PBsample$beta
   S <- PBsample$subgrad
+
+  if (Btype == "wild") {
+    Y <- PBsample$Y
+    if (PEtype == "coeff") {
+      resTarget <- Y - X%*%pETarget
+      resProp1 <- Y - X%*%pEProp1
+      if (Mixture) {
+        resProp2 <- Y - X%*%pEProp2
+      }
+    } else {
+      resTarget <- Y - pETarget
+      resProp1 <- Y - pEProp1
+      if (Mixture) {
+        resProp2 <- Y - pEProp2
+      }
+    }
+    resTarget <- resTarget - mean(resTarget)
+    resProp1 <- resProp1 - mean(resProp1)
+    if (Mixture) {
+      resProp2 <- resProp2 - mean(resProp2)
+    }
+  }
+
+  if (Mixture) {
+    pEProp1 <- PBsample$PE[1,]
+    pEProp2 <- PBsample$PE[2,]
+    sig2Prop1 <- PBsample$sig2[1]
+    sig2Prop2 <- PBsample$sig2[2]
+    lbdProp1 <- PBsample$lbd[1]
+    lbdProp2 <- PBsample$lbd[2]
+  } else {
+    pEProp1 <- PBsample$PE
+    sig2Prop1 <- PBsample$sig2
+    lbdProp1 <- PBsample$lbd
+  }
+
   if (type %in% c("slasso", "sgrlasso")) {
     hSigma <- PBsample$hsigma
   }
   niter <- nrow(B)
 
-  if (!PBsample$mixture) {
-    Mixture <- FALSE
+  if (!Mixture) {
     lbdProp2 <- lbdProp1
-  } else {
-    Mixture <- TRUE
   }
 
-  if (n >= p) {
-    stop("High dimensional setting is required, i.e. nrow(X) < ncol(X) required.")
-  }
 
   if (parallel && ncores == 1) {
     ncores <- 2
@@ -151,7 +173,10 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
       R <- 1:n
       N <- (n+1):p
       InvVarR     <- 1 / (egC$values[R] * sig2Target / n) #inverse of (sig2Target*Lambda_i/n)
-      InvVarRprop <- 1 / (egC$values[R] * sig2Prop1 / n) #inverse of (sig2Prop1*Lambda_i/n)
+      InvVarRprop1 <- 1 / (egC$values[R] * sig2Prop1 / n) #inverse of (sig2Prop1*Lambda_i/n)
+      if (Mixture) {
+        InvVarRprop2 <- 1 / (egC$values[R] * sig2Prop2 / n) #inverse of (sig2Prop1*Lambda_i/n)
+      }
       VR <-matrix(V[, R], p, n)
       VRC <- VRCprop <- t(VR)%*%C
       W <- diag(weights)
@@ -159,24 +184,62 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
       VRW <- VRWprop <- t(VR)%*%W
       if (PEtype == "coeff") {
         VRCB     <- t(VR) %*% C %*% pETarget
-        VRCBprop <- t(VR) %*% C %*% pEProp1
+        VRCBprop1 <- t(VR) %*% C %*% pEProp1
+        if (Mixture) {
+          VRCBprop2 <- t(VR) %*% C %*% pEProp2
+        }
       } else {
         VRCB     <- t(VR) %*% t(X) %*% pETarget / n
-        VRCBprop <- t(VR) %*% t(X) %*% pEProp1 / n
+        VRCBprop1 <- t(VR) %*% t(X) %*% pEProp1 / n
+        if (Mixture) {
+          VRCBprop2 <- t(VR) %*% t(X) %*% pEProp2 / n
+        }
+      }
+
+      if (Btype == "wild") {
+        XVR <- X%*%VR
+        VARTarget <- t(XVR) %*% diag(resTarget) %*% XVR * sig2Target / n^2
+        VARProp1 <- t(XVR) %*% diag(resProp1) %*% XVR * sig2Prop1 / n^2
+        if (Mixture) {
+          VARProp2 <- t(XVR) %*% diag(resProp2) %*% XVR * sig2Prop2 / n^2
+        }
       }
 
       Weight <- numeric(niter)
       FF <- function(x) {
-        log.f0 <- -0.5 * sum((VRC %*% B[x, ] + lbdTarget * VRW %*% S[x, ] -
-          VRCB)^2 * InvVarR) + log(lbdTarget) *
-          (n - sum(B[x,] != 0)) - 0.5 * ( n * log(sig2Target/n) )
-        log.f1 <- -0.5 * sum((VRCprop1 %*% B[x, ] + lbdProp1 *
-          VRWprop1 %*% S[x, ] - VRCBprop1)^2 * InvVarRprop1) + log(lbdProp1) *
-          (n - sum(B[x,] != 0)) - 0.5 * ( n * log(sig2Prop1/n) )
-        if (Mixture) {
-          log.f2 <- -0.5 * sum((VRCprop2 %*% B[x, ] + lbdProp2 *
-            VRWprop2 %*% S[x, ] - VRCBprop2)^2 * InvVarRprop2) + log(lbdProp2) *
-            (n - sum(B[x,] != 0)) - 0.5 * ( n * log(sig2Prop2/n) )
+        if (Btype == "gaussian") {
+          log.f0 <- -0.5 * sum((VRC %*% B[x, ] + lbdTarget * VRW %*% S[x, ] -
+                                  VRCB)^2 * InvVarR) + log(lbdTarget) *
+            (n - sum(B[x,] != 0)) - 0.5 * ( n * log(sig2Target/n) )
+          log.f1 <- -0.5 * sum((VRCprop %*% B[x, ] + lbdProp1 *
+                                  VRWprop %*% S[x, ] - VRCBprop1)^2 * InvVarRprop1) + log(lbdProp1) *
+            (n - sum(B[x,] != 0)) - 0.5 * ( n * log(sig2Prop1/n) )
+          if (Mixture) {
+            log.f2 <- -0.5 * sum((VRCprop %*% B[x, ] + lbdProp2 *
+                                    VRWprop %*% S[x, ] - VRCBprop2)^2 * InvVarRprop2) + log(lbdProp2) *
+              (n - sum(B[x,] != 0)) - 0.5 * ( n * log(sig2Prop2/n) )
+          }
+          # (n - sum(B[x,] != 0)) * log(lbdTarget / lbdProp1) -
+          #   0.5 * sum((VRC %*% B[x, ] + lbdTarget * VRW %*% S[x, ] -
+          #   VRCB)^2 * InvVarR) + 0.5 * sum((VRCprop %*% B[x, ] +
+          #   lbdProp1 * VRWprop %*% S[x, ] - VRCBprop)^2 * InvVarRprop)
+        } else {
+          ##############################
+          # wild multiplier bootstrap
+          ##############################
+          log.f0 <- dmvnorm(c(VRC %*% B[x, ] + lbdTarget * VRW %*% S[x, ] - VRCB),
+                            mean=rep(0,n),sigma=VARTarget,log=TRUE) +
+            log(lbdTarget) * (n - sum(B[x,] != 0))
+          log.f1 <- dmvnorm(c(VRCprop %*% B[x, ] + lbdProp1 *
+                                VRWprop %*% S[x, ] - VRCBprop1),
+                            mean=rep(0,n),sigma=VARProp1,log=TRUE) +
+            log(lbdProp1) * (n - sum(B[x,] != 0))
+          if (Mixture) {
+            log.f2 <- dmvnorm(c(VRCprop %*% B[x, ] + lbdProp2 *
+                                  VRWprop %*% S[x, ] - VRCBprop2),
+                              mean=rep(0,n),sigma=VARProp2,log=TRUE) +
+              log(lbdProp2) * (n - sum(B[x,] != 0))
+          }
         }
         if (!Mixture) {
           if (log) {Weight <- log.f0 - log.f1} else {
@@ -185,17 +248,13 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
         } else {
           if (log) {
             Weight <- - log(exp(-log(2) + log.f1 - log.f0) +
-                            exp(-log(2) + log.f2 - log.f0))
+                              exp(-log(2) + log.f2 - log.f0))
           } else {
             Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) +
                             exp(-log(2) + log.f2 - log.f0))
           }
         }
         return(Weight)
-        # (n - sum(B[x,] != 0)) * log(lbdTarget / lbdProp1) -
-        #   0.5 * sum((VRC %*% B[x, ] + lbdTarget * VRW %*% S[x, ] -
-        #   VRCB)^2 * InvVarR) + 0.5 * sum((VRCprop %*% B[x, ] +
-        #   lbdProp1 * VRWprop %*% S[x, ] - VRCBprop)^2 * InvVarRprop)
       }
     } else {
       #=========================================================================
@@ -219,6 +278,16 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
       }
       t.XWinv <- t(X)/W
       Weight <- numeric(niter)
+
+      if (Btype == "gaussian") {
+        f0sd <- sqrt(sig2Target/n)
+        f1sd <- sqrt(sig2Prop1/n)
+        f2sd <- sqrt(sig2Prop2/n)
+      } else {
+        f0sd <- sqrt(sig2Target/n) * resTarget
+        f1sd <- sqrt(sig2Prop1/n) * resProp1
+        f2sd <- sqrt(sig2Prop2/n) * resProp2
+      }
 
       FF <- function(x) {
         Beta <- B[x,]
@@ -249,13 +318,13 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
             #           }
             TSA <- TsA.select(Q, Subgrad, group, A, n, p)
 
-            log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = T)) +
+            log.f1 <- sum(dnorm(H.tilde.prop1, 0, f1sd, log = T)) +
               (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, W, TSA) )
             if (Mixture) {
-              log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = T)) +
+              log.f2 <- sum(dnorm(H.tilde.prop2, 0, f2sd, log = T)) +
                 (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, W, TSA) )
             }
-            log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = T)) +
+            log.f0 <- sum(dnorm(H.tilde.target, 0, f0sd, log = T)) +
               (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, W, TSA) )
 
             if (!Mixture) {
@@ -270,9 +339,9 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
               }
             }
           } else {
-            log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = TRUE))
-            if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = TRUE))}
-            log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = TRUE))
+            log.f1 <- sum(dnorm(H.tilde.prop1, 0, f1sd, log = TRUE))
+            if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, f2sd, log = TRUE))}
+            log.f0 <- sum(dnorm(H.tilde.target, 0, f0sd, log = TRUE))
 
             if (!Mixture) {
               if (log) {Weight <- log.f0 - log.f1} else {
@@ -287,68 +356,68 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
             }
           }
         }
-        else {
-          if (PEtype == "coeff") {
-            H.target <- Psi %*% (Beta - pETarget) + lbdTarget * W * Subgrad #H.tilde
-            H.prop1 <-  Psi %*% (Beta - pEProp1) + lbdProp1 * W * Subgrad #H.tilde proposed1
-            if (Mixture) H.prop2 <-  Psi %*% (Beta - pEProp2) + lbdProp2 * W * Subgrad #H.tilde proposed2
-          } else {
-            H.target <- Psi %*% Beta + lbdTarget * W * Subgrad - t(X) %*% pETarget / n #H.tilde
-            H.prop1 <-  Psi %*% Beta + lbdProp1 * W * Subgrad - t(X) %*% pEProp1 / n  #H.tilde proposed1
-            if (Mixture) H.prop2 <-  Psi %*% Beta + lbdProp2 * W * Subgrad - t(X) %*% pEProp2 / n  #H.tilde proposed2
-          }
-
-          r <- group.norm2(Beta, group)
-          A <- unique(group[Beta != 0])
-
-          if (!all(lbdTarget == c(lbdProp1, lbdProp2))) {
-
-            if (TsA.method == "null") {
-              TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
-            } else {
-              TSA <- TsA.select(Q, Subgrad, group, A, n, p)
-            }
-
-            log.f1 <- dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = T) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, weights, TSA) )
-            if (Mixture) {
-              log.f2 <- dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = T) +
-                (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, weights, TSA) )
-            }
-            log.f0 <- dmvnorm(drop(H.target), , sig2Target/n * Psi, log = T) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, weights, TSA) )
-
-            if (!Mixture) {
-              if (log) {Weight <- log.f0 - log.f1} else {
-                Weight <- exp(log.f0 - log.f1)
-              }
-            } else {
-              if (log) {
-                Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-              } else {
-                Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-              }
-            }
-          } else {
-            log.f1 <- sum(dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = TRUE))
-            if (Mixture) {
-              log.f2 <- sum(dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = TRUE))
-            }
-            log.f0 <- sum(dmvnorm(drop(H.target), , sig2Target/n * Psi, log = TRUE))
-
-            if (!Mixture) {
-              if (log) {Weight <- log.f0 - log.f1} else {
-                Weight <- exp(log.f0 - log.f1)
-              }
-            } else {
-              if (log) {
-                Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-              } else {
-                Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
-              }
-            }
-          }
-        }
+        # else {
+        #   if (PEtype == "coeff") {
+        #     H.target <- Psi %*% (Beta - pETarget) + lbdTarget * W * Subgrad #H.tilde
+        #     H.prop1 <-  Psi %*% (Beta - pEProp1) + lbdProp1 * W * Subgrad #H.tilde proposed1
+        #     if (Mixture) H.prop2 <-  Psi %*% (Beta - pEProp2) + lbdProp2 * W * Subgrad #H.tilde proposed2
+        #   } else {
+        #     H.target <- Psi %*% Beta + lbdTarget * W * Subgrad - t(X) %*% pETarget / n #H.tilde
+        #     H.prop1 <-  Psi %*% Beta + lbdProp1 * W * Subgrad - t(X) %*% pEProp1 / n  #H.tilde proposed1
+        #     if (Mixture) H.prop2 <-  Psi %*% Beta + lbdProp2 * W * Subgrad - t(X) %*% pEProp2 / n  #H.tilde proposed2
+        #   }
+        #
+        #   r <- group.norm2(Beta, group)
+        #   A <- unique(group[Beta != 0])
+        #
+        #   if (!all(lbdTarget == c(lbdProp1, lbdProp2))) {
+        #
+        #     if (TsA.method == "null") {
+        #       TSA <- TsA.select(t.XWinv, Subgrad, group, A, n, p)
+        #     } else {
+        #       TSA <- TsA.select(Q, Subgrad, group, A, n, p)
+        #     }
+        #
+        #     log.f1 <- dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = T) +
+        #       (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, weights, TSA) )
+        #     if (Mixture) {
+        #       log.f2 <- dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = T) +
+        #         (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, weights, TSA) )
+        #     }
+        #     log.f0 <- dmvnorm(drop(H.target), , sig2Target/n * Psi, log = T) +
+        #       (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, weights, TSA) )
+        #
+        #     if (!Mixture) {
+        #       if (log) {Weight <- log.f0 - log.f1} else {
+        #         Weight <- exp(log.f0 - log.f1)
+        #       }
+        #     } else {
+        #       if (log) {
+        #         Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+        #       } else {
+        #         Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+        #       }
+        #     }
+        #   } else {
+        #     log.f1 <- sum(dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = TRUE))
+        #     if (Mixture) {
+        #       log.f2 <- sum(dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = TRUE))
+        #     }
+        #     log.f0 <- sum(dmvnorm(drop(H.target), , sig2Target/n * Psi, log = TRUE))
+        #
+        #     if (!Mixture) {
+        #       if (log) {Weight <- log.f0 - log.f1} else {
+        #         Weight <- exp(log.f0 - log.f1)
+        #       }
+        #     } else {
+        #       if (log) {
+        #         Weight <- - log(exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+        #       } else {
+        #         Weight <- 1/ (exp(-log(2) + log.f1 - log.f0) + exp(-log(2) + log.f2 - log.f0))
+        #       }
+        #     }
+        #   }
+        # }
         return(Weight)
       }
     }
@@ -370,7 +439,15 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
     t.XWinv <- t(X)/W
     Weight <- numeric(niter)
     SVD.temp <- SVD$v %*% diag(1/SVD$d^2)%*%t(SVD$v)
-
+    if (Btype == "gaussian") {
+      f0sd <- sqrt(sig2Target/n)
+      f1sd <- sqrt(sig2Prop1/n)
+      f2sd <- sqrt(sig2Prop2/n)
+    } else {
+      f0sd <- sqrt(sig2Target/n) * resTarget
+      f1sd <- sqrt(sig2Prop1/n) * resProp1
+      f2sd <- sqrt(sig2Prop2/n) * resProp2
+    }
     FF <- function(x) {
       Beta <- B[x,]
       Subgrad <- S[x,]
@@ -401,18 +478,18 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
       if (!all(lbdTarget == c(lbdProp1, lbdProp2))) { # Jacobian terms stay
         TSA <- TsA.slasso(SVD.temp = SVD.temp, Q = Q, s = Subgrad, W = W, group = group,
                           A = A, n = n, p = p)
-        log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = T)) +
+        log.f1 <- sum(dnorm(H.tilde.prop1, 0, f1sd, log = T)) +
           (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdProp1, hsigma = hatSigma, W = W, TSA = TSA))
         if (Mixture) {
-          log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = T)) +
+          log.f2 <- sum(dnorm(H.tilde.prop2, 0, f2sd, log = T)) +
             (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdProp2, hsigma = hatSigma, W = W, TSA = TSA))
         }
-        log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = T)) +
+        log.f0 <- sum(dnorm(H.tilde.target, 0, f0sd, log = T)) +
           (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdTarget, hsigma = hatSigma, W = W, TSA = TSA))
       } else { # Jacobian terms cancel out
-        log.f1 <- sum(dnorm(H.tilde.prop1, 0, sqrt(sig2Prop1/n), log = TRUE))
-        if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, sqrt(sig2Prop2/n), log = TRUE))}
-        log.f0 <- sum(dnorm(H.tilde.target, 0, sqrt(sig2Target/n), log = TRUE))
+        log.f1 <- sum(dnorm(H.tilde.prop1, 0, f1sd, log = TRUE))
+        if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, f2sd, log = TRUE))}
+        log.f0 <- sum(dnorm(H.tilde.target, 0, f0sd, log = TRUE))
       }
       if (!Mixture) {
         if (log) {Weight <- log.f0 - log.f1} else {

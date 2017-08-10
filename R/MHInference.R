@@ -5,12 +5,14 @@
 #'
 #' @param X n x p matrix of predictors.
 #' @param Y n x 1 vector of response.
+#' @param type type of penalty, either to be "lasso", "grlasso", "slasso" or "sgrlasso".
 #' @param lbd penalty term of lasso. See the loss function given below for more
 #'  details.
 #' @param weights Weight term for each group. Default is
 #' \code{rep(1, max(group))}.
 #' @param group p x 1 vector of consecutive integers. The number of groups
 #' should be same as max(group).
+#' @param verbose verbose for type = "slasso" or "sgrlasso".
 #' @details
 #' Using gglasso package, provide lasso / group lasso solution along with
 #' subgradient. The loss function for group lasso is
@@ -33,10 +35,10 @@
 #' #
 #' # group lasso
 #' #
-#' Lasso.MHLS(X = X,Y = Y,lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
+#' Lasso.MHLS(X = X,Y = Y, type="grlasso", lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
 #' @export
 Lasso.MHLS <- function(X, Y, type = "lasso", lbd=.37,
-  group=1:ncol(X), weights=rep(1,max(group)), ...)
+  group=1:ncol(X), weights=rep(1,max(group)), verbose)
 {
   n <- nrow(X)
   p <- ncol(X)
@@ -93,7 +95,7 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd=.37,
     #A <- which(B0!=0)
     return(list(B0=B0, S0=c(S0), lbd=lbd, weights=weights, group=group))
   } else {
-    TEMP <- slassoFit.tilde(X.tilde = X.tilde, Y=Y, lbd=lbd, group=group, weights = weights, ...)
+    TEMP <- slassoFit.tilde(X.tilde = X.tilde, Y=Y, lbd=lbd, group=group, weights = weights, verbose = verbose)
     return(list(B0=TEMP$B0, S0=TEMP$S0, sigmaHat=TEMP$hsigma, lbd=lbd, weights=weights, group=group))
   }
 }
@@ -200,7 +202,7 @@ slassoFit.tilde <- function(X.tilde, Y, lbd, group, weights, verbose=FALSE){
 #' sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
 #' parallel=TRUE, printSamples=TRUE)
 #' @export
-Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, length(B0)),
+Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   tau = rep(1, sum(B0!=0)), sig2.hat, alpha = .05, nChain = 10,
   niterPerChain = 500, parallel = FALSE, ncores = 2L, printSamples=FALSE, ...)
 {
@@ -282,9 +284,9 @@ Set it to the maximum possible value.")
   Pluginbeta.seq <- Pluginbeta.MHLS(X,Y,A,nChain,sqrt(sig2.hat))
 
   FF <- function(x) {
-    MHLS(X = X, pointEstimate = Pluginbeta.seq[x,], sig2 = sig2.hat, lbd = lbd,
+    MHLS(X = X, PE = Pluginbeta.seq[x,], sig2 = sig2.hat, lbd = lbd,
          weights = weights, niter=niterPerChain,
-         burnin = 0, B0 = B0, S0 = S0, tau = tau, type = "coeff", verbose=FALSE, ...)
+         burnin = 0, B0 = B0, S0 = S0, tau = tau, PEtype = "coeff", verbose=FALSE, ...)
   }
 
   if (parallel) {
