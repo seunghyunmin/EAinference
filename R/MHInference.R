@@ -79,77 +79,25 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd=.37,
 
   IndWeights <- rep(weights,table(group))
   # scale X with weights
-  X.tilde   <- scale(X,FALSE,scale=IndWeights)
+  Xtilde   <- scale(X,FALSE,scale=IndWeights)
 
-  slassoLoss <- function(X,Y,beta,sig,lbd) {
-    n <- nrow(X)
-    crossprod(Y-X%*%beta) / 2 / n / sig + sig / 2 + lbd * sum(abs(beta))
-  }
+  # slassoLoss <- function(X,Y,beta,sig,lbd) {
+  #   n <- nrow(X)
+  #   crossprod(Y-X%*%beta) / 2 / n / sig + sig / 2 + lbd * sum(abs(beta))
+  # }
 
   if (type %in% c("lasso", "grlasso")) {
     # compute group lasso estimator B0 and S0
-    B0 <- coef(gglasso(X.tilde, Y, pf = rep(1,max(group)), group = group,
+    B0 <- coef(gglasso(Xtilde, Y, pf = rep(1,max(group)), group = group,
                        loss="ls", intercept=F, lambda=lbd))[-1] / IndWeights
-    S0 <- (t(X.tilde) %*% Y - t(X.tilde) %*% X.tilde %*%
+    S0 <- (t(Xtilde) %*% Y - t(Xtilde) %*% Xtilde %*%
              (B0 * IndWeights)) / n / lbd
     #A <- which(B0!=0)
     return(list(B0=B0, S0=c(S0), lbd=lbd, weights=weights, group=group))
   } else {
-    TEMP <- slassoFit.tilde(X.tilde = X.tilde, Y=Y, lbd=lbd, group=group, weights = weights, verbose = verbose)
+    TEMP <- slassoFit.tilde(Xtilde = Xtilde, Y=Y, lbd=lbd, group=group, weights = weights, verbose = verbose)
     return(list(B0=TEMP$B0, S0=TEMP$S0, sigmaHat=TEMP$hsigma, lbd=lbd, weights=weights, group=group))
   }
-}
-
-# Scaled lasso / group lasso function, use scaled X matrix.
-slassoFit.tilde <- function(X.tilde, Y, lbd, group, weights, verbose=FALSE){
-  n <- nrow(X.tilde)
-  p <- ncol(X.tilde)
-
-  # if(is.null(lbd)){
-  #   if(p > 10^6){
-  #     lbd = "univ"
-  #   } else lbd = "quantile"
-  # }
-  # if(lbd == "univ" | lbd == "universal")
-  #   lbd=sqrt(2*log(p)/n)
-  # if(lbd=="quantile"){
-  #   L=0.1; Lold=0
-  #   while(abs(L-Lold)>0.001){
-  #     k=(L^4+2*L^2); Lold=L; L=-qnorm(min(k/p,0.99)); L=(L+Lold)/2
-  #   }
-  #   if(p==1) L=0.5
-  #   lbd = sqrt(2/n)*L
-  # }
-
-  if (verbose) {
-    cat("niter \t Loss \t hat.sigma \n")
-    cat("-------------------------------\n")
-  }
-  sig <- signew <- .1
-  K <- 1 ; niter <- 0
-
-  #if (lbd*signew < .001) {signew <- .001 / lbd}
-  #while(K == 1 & niter < 1000 & lbd*signew >= .001){
-  while(K == 1 & niter < 1000){
-    sig <- signew;
-    lam <- lbd * sig
-    B0 <- coef(gglasso(X.tilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
-    signew <- sqrt(crossprod(Y-X.tilde %*% B0) / n)
-
-    niter <- niter + 1
-    if (abs(signew - sig) < 1e-04) {K <- 0}
-    if (verbose) {
-      cat(niter, "\t", sprintf("%.3f", slassoLoss(X,Y,B0,signew,lbd)),"\t",
-          sprintf("%.3f", signew), "\n")
-    }
-  }
-  lam <- lbd * signew
-  B0 <- coef(gglasso(X.tilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
-  hsigma <- c(signew)
-  S0 <- t(X.tilde) %*% (Y - X.tilde %*% B0) / n / lbd / hsigma
-  B0 <- B0 / rep(weights,table(group))
-  #hy=X%*%hbeta
-  return(list(B0=B0, S0=c(S0), hsigma=hsigma,lbd=lbd))
 }
 
 #' @title Post-inference for lasso estimator
@@ -164,7 +112,7 @@ slassoFit.tilde <- function(X.tilde, Y, lbd, group, weights, verbose=FALSE){
 #' @param weights Weight term for each group. Default is
 #' \code{rep(1, max(group))}.
 #' @param tau numeric vector. Standard deviaion of proposal distribution
-#'  for each active beta.
+#'  for each beta.
 #' Adjust the value to get relevant level of acceptance rate.
 #' @param sig2.hat variance of error term.
 #' @param alpha confidence level for confidence interval.
@@ -195,15 +143,13 @@ slassoFit.tilde <- function(X.tilde, Y, lbd, group, weights, verbose=FALSE){
 #' sig2 <- 1
 #' lbd <- .37
 #' weights <- rep(1,p)
-#' group <- 1:p
-#' Postinference.MHLS(X, Y, lbd, weights, tau=rep(1, sum(B0!=0)),
-#' sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20, parallel=TRUE)
-#' Postinference.MHLS(X, Y, lbd, weights, tau=rep(1, sum(B0!=0)),
-#' sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
-#' parallel=TRUE, printSamples=TRUE)
+#' Postinference.MHLS(X, Y, lbd, sig2.hat=1, alpha=.05, nChain=3,
+#' niterPerChain=20, parallel=TRUE)
+#' Postinference.MHLS(X, Y, lbd, sig2.hat=1, alpha=.05, nChain=3,
+#' niterPerChain=20, parallel=TRUE, printSamples=TRUE)
 #' @export
 Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
-  tau = rep(1, sum(B0!=0)), sig2.hat, alpha = .05, nChain = 10,
+  tau = rep(1, ncol(X)), sig2.hat, alpha = .05, nChain = 10,
   niterPerChain = 500, parallel = FALSE, ncores = 2L, printSamples=FALSE, ...)
 {
   # nChain : the number of MH chains

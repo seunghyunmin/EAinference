@@ -282,11 +282,15 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
       if (Btype == "gaussian") {
         f0sd <- sqrt(sig2Target/n)
         f1sd <- sqrt(sig2Prop1/n)
-        f2sd <- sqrt(sig2Prop2/n)
+        if (Mixture) {
+          f2sd <- sqrt(sig2Prop2/n)
+        }
       } else {
         f0sd <- sqrt(sig2Target/n) * resTarget
         f1sd <- sqrt(sig2Prop1/n) * resProp1
-        f2sd <- sqrt(sig2Prop2/n) * resProp2
+        if (Mixture) {
+          f2sd <- sqrt(sig2Prop2/n) * resProp2
+        }
       }
 
       FF <- function(x) {

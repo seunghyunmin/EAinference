@@ -5,12 +5,12 @@
 \title{MH sampler for lasso / group lasso estimator}
 \usage{
 MHLS(X, PE, sig2, lbd, group = 1:ncol(X), weights = rep(1, max(group)), B0,
-  S0, A = unique(group[which(B0 != 0)]), tau = rep(1, length(A)),
+  S0, A = unique(group[which(B0 != 0)]), tau = rep(1, ncol(X)),
   niter = 2000, burnin = 0, PEtype = "coeff", updateS.itv = 1,
   verbose = FALSE, ...)
 }
 \arguments{
-\item{X}{\code{n} x \code{p} matrix of predictors, where \code{n} is the
+\item{X}{\code{n} x \code{p} predictor matrix, where \code{n} is the
 number of samples and \code{p} is the number of covariates.}
 
 \item{PE}{numeric vector. Estimates of true coefficient for
@@ -31,8 +31,8 @@ The number of groups should be same as \code{max(group)}. See examples for detai
 
 \item{A}{numeric vector. Active group index. \code{which(B0 != 0)} has to be a subset of \code{A}.}
 
-\item{tau}{\code{|A|} x \code{1} numeric vector. Variance parameter for proposal
-distribution of active coefficients.}
+\item{tau}{numeric vector. Standard deviaion of proposal distribution
+for each beta.}
 
 \item{niter}{numeric. The number of iterations.}
 

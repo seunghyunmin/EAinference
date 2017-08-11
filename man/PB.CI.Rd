@@ -39,7 +39,8 @@ Group <- rep(1:(p/10), each = 10)
 Weights <- rep(1, p/10)
 X <- matrix(rnorm(n*p), n)
 object <- PBsampler(X,c(1,1,rep(0,p-2)),1,.5,niter=100,type="lasso")
-PB.CI(object = object, alpha = .05, method = "debias")
+parallel <- (.Platform$OS.type != "windows")
+PB.CI(object = object, alpha = .05, method = "none")
 
 }
 \references{

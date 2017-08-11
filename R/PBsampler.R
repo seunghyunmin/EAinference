@@ -190,7 +190,7 @@ PBsampler <- function(X, PE_1, sig2_1, lbd_1, PE_2,
   return(RESULT)
 }
 
-PBsamplerMain <- function(X, PE, sig2, lbd, weights = rep(1, max(group)),
+PBsamplerMain <- function(X, PE, sig2, lbd, weights,
  group, niter, type, PEtype, Btype, Y, parallel,
  ncores, verbose)
 {
@@ -254,12 +254,6 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights = rep(1, max(group)),
                              GramMat %*% (Lassobeta * W)) / n / lbd))
     }
   } else {
-    if (verbose) {
-      slassoLoss <- function(X,Y,beta,sig,lbd) {
-        n <- nrow(X)
-        crossprod(Y-X%*%beta) / 2 / n / sig + sig / 2 + lbd * sum(abs(beta))
-      }
-    }
     FF <- function(x) {
       epsilon <- rnorm(n, mean = 0, sd = sig2^0.5)
       if (Btype == "wild") {
@@ -337,7 +331,8 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights = rep(1, max(group)),
 #' Weights <- rep(1, p/10)
 #' X <- matrix(rnorm(n*p), n)
 #' object <- PBsampler(X,c(1,1,rep(0,p-2)),1,.5,niter=100,type="lasso")
-#' PB.CI(object = object, alpha = .05, method = "debias")
+#' parallel <- (.Platform$OS.type != "windows")
+#' PB.CI(object = object, alpha = .05, method = "none")
 #'
 #' @export
 PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores=2L) {

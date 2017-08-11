@@ -3,7 +3,7 @@
 #' @description Metropolis-Hastings sampler for lasso / group lasso estimator
 #' using estimator augmentation.
 #'
-#' @param X \code{n} x \code{p} matrix of predictors, where \code{n} is the
+#' @param X \code{n} x \code{p} predictor matrix, where \code{n} is the
 #' number of samples and \code{p} is the number of covariates.
 #' @param PE numeric vector. Estimates of true coefficient for
 #' \code{PEtype="coeff"} or E(y) for \code{PEtype="mu"}.
@@ -15,8 +15,8 @@
 #' @param B0 \code{p} x \code{1} vector. Initial value of lasso/group lasso estimator.
 #' @param S0 \code{p} x \code{1} vector. Initial value of subgradients. If not given, it will be generated in defauly way.
 #' @param A numeric vector. Active group index. \code{which(B0 != 0)} has to be a subset of \code{A}.
-#' @param tau \code{|A|} x \code{1} numeric vector. Variance parameter for proposal
-#' distribution of active coefficients.
+#' @param tau numeric vector. Standard deviaion of proposal distribution
+#'  for each beta.
 #' @param niter numeric. The number of iterations.
 #' @param burnin numeric. The length of burin-in periods
 #' @param updateS.itv numeric. Update subgradients in every \code{updateS.itv} iterations. Set this value larger than \code{niter} if one wants to skip updating subgradients.
@@ -103,7 +103,7 @@
 #' @export
 MHLS <-  function(X, PE, sig2, lbd, group = 1:ncol(X),
                    weights = rep(1, max(group)), B0, S0, A = unique(group[which(B0 != 0)]),
-                   tau = rep(1, length(A)), niter = 2000, burnin = 0, PEtype = "coeff", updateS.itv = 1, verbose = FALSE, ...)
+                   tau = rep(1, ncol(X)), niter = 2000, burnin = 0, PEtype = "coeff", updateS.itv = 1, verbose = FALSE, ...)
 {
   MHLSmain(X = X, PE = PE, sig2 = sig2, lbd = lbd,
     group = group, weights = weights, B0 = B0, S0 = S0, A = A,
@@ -222,7 +222,7 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
   if (!missing(S0) && !all(round(S0[which(B0 != 0)], 3) == sign(B0[B0 != 0]))) {
     stop("Invalid S0. Leave S0 blank, if S0 is unknown.")
   }
-  if (length(tau) != length(A)) {
+  if (length(tau) != ncol(X)) {
     stop("tau must have a same length with the active set, A.")
   }
   if (n >= p) {   # Low-dim MH
@@ -278,7 +278,7 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
       if(nA >= 1){
         if (length(FlipSA)!=0) {
           for (j in FlipSA) {
-            b_prop <- rnorm(1, mean = B[t - 1, j], sd = tau[which(A == j)])
+            b_prop <- rnorm(1, mean = B[t - 1, j], sd = tau[j])
             s_prop <- sign(b_prop)
             DiffU <- (b_prop - B[t - 1, j]) * C[, j]
             DiffU[j] <- DiffU[j] + lbdwgt[j] * (s_prop - S[t - 1, j])
@@ -301,11 +301,11 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
 
         if (length(A2)!=0) {
           for (j in A2) {
-            b_prop <- rtnorm(1, mean = B[t - 1, j], sd = tau[which(A == j)],
+            b_prop <- rtnorm(1, mean = B[t - 1, j], sd = tau[j],
                              lower = LUbounds[j, 1],
                              upper = LUbounds[j, 2])
-            Ccur <- pnorm(0,mean=B[t-1, j],sd=tau[which(A == j)],lower.tail=(B[t-1,j]<0),log.p=FALSE);
-            Cnew <- pnorm(0,mean=b_prop,sd=tau[which(A == j)],lower.tail=(b_prop<0),log.p=FALSE);
+            Ccur <- pnorm(0,mean=B[t-1, j],sd=tau[j],lower.tail=(B[t-1,j]<0),log.p=FALSE);
+            Cnew <- pnorm(0,mean=b_prop,sd=tau[j],lower.tail=(b_prop<0),log.p=FALSE);
             lqratio=log(Ccur/Cnew);
 
 

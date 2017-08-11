@@ -29,7 +29,7 @@ UpdateBA <- function(Bcur,Scur,tau,A,I,Rcur,logfRcur,VRC,lbdVRW,InvVarR,
                   tVAN.WA,invB_D,B_F,FlipSA,IndexSF,nA=length(A),nI=length(I))
 {
   Bnew=Bcur;
-  Bnew[A]=rnorm(nA,Bcur[A],tau)
+  Bnew[A]=rnorm(nA,Bcur[A],tau[A])
 
   diffB=Bnew-Bcur;
   nAcceptBA=0;
@@ -100,11 +100,11 @@ UpdateBA.fixedSA <- function(Bcur,tau,A,Rcur,logfRcur,VRC,InvVarR) # Fix sign(be
   LUbounds[Bcur[A]>0,2]=Inf;
   LUbounds[Bcur[A]<0,1]=-Inf;
   Bnew=Bcur;
-  Bnew[A]=rtnorm(nA,Bcur[A],tau,lower=LUbounds[,1],upper=LUbounds[,2]);
+  Bnew[A]=rtnorm(nA,Bcur[A],tau[A],lower=LUbounds[,1],upper=LUbounds[,2]);
 
-  Ccur=pnorm(0,mean=Bcur[A],sd=tau,lower.tail=TRUE,log.p=FALSE);
+  Ccur=pnorm(0,mean=Bcur[A],sd=tau[A],lower.tail=TRUE,log.p=FALSE);
   Ccur[Bcur[A]>0]=1-Ccur[Bcur[A]>0];
-  Cnew=pnorm(0,mean=Bnew[A],sd=tau,lower.tail=TRUE,log.p=FALSE);
+  Cnew=pnorm(0,mean=Bnew[A],sd=tau[A],lower.tail=TRUE,log.p=FALSE);
   Cnew[Bcur[A]>0]=1-Cnew[Bcur[A]>0];
   lqratio=log(Ccur/Cnew);
 
@@ -442,8 +442,8 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
   Bcur <- Bprop <- Scur * rep(rcur,table(group));
   TSA.cur <- TSA.prop <- TsA(,Scur,group,A,n,p);
   for (i in A) {
-      #rprop[i] <- truncnorm::rtruncnorm(1, 0, , rcur[i], sqrt(tau[which(A==i)] * ifelse(rcur[i]!=0,rcur[i],1)))
-    rprop[i] <- rtnorm(n = 1, mean = rcur[i], sd = sqrt(tau[which(A==i)] * ifelse(rcur[i]!=0,rcur[i],1)), lower = 0, upper = Inf)
+      #rprop[i] <- truncnorm::rtruncnorm(1, 0, , rcur[i], sqrt(tau[i] * ifelse(rcur[i]!=0,rcur[i],1)))
+    rprop[i] <- rtnorm(n = 1, mean = rcur[i], sd = sqrt(tau[i] * ifelse(rcur[i]!=0,rcur[i],1)), lower = 0, upper = Inf)
     Bprop[group==i] <- rprop[i] * Scur[group==i]
 
     if (PEtype == "coeff") {
@@ -458,8 +458,8 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
     #dmvnorm(Hprop,,sig2 / n * Psi,log=T) - dmvnorm(Hcur,,sig2 / n * Psi,log=T)
     lJacobianRatio <- log.Jacobi.partial(X,Scur,rprop,Psi,group,A,lbd,W,TSA.prop) -
       log.Jacobi.partial(X,Scur,rcur,Psi,group,A,lbd,W,TSA.cur)
-    lProposalRatio <- pnorm(0,rcur[i],sqrt(tau[which(A==i)] * rcur[i]), lower.tail=FALSE, log.p=TRUE) -
-      pnorm(0,rprop[i],sqrt(tau[which(A==i)] * rprop[i]), lower.tail=FALSE, log.p=TRUE)
+    lProposalRatio <- pnorm(0,rcur[i],sqrt(tau[i] * rcur[i]), lower.tail=FALSE, log.p=TRUE) -
+      pnorm(0,rprop[i],sqrt(tau[i] * rprop[i]), lower.tail=FALSE, log.p=TRUE)
     lAcceptanceRatio <-  lNormalRatio + lJacobianRatio + lProposalRatio
     if (lAcceptanceRatio <= log(runif(1))) { # Reject
       rprop[i] <- rcur[i];
@@ -1051,4 +1051,58 @@ nodewise.getlambdasequence.old <- function(x,verbose=FALSE)
   lambdas <- seq(minlambda, maxlambda, by = (maxlambda-minlambda)/nlambda)
   ## return
   sort(lambdas, decreasing=TRUE)
+}
+
+slassoLoss <- function(X,Y,beta,sig,lbd) {
+  n <- nrow(X)
+  crossprod(Y-X%*%beta) / 2 / n / sig + sig / 2 + lbd * sum(abs(beta))
+}
+
+# Scaled lasso / group lasso function, use scaled X matrix.
+slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, verbose=FALSE){
+  n <- nrow(Xtilde)
+  p <- ncol(Xtilde)
+
+  # if(is.null(lbd)){
+  #   if(p > 10^6){
+  #     lbd = "univ"
+  #   } else lbd = "quantile"
+  # }
+  # if(lbd == "univ" | lbd == "universal")
+  #   lbd=sqrt(2*log(p)/n)
+  # if(lbd=="quantile"){
+  #   L=0.1; Lold=0
+  #   while(abs(L-Lold)>0.001){
+  #     k=(L^4+2*L^2); Lold=L; L=-qnorm(min(k/p,0.99)); L=(L+Lold)/2
+  #   }
+  #   if(p==1) L=0.5
+  #   lbd = sqrt(2/n)*L
+  # }
+
+  if (verbose) {
+    cat("niter \t Loss \t hat.sigma \n")
+    cat("-------------------------------\n")
+  }
+  sig <- signew <- .1
+  K <- 1 ; niter <- 0
+
+  while(K == 1 & niter < 1000){
+    sig <- signew;
+    lam <- lbd * sig
+    B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
+    signew <- sqrt(crossprod(Y-Xtilde %*% B0) / n)
+
+    niter <- niter + 1
+    if (abs(signew - sig) < 1e-04) {K <- 0}
+    if (verbose) {
+      cat(niter, "\t", sprintf("%.3f", slassoLoss(Xtilde,Y,B0,signew,lbd)),"\t",
+          sprintf("%.3f", signew), "\n")
+    }
+  }
+  lam <- lbd * signew
+  B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
+  hsigma <- c(signew)
+  S0 <- t(Xtilde) %*% (Y - Xtilde %*% B0) / n / lbd / hsigma
+  B0 <- B0 / rep(weights,table(group))
+  return(list(B0=B0, S0=c(S0), hsigma=hsigma,lbd=lbd))
 }
