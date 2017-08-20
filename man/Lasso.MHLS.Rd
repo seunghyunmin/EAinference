@@ -4,8 +4,8 @@
 \alias{Lasso.MHLS}
 \title{lasso / group lasso estimator}
 \usage{
-Lasso.MHLS(X, Y, type = "lasso", lbd = 0.37, group = 1:ncol(X),
-  weights = rep(1, max(group)), verbose)
+Lasso.MHLS(X, Y, type = "lasso", lbd, group = 1:ncol(X), weights = rep(1,
+  max(group)), verbose = FALSE)
 }
 \arguments{
 \item{X}{n x p matrix of predictors.}
@@ -33,7 +33,7 @@ should be same as max(group).}
 \item{lbd, weights, grouop}{same as input arguments.}
 }
 \description{
-provides lasso / group lasso solutio;
+provides lasso / group lasso solution;
 coefficient-estimate and subgradient.
 }
 \details{

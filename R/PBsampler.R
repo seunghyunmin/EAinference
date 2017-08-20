@@ -111,9 +111,9 @@ PBsampler <- function(X, PE_1, sig2_1, lbd_1, PE_2,
   if (!all(group==1:p) && (!type %in% c("grlasso", "sgrlasso"))) {
     stop("Choose type to be either grlasso or sgrlasso if group-structure exists.")
   }
-  if (all(group==1:p) && (!type %in% c("lasso", "slasso"))) {
-    stop("Choose type to be either lasso or slasso if group-structure does not exist.")
-  }
+  # if (all(group==1:p) && (!type %in% c("lasso", "slasso"))) {
+  #   stop("Choose type to be either lasso or slasso if group-structure does not exist.")
+  # }
   if (parallel && ncores == 1) {
     ncores <- 2
     warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
@@ -340,13 +340,16 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
   if (class(object)!="PB") {
     stop("object class has to be \"PB\".")
   }
-
+  if(.Platform$OS.type == "windows" && parallel == TRUE){
+    n.cores <- 1L
+    parallel <- FALSE
+    warning("Under Windows platform, parallel computing cannot be executed.")
+  }
   if (parallel && ncores == 1) {
     ncores <- 2
     warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
             Set ncores to 2.")
   }
-
   if (parallel && (ncores > parallel::detectCores())) {
     ncores <- parallel::detectCores()
     warning("ncores is larger than the maximum number of available processes.
@@ -385,7 +388,7 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
     #Z <- hdiFit$Z
     #hdiFit$bhat
 
-    ZY <- crossprod(Z, refitY) # p x niter
+    ZrefitY <- crossprod(Z, refitY) # p x niter
     ZX <- colSums(Z * X) # length p
     ZXcomp <- matrix(0,p-1,p)
     for (i in 1:p) {
@@ -394,10 +397,11 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
 
     refitB <- matrix(0,nrow(B),ncol(B))
 
+    # eq(4) from Zhang & Zhang(2014)
     FF <- function(x) {
       TEMP <- c()
       for (j in 1:ncol(B)) {
-        TEMP[j] <- (ZY[j,x] - ZXcomp[,j] %*% B[x,-j]) / ZX[j]
+        TEMP[j] <- (ZrefitY[j,x] - ZXcomp[,j] %*% B[x,-j]) / ZX[j]
       }
       return(TEMP)
     }
@@ -409,7 +413,7 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
     }
     # for (i in 1:nrow(B)) {
     #   for (j in 1:ncol(B)) {
-    #     refitB[i,j] <- (ZY[j,i] - ZXcomp[,j] %*% B[i,-j]) / ZX[j]
+    #     refitB[i,j] <- (ZrefitY[j,i] - ZXcomp[,j] %*% B[i,-j]) / ZX[j]
     #   }
     # }
     Result <- apply(refitB,1,quantile,prob=c(alpha/2,1-alpha/2))

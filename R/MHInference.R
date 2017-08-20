@@ -1,13 +1,14 @@
 #' @title lasso / group lasso estimator
 #'
-#' @description provides lasso / group lasso solutio;
+#' @description provides lasso / group lasso solution;
 #' coefficient-estimate and subgradient.
 #'
 #' @param X n x p matrix of predictors.
 #' @param Y n x 1 vector of response.
 #' @param type type of penalty, either to be "lasso", "grlasso", "slasso" or "sgrlasso".
-#' @param lbd penalty term of lasso. See the loss function given below for more
-#'  details.
+#' @param lbd penalty term of lasso. By letting this argument to \code{"cv.1se"} or
+#' \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
+#' squared error or that is within 1 std error bound.
 #' @param weights Weight term for each group. Default is
 #' \code{rep(1, max(group))}.
 #' @param group p x 1 vector of consecutive integers. The number of groups
@@ -37,8 +38,8 @@
 #' #
 #' Lasso.MHLS(X = X,Y = Y, type="grlasso", lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
 #' @export
-Lasso.MHLS <- function(X, Y, type = "lasso", lbd=.37,
-  group=1:ncol(X), weights=rep(1,max(group)), verbose)
+Lasso.MHLS <- function(X, Y, type = "lasso", lbd,
+  group=1:ncol(X), weights=rep(1,max(group)), verbose = FALSE, ...)
 {
   n <- nrow(X)
   p <- ncol(X)
@@ -53,8 +54,22 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd=.37,
     stop("Choose type to be either grlasso or sgrlasso if group-structure exists.")
   }
 
-  if (all(group==1:p) && (!type %in% c("lasso", "slasso"))) {
-    stop("Choose type to be either lasso or slasso if group-structure does not exist.")
+  # if (all(group==1:p) && (!type %in% c("lasso", "slasso"))) {
+  #   stop("Choose type to be either lasso or slasso if group-structure does not exist.")
+  # }
+
+  if (lbd %in% c("cv.1se", "cv.min")) {
+    lbd <- cv.lasso(X,Y,group=group,weights=weights,type = type, plot.it = FALSE)
+    if (lbd == "cv.1se") {lbd <- lbd$lbd.1se} else {
+      lbd <- lbd$lbd.min
+    }
+  }
+  if (missing(lbd)) {
+    if (type %in% c("lasso", "grlasso")) {
+      lbd <- .37
+    } else {
+      lbd <- .5
+    }
   }
 
   if (lbd <= 0) {
@@ -96,6 +111,9 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd=.37,
     return(list(B0=B0, S0=c(S0), lbd=lbd, weights=weights, group=group))
   } else {
     TEMP <- slassoFit.tilde(Xtilde = Xtilde, Y=Y, lbd=lbd, group=group, weights = weights, verbose = verbose)
+    if (sum(TEMP$B0!=0) == (n-1)) {
+      warning("Active set is too large. Try to increase the value of lbd.")
+    }
     return(list(B0=TEMP$B0, S0=TEMP$S0, sigmaHat=TEMP$hsigma, lbd=lbd, weights=weights, group=group))
   }
 }
