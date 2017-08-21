@@ -36,7 +36,7 @@
 #' truebeta <- c(rep(1,5),rep(0,p-5))
 #' Y <- X%*%truebeta + rnorm(n)
 #'
-#' cv.lasso(X,Y,group,weights,K=3,type="grslasso",num.lbdseq=10,plot=TRUE)
+#' cv.lasso(X,Y,group,weights,K=3,type="sgrlasso",num.lbdseq=10,plot=TRUE)
 #' cv.lasso(X,Y,group,weights,K=10,type="grlasso",num.lbdseq=100,plot=TRUE)
 #' @export
 cv.lasso <- function(
@@ -46,9 +46,9 @@ cv.lasso <- function(
   weights = rep(1,max(group)),
   type,
   K = 10L,
-  minlbd = 0,
-  maxlbd = if(type %in% c("lasso","grlasso")){2}else{max(t(X)%*%Y)},
-  num.lbdseq = 300L,
+  minlbd,
+  maxlbd,
+  num.lbdseq = 100L,
   parallel = FALSE,
   ncores = 2L,
   plot.it = FALSE,
@@ -59,8 +59,12 @@ cv.lasso <- function(
 
   Y <- as.vector(Y)
   K <- as.integer(K)
-  num.lbdseq <- as.integer(num.integer)
+  num.lbdseq <- as.integer(num.lbdseq)
 
+  if(missing(minlbd)) {minlbd <- 0}
+  if(missing(maxlbd)) {
+    maxlbd <- if (type %in% c("lasso", "grlasso")) {2} else {max(t(X) %*% Y)}
+  }
   #--------------------
   # Error Handling
   #--------------------
@@ -99,8 +103,12 @@ cv.lasso <- function(
     stop("group index has to be a consecutive integer starting from 1.")
   }
   if (any(c(minlbd,maxlbd) < 0)) {stop("minlbd/maxlbd should be non-negative")}
+  if (minlbd >= maxlbd) {stop("minlbd is too large compared to maxlbd.")}
   if (num.lbdseq <= 0) {
     stop("num.lbdseq should be non-negative")
+  }
+  if (K <= 0) {
+    stop("K should be a positive integer.")
   }
 
   all.folds <- split(sample(1:n), rep(1:K, length = n))
@@ -110,7 +118,7 @@ cv.lasso <- function(
   residmat <- matrix(0, length(index), K)
 
   FF <- function(x,omit) {
-    fit <- Lasso.MHLS(X[-omit,,drop=FALSE],Y[-omit],type=type,
+    fit <- Lasso.MHLS(X=X[-omit,,drop=FALSE],Y=Y[-omit],type=type,
                       lbd=index[x],group=group,weights=weights)$B0
     fit <- X[omit,,drop=FALSE]%*%fit
     return(mean((Y[omit]-fit)^2))

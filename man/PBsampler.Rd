@@ -43,13 +43,13 @@ The number of groups should be same as max(group). Default is \code{group = 1:p}
 \code{parallel=FALSE}.}
 }
 \value{
-\item{beta}{(group) lasso estimator.}
+\item{beta}{coeffieicnt estimate.}
 
-\item{subgrad}{subgradient.}
+\item{subgrad}{subgradient of coefficient.}
 
 \item{hsigma}{standard deviation estimator, for type="slasso" or type="sgrlasso" only.}
 
-\item{X, PE, sig2, weights, group, type, PEtype, Btype, Y, mixture}{Model parameters}
+\item{X, PE, sig2, weights, group, type, PEtype, Btype, Y, mixture}{model parameters.}
 }
 \description{
 Draw bootstrap samples in parametric way and

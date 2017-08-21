@@ -4,7 +4,7 @@ set.seed(1234)
 n <- 10
 p <- 30
 Niter <-  10
-Group <- rep(1:(p/10), each = 10)
+group <- rep(1:(p/10), each = 10)
 Weights <- rep(1, p/10)
 x <- matrix(rnorm(n*p), n)
 Y <- x%*%rep(1,p) + rnorm(n)
@@ -17,51 +17,51 @@ test_that("lasso", {
 
 test_that("PE length under two types, \"mu\" and \"coeff\"", {
   expect_error(PBsampler(X = x, PE_1 = rep(0, p-1), sig2_1 = 1, lbd_1 = .5,
-                         weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = FALSE),
+                         weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = FALSE),
                "PE must have a same length")
   expect_error(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                         weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = FALSE)
+                         weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = FALSE)
                , NA)
   expect_error(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = 1,
-                         weights = Weights, group = Group, niter = Niter, type = "sgrlasso", PEtype = "coeff", parallel = FALSE)
+                         weights = Weights, group = group, niter = Niter, type = "sgrlasso", PEtype = "coeff", parallel = FALSE)
                , NA)
   expect_error(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = 1,
                          niter = Niter, type = "slasso", PEtype = "coeff", parallel = FALSE)
                , NA)
   expect_error(PBsampler(X = x, PE_1 = rep(0, n-1), sig2_1 = 1, lbd_1 = .5,
-                         weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "mu", parallel = FALSE),
+                         weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "mu", parallel = FALSE),
                "PE must have a same length")
   expect_error(PBsampler(X = x, PE_1 = rep(0, n), sig2_1 = 1, lbd_1 = .5,
-                         weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "mu", parallel = FALSE)
+                         weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "mu", parallel = FALSE)
                , NA)
   expect_error(PBsampler(X = x, PE_1 = rep(0, n), sig2_1 = 1, lbd_1 = .5,
                          PE_2 = rep(0, n), sig2_2 = 1, lbd_2 = .5,
-                         weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "mu", parallel = FALSE)
+                         weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "mu", parallel = FALSE)
                , NA)
 })
 
 test_that("missing parameter", {
   expect_error(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1,
-                         weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = FALSE)
+                         weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = FALSE)
                , "provide all the parameters")
   expect_error(PBsampler(X = x, PE_1 = rep(0, n), sig2_1 = 1, lbd_1 = .5,
                          PE_2 = rep(0, n), sig2_2 = 1,
-                         weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "mu", parallel = FALSE)
+                         weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "mu", parallel = FALSE)
                , "provide all the parameters")
 })
 
 test_that("Improper value of parameter, sig2/lbd/weights", {
   expect_error(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = -1, lbd_1 = .5,
-                         weights = Weights, group = Group, niter = Niter, type = "grlasso", parallel = FALSE),
+                         weights = Weights, group = group, niter = Niter, type = "grlasso", parallel = FALSE),
                "sig2 should be positive")
   expect_error(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = -1,
-                         weights = Weights, group = Group, niter = Niter, type = "grlasso", parallel = FALSE),
+                         weights = Weights, group = group, niter = Niter, type = "grlasso", parallel = FALSE),
                "lbd should be non-negative")
   expect_error(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = c(1,2), lbd_1 = .5,
-                         weights = Weights, group = Group, niter = Niter, type = "grlasso", parallel = FALSE),
+                         weights = Weights, group = group, niter = Niter, type = "grlasso", parallel = FALSE),
                "sig2/lbd should be a scalar")
   expect_error(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                         weights = c(-1, rep(1, p / 10 - 1)), group = Group, niter = Niter, type = "grlasso", parallel = FALSE),
+                         weights = c(-1, rep(1, p / 10 - 1)), group = group, niter = Niter, type = "grlasso", parallel = FALSE),
                "weights should be positive")
 })
 
@@ -94,10 +94,11 @@ set.seed(1234)
 n <- 40
 p <- 50
 Niter <-  10
-Group <- rep(1:(p/10), each = 10)
-Weights <- rep(1, p/10)
+group <- rep(1:(p/10), each = 10)
+weights <- rep(1, p/10)
 parallel <- (.Platform$OS.type != "windows")
 X <- matrix(rnorm(n*p), n)
+Y <- X %*% c(rep(1,5),rep(0,p-5)) + rnorm(n)
 
 test_that("confidence interval", {
   object <- PBsampler(X = X,PE_1 = c(1,1,rep(0,p-2)),sig2_1 = 1,lbd_1 = .5,
@@ -111,12 +112,12 @@ test_that("confidence interval", {
                , NA)
   expect_error(PB.CI(object = object, alpha = .05, method = "none")
                , NA)
-  object <- PBsampler(X = X,PE_1 = c(1,1,rep(0,p-2)),sig2_1 = 1,lbd_1 = .5,group=Group,niter=100,type="grlasso",parallel=parallel)
+  object <- PBsampler(X = X,PE_1 = c(1,1,rep(0,p-2)),sig2_1 = 1,lbd_1 = .5,group=group,niter=100,type="grlasso",parallel=parallel)
   expect_error(PB.CI(object = object, alpha = .05, method = "debias",parallel=parallel)
                , NA)
   expect_error(PB.CI(object = object, alpha = .05, method = "none")
                , NA)
-  object <- PBsampler(X = X,PE_1 = c(1,1,rep(0,p-2)),sig2_1 = 1,lbd_1 = 1,group=Group,niter=100,type="sgrlasso",parallel=parallel)
+  object <- PBsampler(X = X,PE_1 = c(1,1,rep(0,p-2)),sig2_1 = 1,lbd_1 = 1,group=group,niter=100,type="sgrlasso",parallel=parallel)
   expect_error(PB.CI(object = object, alpha = .05, method = "debias",parallel=parallel)
                , NA)
   expect_error(PB.CI(object = object, alpha = .05, method = "none")
@@ -126,30 +127,30 @@ test_that("confidence interval", {
 if(.Platform$OS.type != "windows"){
   test_that("parallel", {
     expect_warning(PBsampler(X = X, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                             weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
+                             weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
                              ncores = 1)
                    , "Set ncores to 2")
     # expect_warning(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-    #                              weights = Weights, group = Group, niter = Niter, PEtype = "coeff", parallel = TRUE,
+    #                              weights = Weights, group = group, niter = Niter, PEtype = "coeff", parallel = TRUE,
     #                              ncores = 100000)
     #                , "maximum possible value")
     expect_warning(PBsampler(X = X, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                             weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
+                             weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
                              ncores = 2)
                    , NA)
   })
 } else {
   test_that("parallel", {
     expect_warning(PBsampler(X = X, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                             weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
+                             weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
                              ncores = 1)
                    , "Under Windows platform")
     # expect_warning(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-    #                              weights = Weights, group = Group, niter = Niter, PEtype = "coeff", parallel = TRUE,
+    #                              weights = Weights, group = group, niter = Niter, PEtype = "coeff", parallel = TRUE,
     #                              ncores = 100000)
     #                , "maximum possible value")
     expect_warning(PBsampler(X = X, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                             weights = Weights, group = Group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
+                             weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
                              ncores = 2)
                    , "Under Windows platform")
   })

@@ -9,23 +9,65 @@ n <- 50
 p <- 10
 X <- matrix(rnorm(n*p),n)
 Y <- X %*% c(1,1,rep(0,p-2)) + rnorm(n)
+weights <- c(1,1)
+group <- rep(c(1,2), each=5)
 
 test_that("Low dimensional setting", {
   expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso", lbd = .5)
                , NA)
   expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso", lbd = -.5)
-               , "lbd has to be positive")
-  expect_error(Lasso.MHLS(X = X,Y = c(0,Y))
+               , "invalid")
+  expect_error(Lasso.MHLS(X = X,Y = c(0,Y), lbd = .5)
                , "dimension")
-  expect_error(Lasso.MHLS(X = X,Y = Y, type="grlasso", weights=c(1,1), group=rep(c(1,2),each=5))
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="grlasso", lbd = .37
+                          , weights=weights, group=group)
                , NA)
 
-  expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso", weights=1:(p+1))
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso", lbd=.5, weights=1:(p+1))
                , "length")
-  expect_error(Lasso.MHLS(X = X,Y = Y, type="grlasso", weights=1:p, group=rep(c(1,2),each=5))
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="grlasso", lbd=.5,
+                          weights=1:p, group=rep(c(1,2),each=5))
                , "length")
 
 })
+
+test_that("cv.lasso", {
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso"),
+               , "missing")
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso", lbd = "cv"),
+               , "invalid")
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso", lbd = "cv.1se")
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso", lbd = "cv.min")
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso", lbd = .5)
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, group = group, weights= weights,
+                          type="grlasso", lbd = "cv.1se")
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, group = group, weights= weights,
+                          type="grlasso", lbd = "cv.min")
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, group = group, weights= weights,
+                          type="grlasso", lbd = .5)
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="slasso", lbd = "cv.1se")
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="slasso", lbd = "cv.min")
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, type="slasso", lbd = .5)
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, group = group, weights= weights,
+                          type="sgrlasso", lbd = "cv.1se")
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, group = group, weights= weights,
+                          type="sgrlasso", lbd = "cv.min")
+               , NA)
+  expect_error(Lasso.MHLS(X = X,Y = Y, group = group, weights= weights,
+                          type="sgrlasso", lbd = .5)
+               , NA)
+})
+
 
 set.seed(123)
 n <- 20
@@ -37,15 +79,15 @@ test_that("High dimensional setting", {
   expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso",lbd = .5)
                , NA)
   expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso",lbd = -.5)
-               , "lbd has to be positive")
-  expect_error(Lasso.MHLS(X = X,Y = c(0,Y), type="lasso")
+               , "invalid")
+  expect_error(Lasso.MHLS(X = X,Y = c(0,Y), lbd=.5, type="lasso")
                , "dimension")
-  expect_error(Lasso.MHLS(X = X,Y = Y, type="grlasso",weights=c(1,1), group=rep(c(1,2),each=50))
+  expect_error(Lasso.MHLS(X = X,Y = Y, lbd=.5, type="grlasso",weights=c(1,1), group=rep(c(1,2),each=50))
                , NA)
 
-  expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso",weights=1:(p+1))
+  expect_error(Lasso.MHLS(X = X,Y = Y, lbd=.5, type="lasso",weights=1:(p+1))
                , "length")
-  expect_error(Lasso.MHLS(X = X,Y = Y, type="grlasso",weights=1:p, group=rep(c(1,2),each=50))
+  expect_error(Lasso.MHLS(X = X,Y = Y, lbd=.5, type="grlasso",weights=1:p, group=rep(c(1,2),each=50))
                , "length")
 
 })

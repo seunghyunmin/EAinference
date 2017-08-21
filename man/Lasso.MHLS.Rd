@@ -2,10 +2,10 @@
 % Please edit documentation in R/MHInference.R
 \name{Lasso.MHLS}
 \alias{Lasso.MHLS}
-\title{lasso / group lasso estimator}
+\title{Compute lasso estimator}
 \usage{
 Lasso.MHLS(X, Y, type = "lasso", lbd, group = 1:ncol(X), weights = rep(1,
-  max(group)), verbose = FALSE)
+  max(group)), verbose = FALSE, ...)
 }
 \arguments{
 \item{X}{n x p matrix of predictors.}
@@ -14,8 +14,9 @@ Lasso.MHLS(X, Y, type = "lasso", lbd, group = 1:ncol(X), weights = rep(1,
 
 \item{type}{type of penalty, either to be "lasso", "grlasso", "slasso" or "sgrlasso".}
 
-\item{lbd}{penalty term of lasso. See the loss function given below for more
-details.}
+\item{lbd}{penalty term of lasso. By letting this argument to \code{"cv.1se"} or
+\code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
+squared error or that is within 1 std error bound.}
 
 \item{group}{p x 1 vector of consecutive integers. The number of groups
 should be same as max(group).}
@@ -24,17 +25,21 @@ should be same as max(group).}
 \code{rep(1, max(group))}.}
 
 \item{verbose}{verbose for type = "slasso" or "sgrlasso".}
+
+\item{...}{Auxiliary arguments for \code{lbd="cv.min", lbd="cv.1se"}.
+Check \code{\link{cv.lasso}} for more details.}
 }
 \value{
 \item{B0}{a vector of coefficient estimator.}
 
 \item{S0}{a vector of subgradient.}
 
-\item{lbd, weights, grouop}{same as input arguments.}
+\item{lbd, weights, group}{same as input arguments.}
 }
 \description{
-provides lasso / group lasso solution;
-coefficient-estimate and subgradient.
+provides lasso / group lasso / scaled lasso / scaled grouop lasso solution;
+coefficient-estimate and subgradient along with sigma-estimate
+if scaled lasso or scaled group lasso.
 }
 \details{
 Using gglasso package, provide lasso / group lasso solution along with

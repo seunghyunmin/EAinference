@@ -1,7 +1,8 @@
-#' @title lasso / group lasso estimator
+#' @title Compute lasso estimator
 #'
-#' @description provides lasso / group lasso solution;
-#' coefficient-estimate and subgradient.
+#' @description provides lasso / group lasso / scaled lasso / scaled grouop lasso solution;
+#' coefficient-estimate and subgradient along with sigma-estimate
+#' if scaled lasso or scaled group lasso.
 #'
 #' @param X n x p matrix of predictors.
 #' @param Y n x 1 vector of response.
@@ -14,6 +15,8 @@
 #' @param group p x 1 vector of consecutive integers. The number of groups
 #' should be same as max(group).
 #' @param verbose verbose for type = "slasso" or "sgrlasso".
+#' @param ... Auxiliary arguments for \code{lbd="cv.min", lbd="cv.1se"}.
+#' Check \code{\link{cv.lasso}} for more details.
 #' @details
 #' Using gglasso package, provide lasso / group lasso solution along with
 #' subgradient. The loss function for group lasso is
@@ -22,7 +25,7 @@
 #' every group, it becomes lasso loss function.
 #' @return \item{B0}{a vector of coefficient estimator.}
 #' @return \item{S0}{a vector of subgradient.}
-#' @return \item{lbd, weights, grouop}{same as input arguments.}
+#' @return \item{lbd, weights, group}{same as input arguments.}
 #' @examples
 #' set.seed(123)
 #' n <- 50
@@ -58,23 +61,30 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd,
   #   stop("Choose type to be either lasso or slasso if group-structure does not exist.")
   # }
 
-  if (lbd %in% c("cv.1se", "cv.min")) {
-    lbd <- cv.lasso(X,Y,group=group,weights=weights,type = type, plot.it = FALSE)
-    if (lbd == "cv.1se") {lbd <- lbd$lbd.1se} else {
-      lbd <- lbd$lbd.min
-    }
+  if (!lbd  %in% c("cv.1se", "cv.min")) {
+    if (!is.numeric(lbd) || lbd <= 0) {stop("invalid lbd input.")}
   }
-  if (missing(lbd)) {
-    if (type %in% c("lasso", "grlasso")) {
-      lbd <- .37
-    } else {
-      lbd <- .5
+
+  if (verbose) {cat("# Cross-validation \n")}
+  if (lbd %in% c("cv.1se", "cv.min")) {
+    lbdTEMP <- cv.lasso(X = X, Y = Y, group = group, weights = weights,
+                    type = type, plot.it = FALSE, verbose=verbose, ...)
+    if (lbd == "cv.1se") {lbd <- lbdTEMP$lbd.1se} else {
+      lbd <- lbdTEMP$lbd.min
     }
   }
 
-  if (lbd <= 0) {
-    stop("lbd has to be positive.")
-  }
+  # if (missing(lbd)) {
+  #   if (type %in% c("lasso", "grlasso")) {
+  #     lbd <- .37
+  #   } else {
+  #     lbd <- .5
+  #   }
+  # }
+
+  # if (lbd <= 0) {
+  #   stop("lbd has to be positive.")
+  # }
   if (length(group) != p) {
     stop("length(group) has to be the same with ncol(X)")
   }
@@ -125,8 +135,9 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd,
 #'
 #' @param X predictors matrix.
 #' @param Y response vector.
-#' @param lbd penalty term of lasso. See the loss function given below for
-#' more details.
+#' @param lbd penalty term of lasso. By letting this argument to \code{"cv.1se"} or
+#' \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
+#' squared error or that is within 1 std error bound.
 #' @param weights Weight term for each group. Default is
 #' \code{rep(1, max(group))}.
 #' @param tau numeric vector. Standard deviaion of proposal distribution
@@ -178,6 +189,7 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   LassoEst <- Lasso.MHLS(X=X, Y=Y, type = "lasso", lbd=lbd, weights=weights)
   B0 <- LassoEst$B0
   S0 <- LassoEst$S0
+  lbd <- LassoEst$lbd
   A <- which(B0!=0)
 
   if (length(A)==0) {

@@ -13,8 +13,9 @@ Postinference.MHLS(X, Y, lbd, weights = rep(1, ncol(X)), tau = rep(1,
 
 \item{Y}{response vector.}
 
-\item{lbd}{penalty term of lasso. See the loss function given below for
-more details.}
+\item{lbd}{penalty term of lasso. By letting this argument to \code{"cv.1se"} or
+\code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
+squared error or that is within 1 std error bound.}
 
 \item{weights}{Weight term for each group. Default is
 \code{rep(1, max(group))}.}

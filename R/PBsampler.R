@@ -50,10 +50,10 @@
 #' Zhou, Q. and Min, S. (2017). Estimator augmentation with applications in
 #' high-dimensional group inference. Electronic Journal of Statistics, accepted.
 #'
-#' @return \item{beta}{(group) lasso estimator.}
-#' @return \item{subgrad}{subgradient.}
+#' @return \item{beta}{coeffieicnt estimate.}
+#' @return \item{subgrad}{subgradient of coefficient.}
 #' @return \item{hsigma}{standard deviation estimator, for type="slasso" or type="sgrlasso" only.}
-#' @return \item{X, PE, sig2, weights, group, type, PEtype, Btype, Y, mixture}{Model parameters}
+#' @return \item{X, PE, sig2, weights, group, type, PEtype, Btype, Y, mixture}{model parameters.}
 #' @examples
 #' set.seed(1234)
 #' n <- 10
