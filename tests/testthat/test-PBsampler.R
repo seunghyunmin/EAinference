@@ -1,4 +1,4 @@
-context("Parameteric Boostrap Sampling")
+context("Parameteric Bootstrap Sampling")
 
 set.seed(1234)
 n <- 10
@@ -127,7 +127,7 @@ test_that("confidence interval", {
 if(.Platform$OS.type != "windows"){
   test_that("parallel", {
     expect_warning(PBsampler(X = X, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                             weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
+                             weights = weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
                              ncores = 1)
                    , "Set ncores to 2")
     # expect_warning(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
@@ -135,14 +135,14 @@ if(.Platform$OS.type != "windows"){
     #                              ncores = 100000)
     #                , "maximum possible value")
     expect_warning(PBsampler(X = X, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                             weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
+                             weights = weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
                              ncores = 2)
                    , NA)
   })
 } else {
   test_that("parallel", {
     expect_warning(PBsampler(X = X, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                             weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
+                             weights = weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
                              ncores = 1)
                    , "Under Windows platform")
     # expect_warning(PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
@@ -150,7 +150,7 @@ if(.Platform$OS.type != "windows"){
     #                              ncores = 100000)
     #                , "maximum possible value")
     expect_warning(PBsampler(X = X, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
-                             weights = Weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
+                             weights = weights, group = group, niter = Niter, type = "grlasso", PEtype = "coeff", parallel = TRUE,
                              ncores = 2)
                    , "Under Windows platform")
   })

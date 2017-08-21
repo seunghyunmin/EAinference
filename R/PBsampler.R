@@ -341,7 +341,7 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
     stop("object class has to be \"PB\".")
   }
   if(.Platform$OS.type == "windows" && parallel == TRUE){
-    n.cores <- 1L
+    ncores <- 1L
     parallel <- FALSE
     warning("Under Windows platform, parallel computing cannot be executed.")
   }
