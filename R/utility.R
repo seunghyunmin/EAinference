@@ -419,7 +419,7 @@ log.Jacobi.partial <- function(X, s, r, Psi, group, A, lam, W, TSA) { # log(abs(
   #   W <- c(W, rep(weights[i], table.group[i]))
   # }
 
-  if (nrow(X) < ncol(X)) { # High-dim
+  if (n < p) { # High-dim
     if (n == length(A)) {
       log.Det <- determinant(X %*% F2(s, Psi, group)[,A])
     } else {
@@ -1106,3 +1106,28 @@ slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, verbose=FALSE){
   B0 <- B0 / rep(weights,table(group))
   return(list(B0=B0, S0=c(S0), hsigma=hsigma,lbd=lbd))
 }
+
+
+#---------------------
+# Error handling
+#---------------------
+ErrorParallel <- function(parallel, ncores) {
+  if(.Platform$OS.type == "windows" && parallel == TRUE){
+    ncores <- 1L
+    parallel <- FALSE
+    warning("Under Windows platform, parallel computing cannot be executed.")
+  }
+
+  if (parallel && ncores == 1) {
+    ncores <- 2
+    warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
+            set ncores to 2.")
+  }
+  if (parallel && ncores > parallel::detectCores()){
+    ncores <- parallel::detectCores()
+    warning("ncores is greater than the maximum number of available processores.
+            Set it to the maximum possible value.")
+  }
+  return(list(parallel=parallel,ncores=ncores))
+}
+

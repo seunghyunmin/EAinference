@@ -2,74 +2,72 @@
 % Please edit documentation in R/MHLS.R
 \name{MHLS}
 \alias{MHLS}
-\title{MH sampler for lasso / group lasso estimator}
+\title{Metropolis-Hastings sampler for lasso estimator}
 \usage{
-MHLS(X, PE, sig2, lbd, group = 1:ncol(X), weights = rep(1, max(group)), B0,
-  S0, A = unique(group[which(B0 != 0)]), tau = rep(1, ncol(X)),
-  niter = 2000, burnin = 0, PEtype = "coeff", updateS.itv = 1,
-  verbose = FALSE, ...)
+MHLS(X, PE, sig2, lbd, weights = rep(1, ncol(X)), B0, S0, A = which(B0 !=
+  0), tau = rep(1, ncol(X)), niter = 2000, burnin = 0, PEtype = "coeff",
+  updateS.itv = 1, verbose = FALSE, ...)
 }
 \arguments{
-\item{X}{\code{n} x \code{p} predictor matrix, where \code{n} is the
-number of samples and \code{p} is the number of covariates.}
+\item{X}{predictor matrix.}
 
-\item{PE}{numeric vector. Estimates of true coefficient for
-\code{PEtype="coeff"} or E(y) for \code{PEtype="mu"}.}
+\item{PE, sig2, lbd}{parameters of target distribution.
+(point estimate of beta or \code{E(y)} depends on \code{PEtype}, variance estimate of error and lambda).}
 
-\item{sig2}{numeric. variance of error term.}
+\item{weights}{weight vector with length \code{p}(the number of covariates).
+Default is \code{weights = rep(1, p)}.}
 
-\item{lbd}{numeric. penalty term of lasso. See the loss function given at details.}
+\item{B0}{numeric vector with length \code{p}.
+Initial value of lasso estimator.}
 
-\item{group}{\code{p} x \code{1} vector. Consecutive integers should be used for indexing groups.
-The number of groups should be same as \code{max(group)}. See examples for details.}
+\item{S0}{numeric vector with length \code{p}.
+Initial value of subgradients.
+If not given, this will be generated in a default way.}
 
-\item{weights}{\code{p} x \code{1} vector. weight term for each group.}
+\item{A}{numeric vector. Active coefficient index.
+Every active coefficient index in \code{B0} must be included.
+Default is \code{A = which(B0 != 0)}.}
 
-\item{B0}{\code{p} x \code{1} vector. Initial value of lasso/group lasso estimator.}
+\item{tau}{numeric vector with length \code{p}.
+Standard deviaion of proposal distribution for each coefficient.}
 
-\item{S0}{\code{p} x \code{1} vector. Initial value of subgradients. If not given, it will be generated in defauly way.}
+\item{niter}{integer. The number of iterations. Default is \code{niter = 2000}}
 
-\item{A}{numeric vector. Active group index. \code{which(B0 != 0)} has to be a subset of \code{A}.}
+\item{burnin}{integer. The length of burin-in periods. Default is \code{burnin = 0}}
 
-\item{tau}{numeric vector. Standard deviaion of proposal distribution
-for each beta.}
+\item{PEtype}{Type of \code{PE} which is needed to characterize the target distribution.
+Users can choose either \code{"coeff"} or \code{"mu"}.}
 
-\item{niter}{numeric. The number of iterations.}
+\item{updateS.itv}{integer. Update subgradients every \code{updateS.itv} iterations.
+Set this value larger than \code{niter} if one wants to skip updating subgradients.}
 
-\item{burnin}{numeric. The length of burin-in periods}
+\item{verbose}{logical. If true, print out the progress step.}
 
-\item{PEtype}{either to be "coeff" or "mu". Decide what kind of \code{PE} to use.}
-
-\item{updateS.itv}{numeric. Update subgradients in every \code{updateS.itv} iterations. Set this value larger than \code{niter} if one wants to skip updating subgradients.}
-
-\item{verbose}{verbose}
-
-\item{...}{complementary arguments for MH-sampler for lasso.
+\item{...}{complementary arguments.
 \itemize{
- \item{\code{FlipSA}}{ the parameter that is needed for the high-dimensional setting.
-Has to be a subset of active set, A. If the index is not listed in FlipSA,
-the sign of coefficients which corresponds to the index will be fixed.
+ \item{\code{FlipSA :}}{ optional parameter.
+This has to be a subset of active set, A. If the index is not listed in FlipSA,
+the sign of coefficients which correspond to the listed index will remain fixed.
 The default is \code{FlipSA=A}}
- \item{\code{SFindex} }{ subgradient index for the free coordinate.}
- \item{\code{randomSFindex} }{ logical. If \code{true}, resample \code{SFindex} in every
-\code{updateSF.itv} number.}
- \item{\code{updateSF.itv} }{ Specifies how many iterations will be done without
-updating the \code{SFindex}.}
+ \item{\code{SFindex :}}{ optional parameter. subgradient index for the free coordinate.}
+ \item{\code{randomSFindex :}}{ logical. If \code{true}, resample \code{SFindex} every
+\code{updateSF.itv} iterations.}
+ \item{\code{updateSF.itv :}}{ integer. In every \code{updateSF.itv} iterations,
+ randomize \code{SFindex}.}
 }}
 }
 \value{
-\code{MHLS} returns an object of \code{\link{class}} \code{c("MHLS", "Lasso")} or \code{c("MHLS", "GroupLasso")}
-The functions \code{summary} and \code{plot} are used for a breif summary and generating plots.
-\item{beta}{lasso / group lasso samples}
+\code{MHLS} returns an object of class \code{"MHLS"}.
+The functions \code{\link{summary.MHLS}} and \code{\link{plot.MHLS}}
+provide a brief summary and generate plots.
+\item{beta}{lasso samples}
 \item{subgrad}{subgradient samples}
 \item{acceptHistory}{number of acceptance and proposed}
-\item{niteration}{number of iteration}
-\item{burnin}{length of burn-in period}
-\item{PE, group, type}{same as function arguments}
+\item{niter, burnin, PE, type}{same as function arguments}
 }
 \description{
-Metropolis-Hastings sampler for lasso / group lasso estimator
-using estimator augmentation.
+Metropolis-Hastings sampler for lasso estimator
+under low and high dimensional setting.
 }
 \details{
 Given appropriate initial value, provides Metropolis-Hastings samples.
@@ -89,23 +87,10 @@ weights <- rep(1, p)
 LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
-MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
+MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
      PEtype = "coeff")
-MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1, group = 1:p,
-     weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-     PEtype = "mu")
-
-Group <- c(1, 1, 2, 2, 2)
-weights <- rep(1,max(Group))
-LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "grlasso", weights = weights,
-                          group = Group)
-B0 <- LassoResult$B0
-S0 <- LassoResult$S0
-MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = Group,
-     weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-     PEtype = "coeff")
-MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1, group = Group,
+MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
      PEtype = "mu")
 
@@ -117,16 +102,21 @@ n <- 5
 p <- 10
 X <- matrix(rnorm(n*p),n)
 Y <- X \%*\% rep(1,p) + rnorm(n)
-sigma2 <- 1
-lbd <- .37
 weights <- rep(1,p)
 LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd, type = "lasso", weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
-MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
+MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
      PEtype = "coeff")
-MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1, group = 1:p,
+MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
      PEtype = "mu")
+}
+\references{
+Zhou, Q. (2014). Monte Carlo simulation for Lasso-type problems by estimator augmentation.
+Journal of the American Statistical Association, 109, 1495-1516.
+
+Zhou, Q. and Min, S. (2017). Estimator augmentation with applications in
+high-dimensional group inference. Electronic Journal of Statistics, 11(2), 3039-3080.
 }

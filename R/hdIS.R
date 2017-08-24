@@ -1,25 +1,26 @@
-#' @title Computing importance weights under high-dimensional setting
+#' @title Compute importance weights for  lasso, group lasso, scaled lasso or
+#' scaled group lasso estimator under high-dimensional setting
 #'
-#' @description \code{hdIS} is used to computes importance weights using samples
-#' drawn by \code{\link{PBsampler}}. For group lasso, we provide the option
-#' to use mixture distribution as a proposal distribution. See the examples
-#' below for more details
+#' @description \code{hdIS} computes importance weights using samples
+#' drawn by \code{\link{PBsampler}}. See the examples
+#' below for details.
 #'
-#' @param PBsample Bootstrap samples of class \code{PB} from \code{PBsampler}
-#' @param pETarget,sig2Target,lbdTarget Parameter of target distribution.
-#' (point estimate of beta or mu, estimated variance of error, lambda)
-#' @param TsA.method Way to construct T(eta(s),A) matrix. See Zhou and Min(2016)
-#' for more detail.
-#' @param log If true, importance weight is computed in log scale.
-#' @param parallel logical. If true, parallelize the computation.
-#' @param ncores number of CPU cores to use for parallelization.
+#' @param PBsample bootstrap samples of class \code{PB} from \code{\link{PBsampler}}.
+#' @param pETarget,sig2Target,lbdTarget parameters of target distribution.
+#' (point estimate of beta or E(y), estimated variance of error and lambda)
+#' @param TsA.method method to construct T(eta(s),A) matrix. See Zhou and Min(2016)
+#' for details.
+#' @param log logical. If \code{log = TRUE}, importance weight is computed in log scale.
+#' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
+#' Default is \code{parallel = FALSE}.
+#' @param ncores integer. The number of cores to use for the parallelization.
 #'
-#' @details Computes importance weights which is defined as \deqn{\frac{target
-#'  density}{proposal density}}, when the samples is drawn from proposal
-#'  distribution with (coeffprop, sig2prop, lbdprop) while the parameter of
-#'  target distribution is (pETarget, sig2Target, lbdTarget).
+#' @details computes importance weights which is defined as \deqn{\frac{target
+#'  density}{proposal density}}, when the samples are drawn from the proposal
+#'  distribution with the function \code{\link{PBsampler}} while the parameters of
+#'  the target distribution are (pETarget, sig2Target, lbdTarget).
 #'
-#' @return \code{hdIS} returns importance weights of the proposed sample.
+#' @return importance weights of the proposed samples.
 #'
 #' @examples
 #' set.seed(1234)
@@ -72,11 +73,6 @@
 hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
             TsA.method = "default", log = TRUE, parallel = FALSE, ncores = 2L)
 {
-  if(.Platform$OS.type == "windows" && parallel == TRUE){
-    n.cores <- 1L
-    parallel <- FALSE
-    warning("Under Windows platform, parallel computing cannot be executed.")
-  }
 
   if (class(PBsample) != "PB") {
     stop("Use EAlasso::PBsampler to generate Bootstrap samples")
@@ -86,12 +82,16 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
     stop("provide all the parameters for the target distribution")
   }
 
+  parallelTemp <- ErrorParallel(parallel,ncores)
+  parallel <- parallelTemp[[1]]
+  ncores <- parallelTemp[[2]]
+
   X <- PBsample$X
   n <- nrow(X)
   p <- ncol(X)
 
   if (n >= p) {
-    stop("High dimensional setting is required, i.e. nrow(X) < ncol(X) required.")
+    stop("High dimensional setting is required, i.e. nrow(X) < ncol(X) is required.")
   }
 
   Mixture <- PBsample$mixture
@@ -136,7 +136,7 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
   } else {
     pEProp1 <- PBsample$PE
     sig2Prop1 <- PBsample$sig2
-    lbdProp1 <- PBsample$lbd
+    lbdProp1 <- lbdProp2 <- PBsample$lbd
   }
 
   if (type %in% c("slasso", "sgrlasso")) {
@@ -144,21 +144,7 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
   }
   niter <- nrow(B)
 
-  if (!Mixture) {
-    lbdProp2 <- lbdProp1
-  }
 
-
-  if (parallel && ncores == 1) {
-    ncores <- 2
-    warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
-            Set ncores to the maximum number.")
-  }
-  if (parallel && ncores > parallel::detectCores()){
-    ncores <- parallel::detectCores()
-    warning("ncores is larger than the maximum number of available processes.
-             Set it to the maximum possible value.")
-  }
   if (type %in% c("lasso", "grlasso")) {
     if (all(group==1:p)) {
       #=========================================================================
@@ -446,11 +432,15 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
     if (Btype == "gaussian") {
       f0sd <- sqrt(sig2Target/n)
       f1sd <- sqrt(sig2Prop1/n)
-      f2sd <- sqrt(sig2Prop2/n)
+      if (Mixture) {
+        f2sd <- sqrt(sig2Prop2/n)
+      }
     } else {
       f0sd <- sqrt(sig2Target/n) * resTarget
       f1sd <- sqrt(sig2Prop1/n) * resProp1
-      f2sd <- sqrt(sig2Prop2/n) * resProp2
+      if (Mixture) {
+        f2sd <- sqrt(sig2Prop2/n) * resProp2
+      }
     }
     FF <- function(x) {
       Beta <- B[x,]
@@ -482,13 +472,13 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
       if (!all(lbdTarget == c(lbdProp1, lbdProp2))) { # Jacobian terms stay
         TSA <- TsA.slasso(SVD.temp = SVD.temp, Q = Q, s = Subgrad, W = W, group = group,
                           A = A, n = n, p = p)
-        log.f1 <- sum(dnorm(H.tilde.prop1, 0, f1sd, log = T)) +
+        log.f1 <- sum(dnorm(H.tilde.prop1, 0, f1sd, log = TRUE)) +
           (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdProp1, hsigma = hatSigma, W = W, TSA = TSA))
         if (Mixture) {
-          log.f2 <- sum(dnorm(H.tilde.prop2, 0, f2sd, log = T)) +
+          log.f2 <- sum(dnorm(H.tilde.prop2, 0, f2sd, log = TRUE)) +
             (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdProp2, hsigma = hatSigma, W = W, TSA = TSA))
         }
-        log.f0 <- sum(dnorm(H.tilde.target, 0, f0sd, log = T)) +
+        log.f0 <- sum(dnorm(H.tilde.target, 0, f0sd, log = TRUE)) +
           (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdTarget, hsigma = hatSigma, W = W, TSA = TSA))
       } else { # Jacobian terms cancel out
         log.f1 <- sum(dnorm(H.tilde.prop1, 0, f1sd, log = TRUE))

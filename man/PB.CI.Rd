@@ -8,26 +8,27 @@ PB.CI(object, alpha = 0.05, method = "debias", parallel = FALSE,
   ncores = 2L)
 }
 \arguments{
-\item{object}{Bootstrap samples of class \code{PB} from \code{PBsampler}}
+\item{object}{Bootstrap samples of class \code{PB} from \code{\link{PBsampler}}}
 
 \item{alpha}{significance level.}
 
 \item{method}{bias-correction method. Either to be "none" or "debias".}
 
-\item{parallel}{Logical. If \code{TRUE}, use parallelization.}
+\item{parallel}{logical. If \code{TRUE}, use parallelization. Default is \code{FALSE}.}
 
-\item{ncores}{Integer. The number of cores to use for the parallelization.}
+\item{ncores}{integer. The number of cores to use for the parallelization.}
 }
 \value{
 \code{(1-alpha)\%} confidence interval of each coefficients
 }
 \description{
 Using samples drawn by \code{\link{PBsampler}}, compute
-\code{(1-alpha)\%} confidence interval of each coefficients.
+\code{(1-alpha)\%} confidence interval of each coefficient.
 }
 \details{
 If \code{method==none}, \code{\link{PB.CI}} simply compute
-the quantile of the sampled coefficients. If \code{method==debias}, we use
+the two-soded \code{(1-alpha)} quantile of the sampled coefficients.
+If \code{method==debias}, we use
 debiased estimator to compute confidence interval.
 }
 \examples{

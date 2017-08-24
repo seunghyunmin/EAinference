@@ -6,7 +6,7 @@
 \usage{
 Postinference.MHLS(X, Y, lbd, weights = rep(1, ncol(X)), tau = rep(1,
   ncol(X)), sig2.hat, alpha = 0.05, nChain = 10, niterPerChain = 500,
-  parallel = FALSE, ncores = 2L, printSamples = FALSE, ...)
+  parallel = FALSE, ncores = 2L, returnSamples = FALSE, ...)
 }
 \arguments{
 \item{X}{predictors matrix.}
@@ -17,27 +17,28 @@ Postinference.MHLS(X, Y, lbd, weights = rep(1, ncol(X)), tau = rep(1,
 \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
 squared error or that is within 1 std error bound.}
 
-\item{weights}{Weight term for each group. Default is
-\code{rep(1, max(group))}.}
+\item{weights}{weight vector with length equal to the number of coefficients.
+Default is \code{rep(1, ncol(X))}.}
 
 \item{tau}{numeric vector. Standard deviaion of proposal distribution
- for each beta.
-Adjust the value to get relevant level of acceptance rate.}
+for each beta. Adjust the value to get relevant level of acceptance rate.
+Default is \code{rep(1, ncol(X))}.}
 
 \item{sig2.hat}{variance of error term.}
 
 \item{alpha}{confidence level for confidence interval.}
 
-\item{nChain}{The number of chains each from different pluginbeta.}
+\item{nChain}{the number of chains. For each chain, different pluginbeta will be generated
+from its confidence region.}
 
-\item{niterPerChain}{The number of iteration per chain.}
+\item{niterPerChain}{the number of iteration per chain.}
 
-\item{parallel}{Whether to parallelize the code. Default is \code{FALSE}.}
+\item{parallel}{logical. If \code{parallel = TRUE}, uses parallelization.
+Default is \code{parallel = FALSE}.}
 
-\item{ncores}{The number of cores to use for the parallelization. If missing,
-it uses maximum number of cores.}
+\item{ncores}{integer. The number of cores to use for the parallelization.}
 
-\item{printSamples}{Boolean value. If true, print Metropolis-Hastings samples.}
+\item{returnSamples}{logical. If \code{returnSamples = TRUE}, print Metropolis-Hastings samples.}
 
 \item{...}{auxiliary \code{link{MHLS}} arguments.}
 }
@@ -52,13 +53,12 @@ Provides Confidence intervals for the set of active coefficients
 from lasso estimator using Metropolis-Hastings sampler.
 }
 \details{
-We provide Post-selection inference for lasso estimator.
-Using Metropolis Hastings Sampler with multiple chanin, \code{(1-alpha)}
-confidence interval for each active coefficients is generated.
-Set \code{printSamples=TRUE} if one wants to check the samples.
-Check the acceptance rate and adjust tau accordingly. Desirable level of
-acceptance rate for beta is \code{0.30 +- 0.15}. We recommend to set
-nChain >= 10 and niterPerChain >=500.
+This function provides post-selection inference for lasso estimator.
+Using Metropolis-Hastings sampler with multiple chanin, generate \code{(1-alpha)}
+confidence interval for each active coefficients.
+Set \code{returnSamples=TRUE} to check the samples.
+Check the acceptance rate and adjust \code{tau} accordingly.
+We recommend to set \code{nChain >= 10} and \code{niterPerChain >= 500}.
 }
 \examples{
 set.seed(123)
@@ -72,5 +72,5 @@ weights <- rep(1,p)
 Postinference.MHLS(X, Y, lbd, sig2.hat=1, alpha=.05, nChain=3,
 niterPerChain=20, parallel=TRUE)
 Postinference.MHLS(X, Y, lbd, sig2.hat=1, alpha=.05, nChain=3,
-niterPerChain=20, parallel=TRUE, printSamples=TRUE)
+niterPerChain=20, parallel=TRUE, returnSamples=TRUE)
 }

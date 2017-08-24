@@ -2,7 +2,7 @@
 % Please edit documentation in R/cvlasso.R
 \name{cv.lasso}
 \alias{cv.lasso}
-\title{cross validation for scaled lasso & scaled group lasso}
+\title{Computes K-fold cross-validated mean squared error for lasso}
 \usage{
 cv.lasso(X, Y, group = 1:ncol(X), weights = rep(1, max(group)), type,
   K = 10L, minlbd, maxlbd, num.lbdseq = 100L, parallel = FALSE,
@@ -29,7 +29,8 @@ Weight term for each group. Default is \code{rep(1, max(group))}.}
 
 \item{num.lbdseq}{integer. Number of the lambda sequence.}
 
-\item{parallel}{logical. If \code{TRUE}, use parallelization.}
+\item{parallel}{logical. If \code{parallel = TRUE}, uses parallelization.
+Default is \code{parallel = FALSE}.}
 
 \item{ncores}{integer. The number of cores to use for the parallelization.}
 
@@ -46,13 +47,12 @@ Weight term for each group. Default is \code{rep(1, max(group))}.}
 
 \item{cv}{mean squared error at each lambda value.}
 
-\item{cvsd}{the standard deviaion for cv.}
+\item{cvsd}{the standard deviaion of cv.}
 }
 \description{
-Computes K-fold cross-validation to propose a lambda value
-}
-\details{
-Use K-fold cross-validaiton to propose a optimal lambda.
+Computes K-fold cross-validated mean squared error
+to propose a lambda value for lasso, group lasso, scaled lasso or scaled
+group lasso
 }
 \examples{
 set.seed(123)
@@ -64,6 +64,6 @@ X <- matrix(rnorm(n*p),n)
 truebeta <- c(rep(1,5),rep(0,p-5))
 Y <- X\%*\%truebeta + rnorm(n)
 
-cv.lasso(X,Y,group,weights,K=3,type="sgrlasso",num.lbdseq=10,plot=TRUE)
-cv.lasso(X,Y,group,weights,K=10,type="grlasso",num.lbdseq=100,plot=TRUE)
+cv.lasso(X,Y,group,weights,K=5,type="sgrlasso",num.lbdseq=10,plot.it=TRUE)
+cv.lasso(X,Y,group,weights,K=10,type="grlasso",num.lbdseq=100,plot.it=TRUE)
 }

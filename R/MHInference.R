@@ -1,30 +1,33 @@
 #' @title Compute lasso estimator
 #'
-#' @description provides lasso / group lasso / scaled lasso / scaled grouop lasso solution;
+#' @description Compute lasso, group lasso, scaled lasso, or scaled group lasso solution;
 #' coefficient-estimate and subgradient along with sigma-estimate
-#' if scaled lasso or scaled group lasso.
+#' if it is scaled lasso or scaled group lasso.
 #'
-#' @param X n x p matrix of predictors.
-#' @param Y n x 1 vector of response.
-#' @param type type of penalty, either to be "lasso", "grlasso", "slasso" or "sgrlasso".
+#' @param X predictor matrix.
+#' @param Y response vector.
+#' @param type type of penalty. Must be specified to be one of the following:
+#'  \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.
 #' @param lbd penalty term of lasso. By letting this argument to \code{"cv.1se"} or
 #' \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
 #' squared error or that is within 1 std error bound.
-#' @param weights Weight term for each group. Default is
+#' @param weights weight vector with length equal to the number of groups. Default is
 #' \code{rep(1, max(group))}.
-#' @param group p x 1 vector of consecutive integers. The number of groups
-#' should be same as max(group).
+#' @param group \code{p} x \code{1} vector of consecutive integers describing the group structure.
+#' The number of groups should be the same as max(group). Default is \code{group = 1:p}
+#' , where \code{p} is number of covariates.
 #' @param verbose verbose for type = "slasso" or "sgrlasso".
 #' @param ... Auxiliary arguments for \code{lbd="cv.min", lbd="cv.1se"}.
-#' Check \code{\link{cv.lasso}} for more details.
+#' See \code{\link{cv.lasso}} for more details.
 #' @details
 #' Using gglasso package, provide lasso / group lasso solution along with
 #' subgradient. The loss function for group lasso is
 #' \deqn{L(\beta) = ||y-X\beta||^2 / (2n) + \lambda \sum_j ||\beta_(j)||,}
 #' where (j) is the index set of j-th group. If the size of the group is 1 for
 #' every group, it becomes lasso loss function.
-#' @return \item{B0}{a vector of coefficient estimator.}
-#' @return \item{S0}{a vector of subgradient.}
+#'
+#' @return \item{B0}{coefficient estimator.}
+#' @return \item{S0}{subgradient.}
 #' @return \item{lbd, weights, group}{same as input arguments.}
 #' @examples
 #' set.seed(123)
@@ -138,28 +141,29 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd,
 #' @param lbd penalty term of lasso. By letting this argument to \code{"cv.1se"} or
 #' \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
 #' squared error or that is within 1 std error bound.
-#' @param weights Weight term for each group. Default is
-#' \code{rep(1, max(group))}.
+#' @param weights weight vector with length equal to the number of coefficients.
+#' Default is \code{rep(1, ncol(X))}.
 #' @param tau numeric vector. Standard deviaion of proposal distribution
-#'  for each beta.
-#' Adjust the value to get relevant level of acceptance rate.
+#'  for each beta. Adjust the value to get relevant level of acceptance rate.
+#'  Default is \code{rep(1, ncol(X))}.
 #' @param sig2.hat variance of error term.
 #' @param alpha confidence level for confidence interval.
-#' @param nChain The number of chains each from different pluginbeta.
-#' @param niterPerChain The number of iteration per chain.
-#' @param parallel Whether to parallelize the code. Default is \code{FALSE}.
-#' @param ncores The number of cores to use for the parallelization. If missing,
-#'  it uses maximum number of cores.
-#' @param printSamples Boolean value. If true, print Metropolis-Hastings samples.
+#' @param nChain the number of chains. For each chain, different pluginbeta will be generated
+#' from its confidence region.
+#' @param niterPerChain the number of iteration per chain.
+#' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
+#' Default is \code{parallel = FALSE}.
+#' @param ncores integer. The number of cores to use for the parallelization.
+#' @param returnSamples logical. If \code{returnSamples = TRUE}, print Metropolis-Hastings samples.
 #' @param ... auxiliary \code{link{MHLS}} arguments.
 #' @details
-#' We provide Post-selection inference for lasso estimator.
-#' Using Metropolis Hastings Sampler with multiple chanin, \code{(1-alpha)}
-#' confidence interval for each active coefficients is generated.
-#' Set \code{printSamples=TRUE} if one wants to check the samples.
-#' Check the acceptance rate and adjust tau accordingly. Desirable level of
-#' acceptance rate for beta is \code{0.30 +- 0.15}. We recommend to set
-#' nChain >= 10 and niterPerChain >=500.
+#' This function provides post-selection inference for lasso estimator.
+#' Using Metropolis-Hastings sampler with multiple chanin, generate \code{(1-alpha)}
+#' confidence interval for each active coefficients.
+#' Set \code{returnSamples=TRUE} to check the samples.
+#' Check the acceptance rate and adjust \code{tau} accordingly.
+#' We recommend to set \code{nChain >= 10} and \code{niterPerChain >= 500}.
+#'
 #' @return \item{MHsamples}{a list of a class MHLS.}
 #' @return \item{confidenceInterval}{(1-alpha) confidence interval
 #' of each active coefficient.}
@@ -175,11 +179,11 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd,
 #' Postinference.MHLS(X, Y, lbd, sig2.hat=1, alpha=.05, nChain=3,
 #' niterPerChain=20, parallel=TRUE)
 #' Postinference.MHLS(X, Y, lbd, sig2.hat=1, alpha=.05, nChain=3,
-#' niterPerChain=20, parallel=TRUE, printSamples=TRUE)
+#' niterPerChain=20, parallel=TRUE, returnSamples=TRUE)
 #' @export
 Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   tau = rep(1, ncol(X)), sig2.hat, alpha = .05, nChain = 10,
-  niterPerChain = 500, parallel = FALSE, ncores = 2L, printSamples=FALSE, ...)
+  niterPerChain = 500, parallel = FALSE, ncores = 2L, returnSamples=FALSE, ...)
 {
   # nChain : the number of MH chains
   # niterPerChain : the number of iteration for each chain
@@ -196,12 +200,6 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
     stop("Given lbd, active set is empty.")
   }
 
-  if(.Platform$OS.type == "windows" && parallel == TRUE){
-    ncores <- 1L
-    parallel <- FALSE
-    warning("Under Windows platform, parallel computing cannot be executed.")
-  }
-
   Y <- matrix(Y, , 1)
   X <- as.matrix(X)
   n <- nrow(X)
@@ -213,6 +211,10 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   #--------------------
   # Error Handling
   #--------------------
+  parallelTemp <- ErrorParallel(parallel,ncores)
+  parallel <- parallelTemp$parallel
+  ncores <- parallelTemp$ncores
+
   if (nrow(X) != nrow(Y)) {
     stop("The dimension of X and Y are not conformable.")
   }
@@ -227,16 +229,6 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   }
   if (alpha <=0 || alpha >=1) {
     stop("alpha needs to be between 0 and 1.")
-  }
-  if (parallel && ncores == 1) {
-    ncores <- 2
-    warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
-Set ncores to 2.")
-  }
-  if (parallel && (ncores > parallel::detectCores())) {
-    ncores <- parallel::detectCores()
-    warning("ncores is larger than the maximum number of available processes.
-Set it to the maximum possible value.")
   }
   if (any(c(nChain,niterPerChain) <= 0)) {
     stop("nChain & niterPerChain have to be a positive integer.")
@@ -285,7 +277,7 @@ Set it to the maximum possible value.")
 
   # Using MH samples, refit the coeff.
   RefitBeta <- Refit.MHLS(X,weights,lbd,MCSAMPLE)
-  if (printSamples) {
+  if (returnSamples) {
     return(list(MHsamples=TEMP,pluginbeta=Pluginbeta.seq,
                           confidenceInterval=CI.MHLS(betaRefit = RefitBeta,
                           pluginbeta = Pluginbeta.seq, alpha=alpha)))

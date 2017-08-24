@@ -2,40 +2,41 @@
 % Please edit documentation in R/hdIS.R
 \name{hdIS}
 \alias{hdIS}
-\title{Computing importance weights under high-dimensional setting}
+\title{Compute importance weights for  lasso, group lasso, scaled lasso or
+scaled group lasso estimator under high-dimensional setting}
 \usage{
 hdIS(PBsample, pETarget, sig2Target, lbdTarget, TsA.method = "default",
   log = TRUE, parallel = FALSE, ncores = 2L)
 }
 \arguments{
-\item{PBsample}{Bootstrap samples of class \code{PB} from \code{PBsampler}}
+\item{PBsample}{bootstrap samples of class \code{PB} from \code{\link{PBsampler}}.}
 
-\item{pETarget, sig2Target, lbdTarget}{Parameter of target distribution.
-(point estimate of beta or mu, estimated variance of error, lambda)}
+\item{pETarget, sig2Target, lbdTarget}{parameters of target distribution.
+(point estimate of beta or E(y), estimated variance of error and lambda)}
 
-\item{TsA.method}{Way to construct T(eta(s),A) matrix. See Zhou and Min(2016)
-for more detail.}
+\item{TsA.method}{method to construct T(eta(s),A) matrix. See Zhou and Min(2016)
+for details.}
 
-\item{log}{If true, importance weight is computed in log scale.}
+\item{log}{logical. If \code{log = TRUE}, importance weight is computed in log scale.}
 
-\item{parallel}{logical. If true, parallelize the computation.}
+\item{parallel}{logical. If \code{parallel = TRUE}, uses parallelization.
+Default is \code{parallel = FALSE}.}
 
-\item{ncores}{number of CPU cores to use for parallelization.}
+\item{ncores}{integer. The number of cores to use for the parallelization.}
 }
 \value{
-\code{hdIS} returns importance weights of the proposed sample.
+importance weights of the proposed samples.
 }
 \description{
-\code{hdIS} is used to computes importance weights using samples
-drawn by \code{\link{PBsampler}}. For group lasso, we provide the option
-to use mixture distribution as a proposal distribution. See the examples
-below for more details
+\code{hdIS} computes importance weights using samples
+drawn by \code{\link{PBsampler}}. See the examples
+below for details.
 }
 \details{
-Computes importance weights which is defined as \deqn{\frac{target
- density}{proposal density}}, when the samples is drawn from proposal
- distribution with (coeffprop, sig2prop, lbdprop) while the parameter of
- target distribution is (pETarget, sig2Target, lbdTarget).
+computes importance weights which is defined as \deqn{\frac{target
+ density}{proposal density}}, when the samples are drawn from the proposal
+ distribution with the function \code{\link{PBsampler}} while the parameters of
+ the target distribution are (pETarget, sig2Target, lbdTarget).
 }
 \examples{
 set.seed(1234)

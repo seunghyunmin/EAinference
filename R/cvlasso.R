@@ -1,6 +1,8 @@
-#' @title cross validation for scaled lasso & scaled group lasso
+#' @title Compute K-fold cross-validated mean squared error for lasso
 #'
-#' @description Computes K-fold cross-validation to propose a lambda value
+#' @description Compute K-fold cross-validated mean squared error
+#' to propose a lambda value for lasso, group lasso, scaled lasso or scaled
+#' group lasso
 #'
 #' @param X predictor matrix of size \code{p} x \code{n}.
 #' @param Y response vector of length \code{n}.
@@ -13,18 +15,17 @@
 #' @param minlbd numeric. Minumum value of the lambda sequence.
 #' @param maxlbd numeric. Maximum value of the lambda sequence.
 #' @param num.lbdseq integer. Number of the lambda sequence.
-#' @param parallel logical. If \code{TRUE}, use parallelization.
+#' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
+#' Default is \code{parallel = FALSE}.
 #' @param ncores integer. The number of cores to use for the parallelization.
 #' @param plot.it logical. If ture, plot the squared error curve
 #' @param verbose verbose
-#'
-#' @details Use K-fold cross-validaiton to propose a optimal lambda.
 #'
 #' @return \item{lbd.min}{a value of lambda such gives a minimum squared error.}
 #' @return \item{lbd.1se}{a largest lambda within 1 std. from \code{lbd.min}.}
 #' @return \item{lbd.seq}{lambda sequence.}
 #' @return \item{cv}{mean squared error at each lambda value.}
-#' @return \item{cvsd}{the standard deviaion for cv.}
+#' @return \item{cvsd}{the standard deviaion of cv.}
 #'
 #' @examples
 #' set.seed(123)
@@ -36,8 +37,8 @@
 #' truebeta <- c(rep(1,5),rep(0,p-5))
 #' Y <- X%*%truebeta + rnorm(n)
 #'
-#' cv.lasso(X,Y,group,weights,K=3,type="sgrlasso",num.lbdseq=10,plot=TRUE)
-#' cv.lasso(X,Y,group,weights,K=10,type="grlasso",num.lbdseq=100,plot=TRUE)
+#' cv.lasso(X,Y,group,weights,K=5,type="sgrlasso",num.lbdseq=10,plot.it=TRUE)
+#' cv.lasso(X,Y,group,weights,K=10,type="grlasso",num.lbdseq=100,plot.it=TRUE)
 #' @export
 cv.lasso <- function(
   X,
@@ -63,7 +64,17 @@ cv.lasso <- function(
 
   if(missing(minlbd)) {minlbd <- 0}
   if(missing(maxlbd)) {
-    maxlbd <- if (type %in% c("lasso", "grlasso")) {2} else {max(t(X) %*% Y)}
+    maxlbd <- if (type == "lasso")
+      {
+        max(abs(1/weights * t(X) %*% Y))/n
+      } else if (type == "grlasso")
+      {
+        lbdTEMP <- c()
+        for (i in 1:max(group)) {
+          lbdTEMP[i] <- sqrt(crossprod(t(X[,group==i])%*%Y))/weights[i]
+        }
+        max(lbdTEMP / n)
+      } else {2}
   }
   #--------------------
   # Error Handling
@@ -83,16 +94,9 @@ cv.lasso <- function(
   if (!all(group==1:p) && (!type %in% c("grlasso", "sgrlasso"))) {
     stop("Choose type to be either grlasso or sgrlasso if group-structure exists.")
   }
-  if (parallel && ncores == 1) {
-    ncores <- 2
-    warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
-            Set ncores to 2.")
-  }
-  if (parallel && (ncores > parallel::detectCores())) {
-    ncores <- parallel::detectCores()
-    warning("ncores is larger than the maximum number of available processes.
-            Set it to the maximum possible value.")
-  }
+  parallelTemp <- ErrorParallel(parallel,ncores)
+  parallel <- parallelTemp$parallel
+  ncores <- parallelTemp$ncores
   if (length(weights) != length(unique(group))) {
     stop("weights has to have a same length as the number of groups")
   }
@@ -137,13 +141,15 @@ cv.lasso <- function(
 
   err.1se <- cvsd[index.min.cv] + cv[index.min.cv]
 
-  lbd.1se <- index[which.min(abs(cv - err.1se))]
+  index.min.cv:num.lbdseq
+
+  lbd.1se <- index[which.min(abs(cv - err.1se)[index.min.cv:num.lbdseq]) + index.min.cv - 1]
   lbd.min <- index[index.min.cv]
 
   if (plot.it) {
     matplot(x=index, y=cbind(cv,cv-cvsd,cv+cvsd), type="l",
             lty=c(1,2,2), col=c(1,2,2),
-            xlab="lambda",ylab="squared error",
+            xlab="lambda",ylab="mean squared error",
             main="cross validation")
     abline(v=lbd.min,lty=2)
     abline(v=lbd.1se,lty=3)

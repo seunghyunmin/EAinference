@@ -2,44 +2,46 @@
 % Please edit documentation in R/MHInference.R
 \name{Lasso.MHLS}
 \alias{Lasso.MHLS}
-\title{Compute lasso estimator}
+\title{Computes lasso estimator}
 \usage{
 Lasso.MHLS(X, Y, type = "lasso", lbd, group = 1:ncol(X), weights = rep(1,
   max(group)), verbose = FALSE, ...)
 }
 \arguments{
-\item{X}{n x p matrix of predictors.}
+\item{X}{predictor matrix.}
 
-\item{Y}{n x 1 vector of response.}
+\item{Y}{response vector.}
 
-\item{type}{type of penalty, either to be "lasso", "grlasso", "slasso" or "sgrlasso".}
+\item{type}{type of penalty. Must be specified to be one of the following:
+\code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.}
 
 \item{lbd}{penalty term of lasso. By letting this argument to \code{"cv.1se"} or
 \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
 squared error or that is within 1 std error bound.}
 
-\item{group}{p x 1 vector of consecutive integers. The number of groups
-should be same as max(group).}
+\item{group}{\code{p} x \code{1} vector of consecutive integers describing the group structure.
+The number of groups should be the same as max(group). Default is \code{group = 1:p}
+, where \code{p} is number of covariates.}
 
-\item{weights}{Weight term for each group. Default is
+\item{weights}{weight vector with length equal to the number of groups. Default is
 \code{rep(1, max(group))}.}
 
 \item{verbose}{verbose for type = "slasso" or "sgrlasso".}
 
 \item{...}{Auxiliary arguments for \code{lbd="cv.min", lbd="cv.1se"}.
-Check \code{\link{cv.lasso}} for more details.}
+See \code{\link{cv.lasso}} for more details.}
 }
 \value{
-\item{B0}{a vector of coefficient estimator.}
+\item{B0}{coefficient estimator.}
 
-\item{S0}{a vector of subgradient.}
+\item{S0}{subgradient.}
 
 \item{lbd, weights, group}{same as input arguments.}
 }
 \description{
-provides lasso / group lasso / scaled lasso / scaled grouop lasso solution;
+Compute lasso, group lasso, scaled lasso, or scaled group lasso solution;
 coefficient-estimate and subgradient along with sigma-estimate
-if scaled lasso or scaled group lasso.
+if it is scaled lasso or scaled group lasso.
 }
 \details{
 Using gglasso package, provide lasso / group lasso solution along with

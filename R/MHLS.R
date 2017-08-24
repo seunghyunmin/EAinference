@@ -1,50 +1,61 @@
-#' @title MH sampler for lasso / group lasso estimator
+#' @title Metropolis-Hastings sampler for lasso estimator under the fixed active set.
 #'
-#' @description Metropolis-Hastings sampler for lasso / group lasso estimator
-#' using estimator augmentation.
+#' @description Metropolis-Hastings sampler for lasso estimator
+#' under the fixed active set.
 #'
-#' @param X \code{n} x \code{p} predictor matrix, where \code{n} is the
-#' number of samples and \code{p} is the number of covariates.
-#' @param PE numeric vector. Estimates of true coefficient for
-#' \code{PEtype="coeff"} or E(y) for \code{PEtype="mu"}.
-#' @param sig2 numeric. variance of error term.
-#' @param lbd numeric. penalty term of lasso. See the loss function given at details.
-#' @param group \code{p} x \code{1} vector. Consecutive integers should be used for indexing groups.
-#' The number of groups should be same as \code{max(group)}. See examples for details.
-#' @param weights \code{p} x \code{1} vector. weight term for each group.
-#' @param B0 \code{p} x \code{1} vector. Initial value of lasso/group lasso estimator.
-#' @param S0 \code{p} x \code{1} vector. Initial value of subgradients. If not given, it will be generated in defauly way.
-#' @param A numeric vector. Active group index. \code{which(B0 != 0)} has to be a subset of \code{A}.
-#' @param tau numeric vector. Standard deviaion of proposal distribution
-#'  for each beta.
-#' @param niter numeric. The number of iterations.
-#' @param burnin numeric. The length of burin-in periods
-#' @param updateS.itv numeric. Update subgradients in every \code{updateS.itv} iterations. Set this value larger than \code{niter} if one wants to skip updating subgradients.
-#' @param PEtype either to be "coeff" or "mu". Decide what kind of \code{PE} to use.
-#' @param verbose verbose
-#' @param ... complementary arguments for MH-sampler for lasso.
+#' @param X predictor matrix.
+#' @param PE,sig2,lbd parameters of target distribution.
+#' (point estimate of beta or \code{E(y)} depends on \code{PEtype}, variance estimate of error and lambda).
+#' @param weights weight vector with length \code{p}(the number of covariates).
+#' Default is \code{weights = rep(1, p)}.
+#' @param B0 numeric vector with length \code{p}.
+#' Initial value of lasso estimator.
+#' @param S0 numeric vector with length \code{p}.
+#' Initial value of subgradients.
+#' If not given, this will be generated in a default way.
+#' @param A numeric vector. Active coefficient index.
+#' Every active coefficient index in \code{B0} must be included.
+#' Default is \code{A = which(B0 != 0)}.
+#' @param tau numeric vector with length \code{p}.
+#' Standard deviaion of proposal distribution for each coefficient.
+#' @param niter integer. The number of iterations. Default is \code{niter = 2000}
+#' @param burnin integer. The length of burin-in periods. Default is \code{burnin = 0}
+#' @param updateS.itv integer. Update subgradients every \code{updateS.itv} iterations.
+#' Set this value larger than \code{niter} if one wants to skip updating subgradients.
+#' @param PEtype Type of \code{PE} which is needed to characterize the target distribution.
+#' Users can choose either \code{"coeff"} or \code{"mu"}.
+#' @param verbose logical. If true, print out the progress step.
+#' @param ... complementary arguments.
 #' \itemize{
-#'  \item{\code{FlipSA}}{ the parameter that is needed for the high-dimensional setting.
-#' Has to be a subset of active set, A. If the index is not listed in FlipSA,
-#' the sign of coefficients which corresponds to the index will be fixed.
+#'  \item{\code{FlipSA :}}{ optional parameter.
+#' This has to be a subset of active set, A. If the index is not listed in FlipSA,
+#' the sign of coefficients which correspond to the listed index will remain fixed.
 #' The default is \code{FlipSA=A}}
-#'  \item{\code{SFindex} }{ subgradient index for the free coordinate.}
-#'  \item{\code{randomSFindex} }{ logical. If \code{true}, resample \code{SFindex} in every
-#' \code{updateSF.itv} number.}
-#'  \item{\code{updateSF.itv} }{ Specifies how many iterations will be done without
-#' updating the \code{SFindex}.}
+#'  \item{\code{SFindex :}}{ optional parameter. subgradient index for the free coordinate.}
+#'  \item{\code{randomSFindex :}}{ logical. If \code{true}, resample \code{SFindex} every
+#' \code{updateSF.itv} iterations.}
+#'  \item{\code{updateSF.itv :}}{ integer. In every \code{updateSF.itv} iterations,
+#'  randomize \code{SFindex}.}
 #' }
 #'
-#' @details Given appropriate initial value, provides Metropolis-Hastings samples.
+#' @details Given appropriate initial value, provides Metropolis-Hastings samples
+#'  under the fixed active set.
 #'
-#' @return \code{MHLS} returns an object of \code{\link{class}} \code{c("MHLS", "Lasso")} or \code{c("MHLS", "GroupLasso")}
-#' The functions \code{summary} and \code{plot} are used for a breif summary and generating plots.
-#' \item{beta}{lasso / group lasso samples}
-#' \item{subgrad}{subgradient samples}
-#' \item{acceptHistory}{number of acceptance and proposed}
-#' \item{niteration}{number of iteration}
-#' \item{burnin}{length of burn-in period}
-#' \item{PE, group, type}{same as function arguments}
+#' @return \code{MHLS} returns an object of class \code{"MHLS"}.
+#' The functions \code{\link{summary.MHLS}} and \code{\link{plot.MHLS}}
+#' provide a brief summary and generate plots.
+#' \item{beta}{lasso samples.}
+#' \item{subgrad}{subgradient samples.}
+#' \item{acceptHistory}{numbers of acceptance and proposal.}
+#' \item{niter, burnin, PE, type}{same as function arguments.}
+#'
+#' @references
+#' Zhou, Q. (2014). Monte Carlo simulation for Lasso-type problems by estimator augmentation.
+#' Journal of the American Statistical Association, 109, 1495-1516.
+#'
+#' Zhou, Q. and Min, S. (2017). Estimator augmentation with applications in
+#' high-dimensional group inference. Electronic Journal of Statistics, 11(2), 3039-3080.
+#'
 #' @examples
 #' #-------------------------
 #' # Low dim
@@ -60,23 +71,10 @@
 #' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
-#' MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
+#' MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
 #'      PEtype = "coeff")
-#' MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1, group = 1:p,
-#'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-#'      PEtype = "mu")
-#'
-#' Group <- c(1, 1, 2, 2, 2)
-#' weights <- rep(1,max(Group))
-#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "grlasso", weights = weights,
-#'                           group = Group)
-#' B0 <- LassoResult$B0
-#' S0 <- LassoResult$S0
-#' MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = Group,
-#'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
-#'      PEtype = "coeff")
-#' MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1, group = Group,
+#' MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
 #'      PEtype = "mu")
 #'
@@ -88,29 +86,29 @@
 #' p <- 10
 #' X <- matrix(rnorm(n*p),n)
 #' Y <- X %*% rep(1,p) + rnorm(n)
-#' sigma2 <- 1
-#' lbd <- .37
 #' weights <- rep(1,p)
 #' LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd, type = "lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
-#' MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
+#' MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
 #'      PEtype = "coeff")
-#' MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1, group = 1:p,
+#' MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
 #'      PEtype = "mu")
 #' @export
-MHLS <-  function(X, PE, sig2, lbd, group = 1:ncol(X),
-                   weights = rep(1, max(group)), B0, S0, A = unique(group[which(B0 != 0)]),
-                   tau = rep(1, ncol(X)), niter = 2000, burnin = 0, PEtype = "coeff", updateS.itv = 1, verbose = FALSE, ...)
+MHLS <-  function(X, PE, sig2, lbd,
+                   weights = rep(1, ncol(X)), B0, S0, A = which(B0 != 0),
+                   tau = rep(1, ncol(X)), niter = 2000, burnin = 0,
+                   PEtype = "coeff", updateS.itv = 1, verbose = FALSE, ...)
 {
   MHLSmain(X = X, PE = PE, sig2 = sig2, lbd = lbd,
-    group = group, weights = weights, B0 = B0, S0 = S0, A = A,
-           tau = tau, niter = niter, burnin = burnin, PEtype = PEtype, updateS.itv = updateS.itv, verbose = verbose, ...)
+      weights = weights, B0 = B0, S0 = S0, A = A,
+      tau = tau, niter = niter, burnin = burnin, PEtype = PEtype,
+      updateS.itv = updateS.itv, verbose = verbose, ...)
 }
 
-MHLSmain <- function (X, PE, sig2, lbd, group,
+MHLSmain <- function (X, PE, sig2, lbd,
   weights, B0, S0, A, tau, niter, burnin, PEtype, updateS.itv, verbose, ...)
 {
   #------------------
@@ -130,17 +128,14 @@ MHLSmain <- function (X, PE, sig2, lbd, group,
   if (n < p && length(A) > n) {
     stop("Invalid active set index, A. Cannot be larger than min(nrow(X),ncol(X)).")
   }
-  if (length(A) != length(unique(A)) || any(!A %in% 1:max(group))) {
+  if (length(A) != length(unique(A))) {
     stop("Invalid active set index, A.")
   }
   if (!PEtype %in% c("coeff", "mu")) {
     stop("Invalide PEtype input.")
   }
-  if (length(group) != p) {
-    stop("length(group) has to be the same with ncol(X)")
-  }
-  if (length(weights) != length(unique(group))) {
-    stop("length(weights) has to be the same with the number of groups")
+  if (length(weights) != p) {
+    stop("length(weights) has to be the same with the number of coefficients")
   }
   if (any(weights <= 0)) {
     stop("weights should be positive.")
@@ -148,12 +143,9 @@ MHLSmain <- function (X, PE, sig2, lbd, group,
   if (sig2 <=0 || lbd <= 0) {
     stop("sig2 and/or lbd have to be positive.")
   }
-  if (!all(group == 1:ncol(X)) && missing(S0)) {
-    stop("Missing S0. Use LassoMHLS for a good initial value.")
-  }
-  if (any(!1:max(group) %in% group)) {
-    stop("group index has to be a consecutive integer starting from 1.")
-  }
+  # if (!all(group == 1:ncol(X)) && missing(S0)) {
+  #   stop("Missing S0. Use LassoMHLS for a good initial value.")
+  # }
   if (any(missing(PE), missing(sig2), missing(lbd))) {
     stop("provide all the parameters for the distribution")
   }
@@ -163,34 +155,15 @@ MHLSmain <- function (X, PE, sig2, lbd, group,
   if (niter <= 1) {
     stop("niter should be a integer greater than 1.")
   }
-  if (all(group == 1:ncol(X))) {
-    est <- MHLSswp(X = X, PE = PE, sig2 = sig2,
-      lbd = lbd, weights = weights, B0 = B0, S0 = S0, A = A,
-      tau = tau, niter = niter, burnin = burnin, PEtype = PEtype, updateS.itv = updateS.itv, verbose = verbose, ...)
-    class(est) <- "MHLS"
-    class(est) <- append(class(est), "Lasso")
-  } else {
-    if (n < p) {
-      stop("Low dimensional data can be only used for group lasso MH-sampler.")
-    }
-    est <- MHLSgroup(X = X, PE = PE, sig2 = sig2,
-      lbd = lbd, weights = weights, group = group, B0 = B0, S0 = S0, A = A,
-      tau = tau, niter = niter, burnin = burnin, PEtype = PEtype, updateS.itv = updateS.itv, verbose = verbose, ...)
-    class(est) <- "MHLS"
-    class(est) <- append(class(est), "GroupLasso")
 
-    Group.matrix <- matrix(0, max(group), p)
-    Group.matrix[cbind(group,1:p)] <- 1
-    est$beta <- (est$group.l2.norm %*% Group.matrix) * est$subgrad
-    est[1:4] <- est[c(1,4,2,3)]
-    names(est)[1:4] <- names(est)[c(1,4,2,3)]
-    #Need to be updated!!!!!!!!!!!!!
-  }
-  #est$acceptHistory <- rbind(est$acceptHistory,est$acceptHistory[1,]/est$acceptHistory[2,])
-  est$niteration <- niter
+  est <- MHLSswp(X = X, PE = PE, sig2 = sig2,
+                 lbd = lbd, weights = weights, B0 = B0, S0 = S0, A = A,
+                 tau = tau, niter = niter, burnin = burnin, PEtype = PEtype,
+                 updateS.itv = updateS.itv, verbose = verbose, ...)
+  class(est) <- "MHLS"
+  est$niter <- niter
   est$burnin <- burnin
   est$PE <- PE
-  est$group <- group
   est$PEtype <- PEtype
   return(est)
 }
@@ -214,10 +187,10 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
   C <- crossprod(X) / n #Gram matrix
 
   if (!all(which(B0 != 0) %in% A)) {
-    stop("The active set, A, has to include every index of nonzero B0.")
+    stop("Invalid active set index, A. The active set, A, has to include every index of nonzero B0.")
   }
   if (any(!A %in% 1:p)) {
-    stop("The active set, A, has to be a subset of 1:ncol(X)")
+    stop("Invalid active set index, A. The active set, A, has to be a subset of 1:ncol(X)")
   }
   if (!missing(S0) && !all(round(S0[which(B0 != 0)], 3) == sign(B0[B0 != 0]))) {
     stop("Invalid S0. Leave S0 blank, if S0 is unknown.")
@@ -228,7 +201,7 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
   if (n >= p) {   # Low-dim MH
     #precalculation
     #for(j in 1:p){X[,j]=X[,j]-mean(X[,j])}
-    #If X to be centered, we need to recompute B0 and S0 using centered X.
+    #If X to be centered, we need to re-compute B0 and S0 using centered X.
     Cinv <- solve(C) #Inverse Gram matrix
     logdiagC <- log(diag(C))
     Vinv <- n / (2 * sig2) * Cinv # non exponential part of pdf of U
@@ -525,87 +498,87 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
   #             acceptHistory = rbind(nAccept, nProp)))
 }
 
-MHLSgroup <- function(X, PE, sig2, lbd,
- weights, group, B0, S0, A, tau, niter, burnin, PEtype = "coeff", updateS.itv, verbose)
-{
-  if ( all.equal(group.norm2(S0, group)[A], rep(1, length(A)), tolerance = 1e-04) != TRUE ) {
-    stop("Invalid S0. Use LassoMHLS for a good initial value.")
-  }
-  n <- nrow(X)
-  p <- ncol(X)
-
-  K <- 10
-  W <- rep(weights,table(group))
-  Psi <- 1/n * crossprod(X)
-  if (n > p) {
-    inv.Var <- n/sig2 * solve(Psi)
-  }
-  nA <- length(A)
-
-  r.seq <- matrix(, niter, max(group))
-  S.seq <- matrix(, niter ,p)
-  nAccept <- numeric(2)
-  nProp <- c(nA*(niter-max(1,burnin)), max(group)*(niter-max(1,burnin)))
-
-  rcur <- group.norm2(B0,group)
-  r.seq[1, ] <- rcur
-  S.seq[1, ] <- Scur <- S0
-
-  if (PEtype == "coeff") {
-    Hcur <- drop(Psi %*% drop(B0 - PE) + lbd * W * drop(S0))
-  } else {
-    Hcur <- drop(Psi %*% drop(B0) - t(X) %*% PE / n + lbd * W * drop(S0))
-  }
-
-  if (n >= p) {
-    for (i in 2:niter) {
-      r.new <- ld.Update.r(rcur,Scur,A,Hcur,X,PE,Psi,W,lbd,group,inv.Var,tau,PEtype,n,p)
-      r.seq[i,] <- rcur <- r.new$r
-      Hcur <- r.new$Hcur
-      if (i > burnin) {nAccept[1] <- nAccept[1] + r.new$nrUpdate}
-
-      if (i %% updateS.itv == 0) {
-        S.new <- ld.Update.S (rcur,Scur,A,Hcur,X,PE,Psi,W,lbd,group,inv.Var,PEtype,n,p)
-        S.seq[i,] <- Scur <- S.new$S
-        Hcur <- S.new$Hcur
-      } else {
-        S.seq[i,] <- Scur
-      }
-      if (i > burnin) {nAccept[2] <- nAccept[2] + S.new$nSUpdate}
-
-      if (verbose && (i %% round(niter/10) == 0)) {
-        cat("MCMC step,", K, "% Finished\n")
-        K <- K+10
-      }
-    }
-  # } else {
-  #   for (i in 2:niter) {
-  #     r.new <- hd.Update.r(rcur,Scur,A,Hcur,X,PE,Psi,W,lbd,group,inv.Var,1)
-  #     r.seq[i,] <- rcur <- r.new$r
-  #     Hcur <- r.new$Hcur
-  #     nAccept[1] <- nAccept[1] + r.new$nrUpdate
-  #
-  #     S.new <- hd.Update.S (rcur,Scur,A,Hcur,X,PE,Psi,W,lbd,group,inv.Var,p)
-  #     S.seq[i,] <- Scur <- S.new$S
-  #     Hcur <- S.new$Hcur
-  #     nAccept[2] <- nAccept[2] + S.new$nSUpdate
-  #
-  #     if (verbose && (i %% round(niter/10) == 0)) {
-  #       cat("MCMC step,", K, "% Finished\n")
-  #       K <- K+10
-  #     }
-  #   }
-  }
-  return(list(
-    group.l2.norm = r.seq[if (burnin != 0){-c(1:burnin)} else {1:niter}, ],
-    subgrad = S.seq[if (burnin != 0){-c(1:burnin)} else {1:niter}, ],
-    acceptHistory = rbind(nAccept, nProp)))
-}
+# MHLSgroup <- function(X, PE, sig2, lbd,
+#  weights, group, B0, S0, A, tau, niter, burnin, PEtype = "coeff", updateS.itv, verbose)
+# {
+#   if ( all.equal(group.norm2(S0, group)[A], rep(1, length(A)), tolerance = 1e-04) != TRUE ) {
+#     stop("Invalid S0. Use LassoMHLS for a good initial value.")
+#   }
+#   n <- nrow(X)
+#   p <- ncol(X)
+#
+#   K <- 10
+#   W <- rep(weights,table(group))
+#   Psi <- 1/n * crossprod(X)
+#   if (n > p) {
+#     inv.Var <- n/sig2 * solve(Psi)
+#   }
+#   nA <- length(A)
+#
+#   r.seq <- matrix(, niter, max(group))
+#   S.seq <- matrix(, niter ,p)
+#   nAccept <- numeric(2)
+#   nProp <- c(nA*(niter-max(1,burnin)), max(group)*(niter-max(1,burnin)))
+#
+#   rcur <- group.norm2(B0,group)
+#   r.seq[1, ] <- rcur
+#   S.seq[1, ] <- Scur <- S0
+#
+#   if (PEtype == "coeff") {
+#     Hcur <- drop(Psi %*% drop(B0 - PE) + lbd * W * drop(S0))
+#   } else {
+#     Hcur <- drop(Psi %*% drop(B0) - t(X) %*% PE / n + lbd * W * drop(S0))
+#   }
+#
+#   if (n >= p) {
+#     for (i in 2:niter) {
+#       r.new <- ld.Update.r(rcur,Scur,A,Hcur,X,PE,Psi,W,lbd,group,inv.Var,tau,PEtype,n,p)
+#       r.seq[i,] <- rcur <- r.new$r
+#       Hcur <- r.new$Hcur
+#       if (i > burnin) {nAccept[1] <- nAccept[1] + r.new$nrUpdate}
+#
+#       if (i %% updateS.itv == 0) {
+#         S.new <- ld.Update.S (rcur,Scur,A,Hcur,X,PE,Psi,W,lbd,group,inv.Var,PEtype,n,p)
+#         S.seq[i,] <- Scur <- S.new$S
+#         Hcur <- S.new$Hcur
+#       } else {
+#         S.seq[i,] <- Scur
+#       }
+#       if (i > burnin) {nAccept[2] <- nAccept[2] + S.new$nSUpdate}
+#
+#       if (verbose && (i %% round(niter/10) == 0)) {
+#         cat("MCMC step,", K, "% Finished\n")
+#         K <- K+10
+#       }
+#     }
+#   # } else {
+#   #   for (i in 2:niter) {
+#   #     r.new <- hd.Update.r(rcur,Scur,A,Hcur,X,PE,Psi,W,lbd,group,inv.Var,1)
+#   #     r.seq[i,] <- rcur <- r.new$r
+#   #     Hcur <- r.new$Hcur
+#   #     nAccept[1] <- nAccept[1] + r.new$nrUpdate
+#   #
+#   #     S.new <- hd.Update.S (rcur,Scur,A,Hcur,X,PE,Psi,W,lbd,group,inv.Var,p)
+#   #     S.seq[i,] <- Scur <- S.new$S
+#   #     Hcur <- S.new$Hcur
+#   #     nAccept[2] <- nAccept[2] + S.new$nSUpdate
+#   #
+#   #     if (verbose && (i %% round(niter/10) == 0)) {
+#   #       cat("MCMC step,", K, "% Finished\n")
+#   #       K <- K+10
+#   #     }
+#   #   }
+#   }
+#   return(list(
+#     group.l2.norm = r.seq[if (burnin != 0){-c(1:burnin)} else {1:niter}, ],
+#     subgrad = S.seq[if (burnin != 0){-c(1:burnin)} else {1:niter}, ],
+#     acceptHistory = rbind(nAccept, nProp)))
+# }
 
 #' @export
 print.MHLS <- function (x, ...) {
   cat ("===========================\n")
-  cat ("Number of iteration: ", x$niteration,"\n\n")
+  cat ("Number of iteration: ", x$niter,"\n\n")
   cat ("Burn-in period: ", x$burnin,"\n\n")
   cat ("Plug-in PE: \n")
   print(x$PE)
@@ -619,15 +592,15 @@ print.MHLS <- function (x, ...) {
   # }
   cat ("\nLast 10 steps of beta's:\n")
 
-  if (inherits(x,"GroupLasso")) {
-    if (x$niteration-x$burnin <= 9) {
-      print(x$group.l2.norm)
-    } else {
-      print(x$group.l2.norm[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
-    }
-  }
+  # if (inherits(x,"GroupLasso")) {
+  #   if (x$niter-x$burnin <= 9) {
+  #     print(x$group.l2.norm)
+  #   } else {
+  #     print(x$group.l2.norm[(x$niter-x$burnin-9):(x$niter-x$burnin),])
+  #   }
+  # }
 
-  if (x$niteration-x$burnin <= 9) {
+  if (x$niter-x$burnin <= 9) {
     # if (inherits(x,"Group")) {
     #   #print(x$group.l2.norm)
     #   print(beta)
@@ -636,27 +609,28 @@ print.MHLS <- function (x, ...) {
     # }
   } else {
     # if (inherits(x,"Group")) {
-    #   print(beta[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
-    #   #print(x$group.l2.norm[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
+    #   print(beta[(x$niter-x$burnin-9):(x$niter-x$burnin),])
+    #   #print(x$group.l2.norm[(x$niter-x$burnin-9):(x$niter-x$burnin),])
     # } else {
-    print(x$beta[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
+    print(x$beta[(x$niter-x$burnin-9):(x$niter-x$burnin),])
     # }
   }
 
   cat ("\nlast 10 steps of subgradients:\n")
-  if (x$niteration-x$burnin <= 9) {
+  if (x$niter-x$burnin <= 9) {
     print(x$subgrad)
   } else {
-    print(x$subgrad[(x$niteration-x$burnin-9):(x$niteration-x$burnin),])
+    print(x$subgrad[(x$niter-x$burnin-9):(x$niter-x$burnin),])
   }
 
   cat ("\nAcceptance rate:\n")
   cat("-----------------------------\n")
-  if (inherits(x,"GroupLasso")) {
-    cat("\t \t l_2 group norm\t subgrad\n")
-  } else {
-    cat("\t \t \t beta \t subgrad\n")
-  }
+  cat("\t \t \t beta \t subgrad\n")
+  # if (inherits(x,"GroupLasso")) {
+  #   cat("\t \t l_2 group norm\t subgrad\n")
+  # } else {
+  #   cat("\t \t \t beta \t subgrad\n")
+  # }
   cat("# Accepted\t : \t", paste(x$acceptHistory[1,],"\t"),"\n")
   cat("# Moved\t\t : \t", paste(x$acceptHistory[2,],"\t"),"\n")
   cat("Acceptance rate\t : \t", paste(round(x$acceptHistory[1,]/x$acceptHistory[2,],3),"\t"),"\n")
@@ -671,14 +645,15 @@ print.MHLS <- function (x, ...) {
 
 #' @title Summarizing Metropolis-Hastings sampler outputs
 #'
-#' @description summary method for class "MHLS"
+#' @description Summary method for class "MHLS"
 #'
 #' @param object an object of class "MHLS", which is a result of \code{\link{MHLS}}.
 #' @param ... additional arguments affecting the summary produced.
 #'
 #' @details
 #' This function provides a summary of each sampled beta and subgradient.
-#' @return mean, median, s.d., 2.5% quantile and 97.5% quantile for each sampled beta and subgradient.
+#' @return mean, median, standard deviation, 2.5% quantile and 97.5% quantile
+#' for each beta and its subgradient.
 #' @examples
 #' #' set.seed(123)
 #' n <- 10
@@ -691,7 +666,7 @@ print.MHLS <- function (x, ...) {
 #' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
-#' summary(MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,
+#' summary(MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
 #'      type = "coeff"))
 #' @export
@@ -704,20 +679,20 @@ summary.MHLS <- function (object, ...) {
   return(result)
 }
 
-#' @title Plotting Metropolis-Hastings sampler outputs
+#' @title Plot Metropolis-Hastings sampler outputs
 #'
-#' @description povides six plots for each covariates index;
-#'  histogram, path plot and acf plot for beta and subgradient.
+#' @description Provides six plots for each covariates index;
+#'  histogram, path plot and acf plot for beta and for subgradient.
 #'
 #' @param x an object of class "MHLS", which is a result of \code{\link{MHLS}}.
-#' @param index an index of covariates that one can plot with.
+#' @param index an index of covariates that one want to plot.
 #' @param skipS logical. If \code{TRUE}, plot beta only.
-#' @param ... ...	further arguments passed to or from other methods.
+#' @param ... ...	addtional arguments passed to or from other methods.
 #' @details
-#' \code{plot.MHLS} provides summary plots of sampled beta and subgradient.
+#' \code{plot.MHLS} provides summary plots of beta and subgradient.
 #'  The first column provides histogram of beta and subgradient, while the second
 #'  and the third column provide path plot and acf plot, respectively.
-#'  If \code{skipS = TRUE}, it will provide summary plots for beta only.
+#'  If \code{skipS = TRUE}, this function provides summary plots for beta only.
 #' @examples
 #' #' set.seed(123)
 #' n <- 10
@@ -740,7 +715,7 @@ plot.MHLS <- function(x, index = 1:ncol(x$beta), skipS = FALSE, ...) {
     stop("Invalid index.")
   }
 
-  niter <- x$niteration
+  niter <- x$niter
   burnin <- x$burnin
 
   if (!skipS) {par(mfrow = c(2,3))} else {par(mfrow = c(1,3))}
