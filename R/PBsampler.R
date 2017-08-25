@@ -394,11 +394,7 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
     } else {
       refitB <- mapply(FF, 1:nrow(B))
     }
-    # for (i in 1:nrow(B)) {
-    #   for (j in 1:ncol(B)) {
-    #     refitB[i,j] <- (ZrefitY[j,i] - ZXcomp[,j] %*% B[i,-j]) / ZX[j]
-    #   }
-    # }
+
     Result <- apply(refitB,1,quantile,prob=c(alpha/2,1-alpha/2))
   }
   colnames(Result) <- paste("beta", 1:ncol(object$X), sep = "")
