@@ -5,7 +5,7 @@ Version: 0.1.0
 Authors@R: person("Seunghyun", "Min", email = "seunghyun@ucla.edu", role = c("aut", "cre"))
 Maintainer: Seunghyun Min <seunghyun@ucla.edu>
 Description: Simulation based inference of lasso estimator. It provides several sampling methods 
-    to sample lasso estimator: (a) gaussian and wild multiplier bootstrap for 
+    to sample lasso estimator: (a) Gaussian and wild multiplier bootstrap for 
     lasso, group lasso, scaled lasso and scaled group lasso, (b) importance sampler
     for lasso, group lasso, scaled lasso and scaled group lasso,
     (c) Markov chain Monte Carlo sampler for lasso, (d) post-selection inference

@@ -69,8 +69,8 @@ Y <- X \%*\% rep(1,p) + rnorm(n)
 sig2 <- 1
 lbd <- .37
 weights <- rep(1,p)
-Postinference.MHLS(X, Y, lbd, sig2.hat=1, alpha=.05, nChain=3,
-niterPerChain=20, parallel=TRUE)
-Postinference.MHLS(X, Y, lbd, sig2.hat=1, alpha=.05, nChain=3,
-niterPerChain=20, parallel=TRUE, returnSamples=TRUE)
+Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+nChain = 3, niterPerChain = 20, parallel = TRUE)
+Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+nChain = 3, niterPerChain = 20, parallel = TRUE, returnSamples = TRUE)
 }

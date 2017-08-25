@@ -8,7 +8,7 @@ PB.CI(object, alpha = 0.05, method = "debias", parallel = FALSE,
   ncores = 2L)
 }
 \arguments{
-\item{object}{Bootstrap samples of class \code{PB} from \code{\link{PBsampler}}}
+\item{object}{bootstrap samples of class \code{PB} from \code{\link{PBsampler}}}
 
 \item{alpha}{significance level.}
 
@@ -22,7 +22,7 @@ PB.CI(object, alpha = 0.05, method = "debias", parallel = FALSE,
 \code{(1-alpha)\%} confidence interval of each coefficients
 }
 \description{
-Using samples drawn by \code{\link{PBsampler}}, compute
+Using samples drawn by \code{\link{PBsampler}}, computes
 \code{(1-alpha)\%} confidence interval of each coefficient.
 }
 \details{
