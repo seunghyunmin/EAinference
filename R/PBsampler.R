@@ -127,7 +127,7 @@ PBsampler <- function(X, PE_1, sig2_1, lbd_1, PE_2,
     stop("group index has to be a consecutive integer starting from 1.")
   }
   if (any(missing(PE_1), missing(sig2_1), missing(lbd_1))) {
-    stop("provide all the parameters for the distribution")
+    stop("provide all the parameters for the distribution.")
   }
   if (!sum(c(missing(sig2_2), missing(lbd_2), missing(PE_2)))
       %in% c(0, 3)) {
