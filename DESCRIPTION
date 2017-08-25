@@ -2,10 +2,14 @@ Package: EAlasso
 Type: Package
 Title: Simulation based Inference of Lasso Estimator
 Version: 0.1.0
-Author: Seunghyun Min
+Authors@R: person("Seunghyun", "Min", email = "seunghyun@ucla.edu", role = c("aut", "cre"))
 Maintainer: Seunghyun Min <seunghyun@ucla.edu>
 Description: Simulation based inference of lasso estimator. It provides several sampling methods 
-    to sample lasso estimator : importance sampler, Markov chain Monte Carlo sampler and bootstrap.
+    to sample lasso estimator: (a) gaussian and wild multiplier bootstrap for 
+    lasso, group lasso, scaled lasso and scaled group lasso, (b) importance sampler
+    for lasso, group lasso, scaled lasso and scaled group lasso,
+    (c) Markov chain Monte Carlo sampler for lasso, (d) post-selection inference
+    for lasso. 
 License: GPL (>=2)
 Encoding: UTF-8
 LazyData: true
@@ -18,7 +22,6 @@ Imports:
     msm,
     mvtnorm,
     parallel,
-    ggm,
     limSolve,
     MASS,
     glmnet

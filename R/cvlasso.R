@@ -1,31 +1,33 @@
 #' @title Compute K-fold cross-validated mean squared error for lasso
 #'
-#' @description Compute K-fold cross-validated mean squared error
+#' @description Computes K-fold cross-validated mean squared error
 #' to propose a lambda value for lasso, group lasso, scaled lasso or scaled
 #' group lasso
 #'
-#' @param X predictor matrix of size \code{p} x \code{n}.
-#' @param Y response vector of length \code{n}.
-#' @param group p x 1 vector of consecutive integers. The number of groups
-#' should be same as max(group).
-#' @param weights weight vector of length \code{max(group)}.
-#' Weight term for each group. Default is \code{rep(1, max(group))}.
-#' @param type type of penalty, either to be "lasso", "grlasso", "slasso" or "sgrlasso".
-#' @param K integer. number of folds
+#' @param X predictor matrix.
+#' @param Y response vector.
+#' @param group \code{p} x \code{1} vector of consecutive integers describing the group structure.
+#' The number of groups should be the same as max(group). Default is \code{group = 1:p}
+#' , where \code{p} is number of covariates. See examples for a guideline.
+#' @param weights weight vector with length equal to the number of groups. Default is
+#' \code{rep(1, max(group))}.
+#' @param type type of penalty. Must be specified to be one of the following:
+#'  \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.
+#' @param K integer. Number of folds
 #' @param minlbd numeric. Minumum value of the lambda sequence.
 #' @param maxlbd numeric. Maximum value of the lambda sequence.
-#' @param num.lbdseq integer. Number of the lambda sequence.
+#' @param num.lbdseq integer. Length of the lambda sequence.
 #' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
 #' Default is \code{parallel = FALSE}.
 #' @param ncores integer. The number of cores to use for the parallelization.
-#' @param plot.it logical. If ture, plot the squared error curve
-#' @param verbose verbose
+#' @param plot.it logical. If true, plots the squared error curve.
+#' @param verbose logical.
 #'
-#' @return \item{lbd.min}{a value of lambda such gives a minimum squared error.}
-#' @return \item{lbd.1se}{a largest lambda within 1 std. from \code{lbd.min}.}
+#' @return \item{lbd.min}{a value of lambda which gives a minimum squared error.}
+#' @return \item{lbd.1se}{a largest lambda within 1 standard error from \code{lbd.min}.}
 #' @return \item{lbd.seq}{lambda sequence.}
 #' @return \item{cv}{mean squared error at each lambda value.}
-#' @return \item{cvsd}{the standard deviaion of cv.}
+#' @return \item{cvsd}{the standard deviation of cv.}
 #'
 #' @examples
 #' set.seed(123)
@@ -37,8 +39,10 @@
 #' truebeta <- c(rep(1,5),rep(0,p-5))
 #' Y <- X%*%truebeta + rnorm(n)
 #'
-#' cv.lasso(X,Y,group,weights,K=5,type="sgrlasso",num.lbdseq=10,plot.it=TRUE)
-#' cv.lasso(X,Y,group,weights,K=10,type="grlasso",num.lbdseq=100,plot.it=TRUE)
+#' # To accelerate the computational time, we set K=2 and num.lbdseq=2.
+#' # However, in practice, Allowing K=10 and num.lbdseq > 100 is recommended.
+#' cv.lasso(X,Y,group,weights,K=2,type="sgrlasso",num.lbdseq=2,plot.it=FALSE)
+#' cv.lasso(X,Y,group,weights,K=2,type="grlasso",num.lbdseq=2,plot.it=FALSE)
 #' @export
 cv.lasso <- function(
   X,
@@ -61,6 +65,8 @@ cv.lasso <- function(
   Y <- as.vector(Y)
   K <- as.integer(K)
   num.lbdseq <- as.integer(num.lbdseq)
+
+  if (!parallel) {ncores <- 1}
 
   if(missing(minlbd)) {minlbd <- 0}
   if(missing(maxlbd)) {

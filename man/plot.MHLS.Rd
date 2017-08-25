@@ -2,28 +2,28 @@
 % Please edit documentation in R/MHLS.R
 \name{plot.MHLS}
 \alias{plot.MHLS}
-\title{Plotting Metropolis-Hastings sampler outputs}
+\title{Plot Metropolis-Hastings sampler outputs}
 \usage{
 \method{plot}{MHLS}(x, index = 1:ncol(x$beta), skipS = FALSE, ...)
 }
 \arguments{
-\item{x}{an object of class "MHLS", which is a result of \code{\link{MHLS}}.}
+\item{x}{an object of class "MHLS", which is an output of \code{\link{MHLS}}.}
 
-\item{index}{an index of covariates that one can plot with.}
+\item{index}{an index of covariates to plot.}
 
-\item{skipS}{logical. If \code{TRUE}, plot beta only.}
+\item{skipS}{logical. If \code{skipS = TRUE}, plots beta only.}
 
-\item{...}{...    further arguments passed to or from other methods.}
+\item{...}{addtional arguments passed to or from other methods.}
 }
 \description{
-povides six plots for each covariates index;
- histogram, path plot and acf plot for beta and subgradient.
+Provides six plots for each covariate index;
+ histogram, path plot and acf plot for beta and for its subgradient.
 }
 \details{
-\code{plot.MHLS} provides summary plots of sampled beta and subgradient.
+\code{\link{plot.MHLS}} provides summary plots of beta and subgradient.
  The first column provides histogram of beta and subgradient, while the second
- and the third column provide path plot and acf plot, respectively.
- If \code{skipS = TRUE}, it will provide summary plots for beta only.
+ and the third columns provide path and acf plots, respectively.
+ If \code{skipS = TRUE}, this function provides summary plots for beta only.
 }
 \examples{
 #' set.seed(123)

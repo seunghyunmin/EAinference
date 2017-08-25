@@ -1,14 +1,14 @@
 #' @title Compute lasso estimator
 #'
-#' @description Compute lasso, group lasso, scaled lasso, or scaled group lasso solution;
-#' coefficient-estimate and subgradient along with sigma-estimate
-#' if it is scaled lasso or scaled group lasso.
+#' @description Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
+#' The outputs are coefficient-estimate and subgradient. If \code{type = "slasso"} or \code{type = "sgrlasso"},
+#' the output will include the sigma-estimate.
 #'
 #' @param X predictor matrix.
 #' @param Y response vector.
 #' @param type type of penalty. Must be specified to be one of the following:
 #'  \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.
-#' @param lbd penalty term of lasso. By letting this argument to \code{"cv.1se"} or
+#' @param lbd penalty term of lasso. By letting this argument be \code{"cv.1se"} or
 #' \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
 #' squared error or that is within 1 std error bound.
 #' @param weights weight vector with length equal to the number of groups. Default is
@@ -16,9 +16,9 @@
 #' @param group \code{p} x \code{1} vector of consecutive integers describing the group structure.
 #' The number of groups should be the same as max(group). Default is \code{group = 1:p}
 #' , where \code{p} is number of covariates.
-#' @param verbose verbose for type = "slasso" or "sgrlasso".
-#' @param ... Auxiliary arguments for \code{lbd="cv.min", lbd="cv.1se"}.
-#' See \code{\link{cv.lasso}} for more details.
+#' @param verbose logical. Only available for \code{type = "slasso"} or \code{type = "sgrlasso"}.
+#' @param ... auxiliary arguments for \code{lbd = "cv.min", lbd = "cv.1se"}.
+#' See \code{\link{cv.lasso}} for details.
 #' @details
 #' Using gglasso package, provide lasso / group lasso solution along with
 #' subgradient. The loss function for group lasso is
@@ -133,12 +133,12 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd,
 
 #' @title Post-inference for lasso estimator
 #'
-#' @description Provides Confidence intervals for the set of active coefficients
+#' @description Provides confidence intervals for the set of active coefficients
 #' from lasso estimator using Metropolis-Hastings sampler.
 #'
-#' @param X predictors matrix.
+#' @param X predictor matrix.
 #' @param Y response vector.
-#' @param lbd penalty term of lasso. By letting this argument to \code{"cv.1se"} or
+#' @param lbd penalty term of lasso. By letting this argument be \code{"cv.1se"} or
 #' \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
 #' squared error or that is within 1 std error bound.
 #' @param weights weight vector with length equal to the number of coefficients.
@@ -148,25 +148,25 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd,
 #'  Default is \code{rep(1, ncol(X))}.
 #' @param sig2.hat variance of error term.
 #' @param alpha confidence level for confidence interval.
-#' @param nChain the number of chains. For each chain, different pluginbeta will be generated
+#' @param nChain the number of chains. For each chain, different plug-in beta will be generated
 #' from its confidence region.
-#' @param niterPerChain the number of iteration per chain.
+#' @param niterPerChain the number of iterations per chain.
 #' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
 #' Default is \code{parallel = FALSE}.
 #' @param ncores integer. The number of cores to use for the parallelization.
 #' @param returnSamples logical. If \code{returnSamples = TRUE}, print Metropolis-Hastings samples.
-#' @param ... auxiliary \code{link{MHLS}} arguments.
+#' @param ... auxiliary \code{\link{MHLS}} arguments.
 #' @details
 #' This function provides post-selection inference for lasso estimator.
-#' Using Metropolis-Hastings sampler with multiple chanin, generate \code{(1-alpha)}
+#' Using Metropolis-Hastings sampler with multiple chains, generates \code{(1-alpha)}
 #' confidence interval for each active coefficients.
-#' Set \code{returnSamples=TRUE} to check the samples.
+#' Set \code{returnSamples = TRUE} to check the samples.
 #' Check the acceptance rate and adjust \code{tau} accordingly.
 #' We recommend to set \code{nChain >= 10} and \code{niterPerChain >= 500}.
 #'
-#' @return \item{MHsamples}{a list of a class MHLS.}
+#' @return \item{MHsamples}{a list of class MHLS.}
 #' @return \item{confidenceInterval}{(1-alpha) confidence interval
-#' of each active coefficient.}
+#' for each active coefficient.}
 #' @examples
 #' set.seed(123)
 #' n <- 5

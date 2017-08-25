@@ -9,11 +9,11 @@ Postinference.MHLS(X, Y, lbd, weights = rep(1, ncol(X)), tau = rep(1,
   parallel = FALSE, ncores = 2L, returnSamples = FALSE, ...)
 }
 \arguments{
-\item{X}{predictors matrix.}
+\item{X}{predictor matrix.}
 
 \item{Y}{response vector.}
 
-\item{lbd}{penalty term of lasso. By letting this argument to \code{"cv.1se"} or
+\item{lbd}{penalty term of lasso. By letting this argument be \code{"cv.1se"} or
 \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
 squared error or that is within 1 std error bound.}
 
@@ -28,10 +28,10 @@ Default is \code{rep(1, ncol(X))}.}
 
 \item{alpha}{confidence level for confidence interval.}
 
-\item{nChain}{the number of chains. For each chain, different pluginbeta will be generated
+\item{nChain}{the number of chains. For each chain, different plug-in beta will be generated
 from its confidence region.}
 
-\item{niterPerChain}{the number of iteration per chain.}
+\item{niterPerChain}{the number of iterations per chain.}
 
 \item{parallel}{logical. If \code{parallel = TRUE}, uses parallelization.
 Default is \code{parallel = FALSE}.}
@@ -40,23 +40,23 @@ Default is \code{parallel = FALSE}.}
 
 \item{returnSamples}{logical. If \code{returnSamples = TRUE}, print Metropolis-Hastings samples.}
 
-\item{...}{auxiliary \code{link{MHLS}} arguments.}
+\item{...}{auxiliary \code{\link{MHLS}} arguments.}
 }
 \value{
-\item{MHsamples}{a list of a class MHLS.}
+\item{MHsamples}{a list of class MHLS.}
 
 \item{confidenceInterval}{(1-alpha) confidence interval
-of each active coefficient.}
+for each active coefficient.}
 }
 \description{
-Provides Confidence intervals for the set of active coefficients
+Provides confidence intervals for the set of active coefficients
 from lasso estimator using Metropolis-Hastings sampler.
 }
 \details{
 This function provides post-selection inference for lasso estimator.
-Using Metropolis-Hastings sampler with multiple chanin, generate \code{(1-alpha)}
+Using Metropolis-Hastings sampler with multiple chains, generates \code{(1-alpha)}
 confidence interval for each active coefficients.
-Set \code{returnSamples=TRUE} to check the samples.
+Set \code{returnSamples = TRUE} to check the samples.
 Check the acceptance rate and adjust \code{tau} accordingly.
 We recommend to set \code{nChain >= 10} and \code{niterPerChain >= 500}.
 }

@@ -575,6 +575,36 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
 #     acceptHistory = rbind(nAccept, nProp)))
 # }
 
+#' @method print MHLS
+#' @title Print Metropolis-Hastings sampler outputs
+#'
+#' @description Print a brief summary of the MH sampler outputs.
+#'
+#' @param x an object of class "MHLS", which is a result of \code{\link{MHLS}}.
+#' @param ... ...	addtional print arguments.
+#' @details
+#' \code{\link{print.MHLS}} prints out last 10 iterations and a brief summary
+#' of the simulation; number of iterations, number of burn-in periods, PE, PEtype and
+#' acceptance rate.
+#'
+#' @return Above results are silently returned.
+#'
+#' @examples
+#' set.seed(123)
+#' n <- 10
+#' p <- 5
+#' X <- matrix(rnorm(n * p), n)
+#' Y <- X %*% rep(1, p) + rnorm(n)
+#' sigma2 <- 1
+#' lbd <- .37
+#' weights <- rep(1, p)
+#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type="lasso", weights = weights)
+#' B0 <- LassoResult$B0
+#' S0 <- LassoResult$S0
+#' Result <- MHLS(X = X, PE = rep(0, p), sig2 = sigma2, lbd = lbd, group = 1:p,
+#'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
+#'      type = "coeff")
+#' print(Result)
 #' @export
 print.MHLS <- function (x, ...) {
   cat ("===========================\n")
@@ -642,17 +672,17 @@ print.MHLS <- function (x, ...) {
   # cat("Acceptance rate\t : \t", paste(round(x$signchange[1]/x$signchange[2],3),"\t"),"\n")
 }
 
-
+#' @method summary MHLS
 #' @title Summarizing Metropolis-Hastings sampler outputs
 #'
-#' @description Summary method for class "MHLS"
+#' @description Summary method for class "MHLS".
 #'
 #' @param object an object of class "MHLS", which is a result of \code{\link{MHLS}}.
 #' @param ... additional arguments affecting the summary produced.
 #'
 #' @details
 #' This function provides a summary of each sampled beta and subgradient.
-#' @return mean, median, standard deviation, 2.5% quantile and 97.5% quantile
+#' @return mean, median, standard deviation, 2.5\% quantile and 97.5\% quantile
 #' for each beta and its subgradient.
 #' @examples
 #' #' set.seed(123)
@@ -666,7 +696,7 @@ print.MHLS <- function (x, ...) {
 #' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
-#' summary(MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
+#' summary(MHLS(X = X, PE = rep(0, p), sig2 = sigma2, lbd = lbd,
 #'      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
 #'      type = "coeff"))
 #' @export
@@ -679,19 +709,20 @@ summary.MHLS <- function (object, ...) {
   return(result)
 }
 
+#' @method plot MHLS
 #' @title Plot Metropolis-Hastings sampler outputs
 #'
-#' @description Provides six plots for each covariates index;
-#'  histogram, path plot and acf plot for beta and for subgradient.
+#' @description Provides six plots for each covariate index;
+#'  histogram, path plot and acf plot for beta and for its subgradient.
 #'
-#' @param x an object of class "MHLS", which is a result of \code{\link{MHLS}}.
-#' @param index an index of covariates that one want to plot.
-#' @param skipS logical. If \code{TRUE}, plot beta only.
-#' @param ... ...	addtional arguments passed to or from other methods.
+#' @param x an object of class "MHLS", which is an output of \code{\link{MHLS}}.
+#' @param index an index of covariates to plot.
+#' @param skipS logical. If \code{skipS = TRUE}, plots beta only.
+#' @param ...	addtional arguments passed to or from other methods.
 #' @details
-#' \code{plot.MHLS} provides summary plots of beta and subgradient.
+#' \code{\link{plot.MHLS}} provides summary plots of beta and subgradient.
 #'  The first column provides histogram of beta and subgradient, while the second
-#'  and the third column provide path plot and acf plot, respectively.
+#'  and the third columns provide path and acf plots, respectively.
 #'  If \code{skipS = TRUE}, this function provides summary plots for beta only.
 #' @examples
 #' #' set.seed(123)

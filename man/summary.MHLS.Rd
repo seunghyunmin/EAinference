@@ -12,10 +12,11 @@
 \item{...}{additional arguments affecting the summary produced.}
 }
 \value{
-mean, median, s.d., 2.5% quantile and 97.5% quantile for each sampled beta and subgradient.
+mean, median, standard deviation, 2.5\% quantile and 97.5\% quantile
+for each beta and its subgradient.
 }
 \description{
-summary method for class "MHLS"
+Summary method for class "MHLS".
 }
 \details{
 This function provides a summary of each sampled beta and subgradient.
@@ -32,7 +33,7 @@ weights <- rep(1, p)
 LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
-summary(MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
+summary(MHLS(X = X, PE = rep(0, p), sig2 = sigma2, lbd = lbd,
      weights = weights, B0 = B0, S0 = S0, niter = 50, burnin = 0,
      type = "coeff"))
 }

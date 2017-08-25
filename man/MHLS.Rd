@@ -2,7 +2,7 @@
 % Please edit documentation in R/MHLS.R
 \name{MHLS}
 \alias{MHLS}
-\title{Metropolis-Hastings sampler for lasso estimator}
+\title{Metropolis-Hastings sampler for lasso estimator under the fixed active set.}
 \usage{
 MHLS(X, PE, sig2, lbd, weights = rep(1, ncol(X)), B0, S0, A = which(B0 !=
   0), tau = rep(1, ncol(X)), niter = 2000, burnin = 0, PEtype = "coeff",
@@ -60,17 +60,18 @@ The default is \code{FlipSA=A}}
 \code{MHLS} returns an object of class \code{"MHLS"}.
 The functions \code{\link{summary.MHLS}} and \code{\link{plot.MHLS}}
 provide a brief summary and generate plots.
-\item{beta}{lasso samples}
-\item{subgrad}{subgradient samples}
-\item{acceptHistory}{number of acceptance and proposed}
-\item{niter, burnin, PE, type}{same as function arguments}
+\item{beta}{lasso samples.}
+\item{subgrad}{subgradient samples.}
+\item{acceptHistory}{numbers of acceptance and proposal.}
+\item{niter, burnin, PE, type}{same as function arguments.}
 }
 \description{
 Metropolis-Hastings sampler for lasso estimator
-under low and high dimensional setting.
+under the fixed active set.
 }
 \details{
-Given appropriate initial value, provides Metropolis-Hastings samples.
+Given appropriate initial value, provides Metropolis-Hastings samples
+ under the fixed active set.
 }
 \examples{
 #-------------------------

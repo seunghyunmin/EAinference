@@ -50,7 +50,7 @@ Default is \code{parallel = FALSE}.}
 \value{
 \item{beta}{coefficient estimate.}
 
-\item{subgrad}{subgradient of coefficient.}
+\item{subgrad}{subgradient.}
 
 \item{hsigma}{standard deviation estimator, for type="slasso" or type="sgrlasso" only.}
 

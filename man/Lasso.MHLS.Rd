@@ -2,7 +2,7 @@
 % Please edit documentation in R/MHInference.R
 \name{Lasso.MHLS}
 \alias{Lasso.MHLS}
-\title{Computes lasso estimator}
+\title{Compute lasso estimator}
 \usage{
 Lasso.MHLS(X, Y, type = "lasso", lbd, group = 1:ncol(X), weights = rep(1,
   max(group)), verbose = FALSE, ...)
@@ -15,7 +15,7 @@ Lasso.MHLS(X, Y, type = "lasso", lbd, group = 1:ncol(X), weights = rep(1,
 \item{type}{type of penalty. Must be specified to be one of the following:
 \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.}
 
-\item{lbd}{penalty term of lasso. By letting this argument to \code{"cv.1se"} or
+\item{lbd}{penalty term of lasso. By letting this argument be \code{"cv.1se"} or
 \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
 squared error or that is within 1 std error bound.}
 
@@ -26,10 +26,10 @@ The number of groups should be the same as max(group). Default is \code{group = 
 \item{weights}{weight vector with length equal to the number of groups. Default is
 \code{rep(1, max(group))}.}
 
-\item{verbose}{verbose for type = "slasso" or "sgrlasso".}
+\item{verbose}{logical. Only available for \code{type = "slasso"} or \code{type = "sgrlasso"}.}
 
-\item{...}{Auxiliary arguments for \code{lbd="cv.min", lbd="cv.1se"}.
-See \code{\link{cv.lasso}} for more details.}
+\item{...}{auxiliary arguments for \code{lbd = "cv.min", lbd = "cv.1se"}.
+See \code{\link{cv.lasso}} for details.}
 }
 \value{
 \item{B0}{coefficient estimator.}
@@ -39,9 +39,9 @@ See \code{\link{cv.lasso}} for more details.}
 \item{lbd, weights, group}{same as input arguments.}
 }
 \description{
-Compute lasso, group lasso, scaled lasso, or scaled group lasso solution;
-coefficient-estimate and subgradient along with sigma-estimate
-if it is scaled lasso or scaled group lasso.
+Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
+The outputs are coefficient-estimate and subgradient. If \code{type = "slasso"} or \code{type = "sgrlasso"},
+the output will include the sigma-estimate.
 }
 \details{
 Using gglasso package, provide lasso / group lasso solution along with

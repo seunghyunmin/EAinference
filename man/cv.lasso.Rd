@@ -2,52 +2,54 @@
 % Please edit documentation in R/cvlasso.R
 \name{cv.lasso}
 \alias{cv.lasso}
-\title{Computes K-fold cross-validated mean squared error for lasso}
+\title{Compute K-fold cross-validated mean squared error for lasso}
 \usage{
 cv.lasso(X, Y, group = 1:ncol(X), weights = rep(1, max(group)), type,
   K = 10L, minlbd, maxlbd, num.lbdseq = 100L, parallel = FALSE,
   ncores = 2L, plot.it = FALSE, verbose = FALSE)
 }
 \arguments{
-\item{X}{predictor matrix of size \code{p} x \code{n}.}
+\item{X}{predictor matrix.}
 
-\item{Y}{response vector of length \code{n}.}
+\item{Y}{response vector.}
 
-\item{group}{p x 1 vector of consecutive integers. The number of groups
-should be same as max(group).}
+\item{group}{\code{p} x \code{1} vector of consecutive integers describing the group structure.
+The number of groups should be the same as max(group). Default is \code{group = 1:p}
+, where \code{p} is number of covariates. See examples for a guideline.}
 
-\item{weights}{weight vector of length \code{max(group)}.
-Weight term for each group. Default is \code{rep(1, max(group))}.}
+\item{weights}{weight vector with length equal to the number of groups. Default is
+\code{rep(1, max(group))}.}
 
-\item{type}{type of penalty, either to be "lasso", "grlasso", "slasso" or "sgrlasso".}
+\item{type}{type of penalty. Must be specified to be one of the following:
+\code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.}
 
-\item{K}{integer. number of folds}
+\item{K}{integer. Number of folds}
 
 \item{minlbd}{numeric. Minumum value of the lambda sequence.}
 
 \item{maxlbd}{numeric. Maximum value of the lambda sequence.}
 
-\item{num.lbdseq}{integer. Number of the lambda sequence.}
+\item{num.lbdseq}{integer. Length of the lambda sequence.}
 
 \item{parallel}{logical. If \code{parallel = TRUE}, uses parallelization.
 Default is \code{parallel = FALSE}.}
 
 \item{ncores}{integer. The number of cores to use for the parallelization.}
 
-\item{plot.it}{logical. If ture, plot the squared error curve}
+\item{plot.it}{logical. If true, plots the squared error curve.}
 
-\item{verbose}{verbose}
+\item{verbose}{logical.}
 }
 \value{
-\item{lbd.min}{a value of lambda such gives a minimum squared error.}
+\item{lbd.min}{a value of lambda which gives a minimum squared error.}
 
-\item{lbd.1se}{a largest lambda within 1 std. from \code{lbd.min}.}
+\item{lbd.1se}{a largest lambda within 1 standard error from \code{lbd.min}.}
 
 \item{lbd.seq}{lambda sequence.}
 
 \item{cv}{mean squared error at each lambda value.}
 
-\item{cvsd}{the standard deviaion of cv.}
+\item{cvsd}{the standard deviation of cv.}
 }
 \description{
 Computes K-fold cross-validated mean squared error
@@ -64,6 +66,8 @@ X <- matrix(rnorm(n*p),n)
 truebeta <- c(rep(1,5),rep(0,p-5))
 Y <- X\%*\%truebeta + rnorm(n)
 
-cv.lasso(X,Y,group,weights,K=5,type="sgrlasso",num.lbdseq=10,plot.it=TRUE)
-cv.lasso(X,Y,group,weights,K=10,type="grlasso",num.lbdseq=100,plot.it=TRUE)
+# To accelerate the computational time, we set K=2 and num.lbdseq=2.
+# However, in practice, Allowing K=10 and num.lbdseq > 100 is recommended.
+cv.lasso(X,Y,group,weights,K=2,type="sgrlasso",num.lbdseq=2,plot.it=FALSE)
+cv.lasso(X,Y,group,weights,K=2,type="grlasso",num.lbdseq=2,plot.it=FALSE)
 }
