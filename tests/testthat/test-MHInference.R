@@ -17,7 +17,7 @@ test_that("Low dimensional setting", {
                , NA)
   expect_error(Lasso.MHLS(X = X,Y = Y, type="lasso", lbd = -.5)
                , "invalid")
-  expect_error(Lasso.MHLS(X = X,Y = c(0,Y), lbd = .5)
+  expect_error(Lasso.MHLS(X = X,Y = c(0,Y), type="lasso", lbd = .5)
                , "dimension")
   expect_error(Lasso.MHLS(X = X,Y = Y, type="grlasso", lbd = .37
                           , weights=weights, group=group)

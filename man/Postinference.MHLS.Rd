@@ -36,7 +36,7 @@ from its confidence region.}
 \item{parallel}{logical. If \code{parallel = TRUE}, uses parallelization.
 Default is \code{parallel = FALSE}.}
 
-\item{ncores}{integer. The number of cores to use for the parallelization.}
+\item{ncores}{integer. The number of cores to use for parallelization.}
 
 \item{returnSamples}{logical. If \code{returnSamples = TRUE}, print Metropolis-Hastings samples.}
 

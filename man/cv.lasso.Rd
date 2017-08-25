@@ -34,7 +34,7 @@ The number of groups should be the same as max(group). Default is \code{group = 
 \item{parallel}{logical. If \code{parallel = TRUE}, uses parallelization.
 Default is \code{parallel = FALSE}.}
 
-\item{ncores}{integer. The number of cores to use for the parallelization.}
+\item{ncores}{integer. The number of cores to use for parallelization.}
 
 \item{plot.it}{logical. If true, plots the squared error curve.}
 
@@ -54,7 +54,7 @@ Default is \code{parallel = FALSE}.}
 \description{
 Computes K-fold cross-validated mean squared error
 to propose a lambda value for lasso, group lasso, scaled lasso or scaled
-group lasso
+group lasso.
 }
 \examples{
 set.seed(123)
@@ -68,6 +68,8 @@ Y <- X\%*\%truebeta + rnorm(n)
 
 # To accelerate the computational time, we set K=2 and num.lbdseq=2.
 # However, in practice, Allowing K=10 and num.lbdseq > 100 is recommended.
-cv.lasso(X,Y,group,weights,K=2,type="sgrlasso",num.lbdseq=2,plot.it=FALSE)
-cv.lasso(X,Y,group,weights,K=2,type="grlasso",num.lbdseq=2,plot.it=FALSE)
+cv.lasso(X = X, Y = Y, group = group, weights = weights, K = 2,
+type = "grlasso", num.lbdseq = 2, plot.it = FALSE)
+cv.lasso(X = X, Y = Y, group = group, weights = weights, K = 2,
+type = "sgrlasso", num.lbdseq = 2, plot.it = FALSE)
 }

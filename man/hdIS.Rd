@@ -5,13 +5,13 @@
 \title{Compute importance weights for  lasso, group lasso, scaled lasso or
 scaled group lasso estimator under high-dimensional setting}
 \usage{
-hdIS(PBsample, pETarget, sig2Target, lbdTarget, TsA.method = "default",
+hdIS(PBsample, PETarget, sig2Target, lbdTarget, TsA.method = "default",
   log = TRUE, parallel = FALSE, ncores = 2L)
 }
 \arguments{
 \item{PBsample}{bootstrap samples of class \code{PB} from \code{\link{PBsampler}}.}
 
-\item{pETarget, sig2Target, lbdTarget}{parameters of target distribution.
+\item{PETarget, sig2Target, lbdTarget}{parameters of target distribution.
 (point estimate of beta or E(y), estimated variance of error and lambda)}
 
 \item{TsA.method}{method to construct T(eta(s),A) matrix. See Zhou and Min(2016)
@@ -22,7 +22,7 @@ for details.}
 \item{parallel}{logical. If \code{parallel = TRUE}, uses parallelization.
 Default is \code{parallel = FALSE}.}
 
-\item{ncores}{integer. The number of cores to use for the parallelization.}
+\item{ncores}{integer. The number of cores to use for parallelization.}
 }
 \value{
 importance weights of the proposed samples.
@@ -36,7 +36,7 @@ below for details.
 computes importance weights which is defined as \deqn{\frac{target
  density}{proposal density}}, when the samples are drawn from the proposal
  distribution with the function \code{\link{PBsampler}} while the parameters of
- the target distribution are (pETarget, sig2Target, lbdTarget).
+ the target distribution are (PETarget, sig2Target, lbdTarget).
 }
 \examples{
 set.seed(1234)
@@ -48,7 +48,7 @@ Weights <- rep(1, p/10)
 x <- matrix(rnorm(n*p), n)
 
 # Target distribution parameter
-pETarget <- rep(0, p)
+PETarget <- rep(0, p)
 sig2Target <- .5
 lbdTarget <- .37
 
@@ -56,14 +56,14 @@ lbdTarget <- .37
 # Using non-mixture distribution
 # ------------------------------
 ## Proposal distribution parameter
-pEProp1 <- rep(1, p)
+PEProp1 <- rep(1, p)
 sig2Prop1 <- .5
 lbdProp1 <- 1
-PB <- PBsampler(X = x, PE_1 = pEProp1, sig2_1 = sig2Prop1,
+PB <- PBsampler(X = x, PE_1 = PEProp1, sig2_1 = sig2Prop1,
  lbd_1 = lbdProp1, weights = Weights, group = Group, niter = Niter,
  type="grlasso", PEtype = "coeff")
 
-hdIS(PB, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+hdIS(PB, PETarget = PETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
  log = TRUE)
 
 #
@@ -74,14 +74,14 @@ hdIS(PB, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
 #  (coeff, sig2, lbd) = (rep(0,p), .5, .37) & (rep(1,p), 1, .5)
 #
 #
-pEProp1 <- rep(0,p); pEProp2 <- rep(1,p)
+PEProp1 <- rep(0,p); PEProp2 <- rep(1,p)
 sig2Prop1 <- .5; sig2Prop2 <- 1
 lbdProp1 <- .37; lbdProp2 <- .5
 
-PBMixture <- PBsampler(X = x, PE_1 = pEProp1,
- sig2_1 = sig2Prop1, lbd_1 = lbdProp1, PE_2 = pEProp2,
+PBMixture <- PBsampler(X = x, PE_1 = PEProp1,
+ sig2_1 = sig2Prop1, lbd_1 = lbdProp1, PE_2 = PEProp2,
  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
- niter = Niter, type="grlasso", PEtype = "coeff")
-hdIS(PBMixture, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+ niter = Niter, type = "grlasso", PEtype = "coeff")
+hdIS(PBMixture, PETarget = PETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
  log = TRUE)
 }

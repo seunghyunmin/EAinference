@@ -10,12 +10,12 @@ Weights <- rep(1, p)
 x <- matrix(rnorm(n*p), n)
 
 # Target distribution parameter
-pETarget <- rep(0,p)
+PETarget <- rep(0,p)
 sig2Target <- .5
 lbdTarget <- .37
 
 # Proposal distribution parameter
-pEProp1 <- rep(0, p) ;pEProp2 <- rep(1, p)
+PEProp1 <- rep(0, p) ;PEProp2 <- rep(1, p)
 sig2Prop1 <- .5; sig2Prop2 <- 1
 lbdProp1 <- .37; lbdProp2 <- .5
 
@@ -23,7 +23,7 @@ PB <- PBsampler(X = x, PE_1 = rep(1, p), sig2_1 = 1, lbd_1 = .5,
  weights = Weights, group = Group, niter = Niter, type = "lasso", PEtype = "coeff", parallel = FALSE)
 
 test_that("Low dimensional setting", {
-  expect_error(hdIS(PBsample = PB,pETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+  expect_error(hdIS(PBsample = PB,PETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
                     log = TRUE)
   , "High dimensional setting")
 })
@@ -31,7 +31,7 @@ test_that("Low dimensional setting", {
 class(PB) <- "list"
 
 test_that("Wrong class", {
-  expect_error(hdIS(PBsample = PB,pETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
+  expect_error(hdIS(PBsample = PB,PETarget = rep(0,p), sig2Target = .5, lbdTarget = .37,
                     log = TRUE)
                , "Use EAlasso::PBsampler")
 })
@@ -62,12 +62,12 @@ PBMixture4 <- PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = 1,
                         group = Group2, type = "slasso", PEtype = "coeff", niter = Niter, parallel = FALSE)
 
 test_that("Mixture under four types", {
-  expect_error(hdIS(PBsample = PBMixture1, pETarget = rep(0,p),
+  expect_error(hdIS(PBsample = PBMixture1, PETarget = rep(0,p),
     sig2Target = .5, lbdTarget = .37, log = TRUE), NA)
-  expect_error(hdIS(PBsample = PBMixture2, pETarget = rep(0,p),
+  expect_error(hdIS(PBsample = PBMixture2, PETarget = rep(0,p),
                     sig2Target = .5, lbdTarget = .37, log = TRUE), NA)
-  expect_error(hdIS(PBsample = PBMixture3, pETarget = rep(0,p),
+  expect_error(hdIS(PBsample = PBMixture3, PETarget = rep(0,p),
                     sig2Target = .5, lbdTarget = .37, log = TRUE), NA)
-  expect_error(hdIS(PBsample = PBMixture4, pETarget = rep(0,p),
+  expect_error(hdIS(PBsample = PBMixture4, PETarget = rep(0,p),
                     sig2Target = .5, lbdTarget = .37, log = TRUE), NA)
 })

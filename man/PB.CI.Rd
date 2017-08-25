@@ -16,7 +16,7 @@ PB.CI(object, alpha = 0.05, method = "debias", parallel = FALSE,
 
 \item{parallel}{logical. If \code{TRUE}, use parallelization. Default is \code{FALSE}.}
 
-\item{ncores}{integer. The number of cores to use for the parallelization.}
+\item{ncores}{integer. The number of cores to use for parallelization.}
 }
 \value{
 \code{(1-alpha)\%} confidence interval of each coefficients
@@ -39,7 +39,8 @@ Niter <-  10
 Group <- rep(1:(p/10), each = 10)
 Weights <- rep(1, p/10)
 X <- matrix(rnorm(n*p), n)
-object <- PBsampler(X,c(1,1,rep(0,p-2)),1,.5,niter=100,type="lasso")
+object <- PBsampler(X = X, PE_1 = c(1,1,rep(0,p-2)), sig2_1 = 1, lbd_1 = .5,
+niter = 100, type = "lasso")
 parallel <- (.Platform$OS.type != "windows")
 PB.CI(object = object, alpha = .05, method = "none")
 

@@ -4,8 +4,8 @@
 \alias{Lasso.MHLS}
 \title{Compute lasso estimator}
 \usage{
-Lasso.MHLS(X, Y, type = "lasso", lbd, group = 1:ncol(X), weights = rep(1,
-  max(group)), verbose = FALSE, ...)
+Lasso.MHLS(X, Y, type, lbd, group = 1:ncol(X), weights = rep(1, max(group)),
+  verbose = FALSE, ...)
 }
 \arguments{
 \item{X}{predictor matrix.}
@@ -40,28 +40,27 @@ See \code{\link{cv.lasso}} for details.}
 }
 \description{
 Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
-The outputs are coefficient-estimate and subgradient. If \code{type = "slasso"} or \code{type = "sgrlasso"},
-the output will include the sigma-estimate.
+The outputs are coefficient-estimate and subgradient. If \code{type = "slasso"}
+or \code{type = "sgrlasso"}, the output will include the sigma-estimate.
 }
 \details{
-Using gglasso package, provide lasso / group lasso solution along with
-subgradient. The loss function for group lasso is
-\deqn{L(\beta) = ||y-X\beta||^2 / (2n) + \lambda \sum_j ||\beta_(j)||,}
-where (j) is the index set of j-th group. If the size of the group is 1 for
-every group, it becomes lasso loss function.
+Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
+Users can specify the value of lbd or choose to run cross-validation to get
+optimal lambda in term of mean squared error.
 }
 \examples{
 set.seed(123)
 n <- 50
 p <- 10
-X <- matrix(rnorm(n*p),n)
-Y <- X \%*\% c(1,1,rep(0,p-2)) + rnorm(n)
+X <- matrix(rnorm(n*p), n)
+Y <- X \%*\% c(1, 1, rep(0, p-2)) + rnorm(n)
 #
 # lasso
 #
-Lasso.MHLS(X = X,Y = Y,lbd = .5)
+Lasso.MHLS(X = X, Y = Y, type = "lasso", lbd = .5)
 #
 # group lasso
 #
-Lasso.MHLS(X = X,Y = Y, type="grlasso", lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
+Lasso.MHLS(X = X, Y = Y, type = "grlasso", lbd = .5, weights = rep(1,2),
+group = rep(1:2, each=5))
 }

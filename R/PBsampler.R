@@ -24,7 +24,7 @@
 #' @param Y response vector. This is only required when \code{Btype = "wild"}.
 #' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
 #' Default is \code{parallel = FALSE}.
-#' @param ncores integer. The number of cores to use for the parallelization.
+#' @param ncores integer. The number of cores to use for parallelization.
 #' @param verbose logical. This works only when
 #'  \code{parallel = FALSE}.
 #'
@@ -295,14 +295,14 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
 
 #' @title Provide \code{(1-alpha)\%} confidence interval of each coefficients
 #'
-#' @description Using samples drawn by \code{\link{PBsampler}}, compute
+#' @description Using samples drawn by \code{\link{PBsampler}}, computes
 #' \code{(1-alpha)\%} confidence interval of each coefficient.
 #'
-#' @param object Bootstrap samples of class \code{PB} from \code{\link{PBsampler}}
+#' @param object bootstrap samples of class \code{PB} from \code{\link{PBsampler}}
 #' @param alpha significance level.
 #' @param method bias-correction method. Either to be "none" or "debias".
 #' @param parallel logical. If \code{TRUE}, use parallelization. Default is \code{FALSE}.
-#' @param ncores integer. The number of cores to use for the parallelization.
+#' @param ncores integer. The number of cores to use for parallelization.
 #'
 #' @details If \code{method==none}, \code{\link{PB.CI}} simply compute
 #' the two-soded \code{(1-alpha)} quantile of the sampled coefficients.
@@ -324,7 +324,8 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
 #' Group <- rep(1:(p/10), each = 10)
 #' Weights <- rep(1, p/10)
 #' X <- matrix(rnorm(n*p), n)
-#' object <- PBsampler(X,c(1,1,rep(0,p-2)),1,.5,niter=100,type="lasso")
+#' object <- PBsampler(X = X, PE_1 = c(1,1,rep(0,p-2)), sig2_1 = 1, lbd_1 = .5,
+#' niter = 100, type = "lasso")
 #' parallel <- (.Platform$OS.type != "windows")
 #' PB.CI(object = object, alpha = .05, method = "none")
 #'

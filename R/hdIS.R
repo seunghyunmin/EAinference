@@ -6,19 +6,19 @@
 #' below for details.
 #'
 #' @param PBsample bootstrap samples of class \code{PB} from \code{\link{PBsampler}}.
-#' @param pETarget,sig2Target,lbdTarget parameters of target distribution.
+#' @param PETarget,sig2Target,lbdTarget parameters of target distribution.
 #' (point estimate of beta or E(y), estimated variance of error and lambda)
 #' @param TsA.method method to construct T(eta(s),A) matrix. See Zhou and Min(2016)
 #' for details.
 #' @param log logical. If \code{log = TRUE}, importance weight is computed in log scale.
 #' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
 #' Default is \code{parallel = FALSE}.
-#' @param ncores integer. The number of cores to use for the parallelization.
+#' @param ncores integer. The number of cores to use for parallelization.
 #'
 #' @details computes importance weights which is defined as \deqn{\frac{target
 #'  density}{proposal density}}, when the samples are drawn from the proposal
 #'  distribution with the function \code{\link{PBsampler}} while the parameters of
-#'  the target distribution are (pETarget, sig2Target, lbdTarget).
+#'  the target distribution are (PETarget, sig2Target, lbdTarget).
 #'
 #' @return importance weights of the proposed samples.
 #'
@@ -32,7 +32,7 @@
 #' x <- matrix(rnorm(n*p), n)
 #'
 #' # Target distribution parameter
-#' pETarget <- rep(0, p)
+#' PETarget <- rep(0, p)
 #' sig2Target <- .5
 #' lbdTarget <- .37
 #'
@@ -40,15 +40,15 @@
 #' # Using non-mixture distribution
 #' # ------------------------------
 #' ## Proposal distribution parameter
-#' pEProp1 <- rep(1, p)
+#' PEProp1 <- rep(1, p)
 #' sig2Prop1 <- .5
 #' lbdProp1 <- 1
 
-#' PB <- PBsampler(X = x, PE_1 = pEProp1, sig2_1 = sig2Prop1,
+#' PB <- PBsampler(X = x, PE_1 = PEProp1, sig2_1 = sig2Prop1,
 #'  lbd_1 = lbdProp1, weights = Weights, group = Group, niter = Niter,
 #'  type="grlasso", PEtype = "coeff")
 #'
-#' hdIS(PB, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+#' hdIS(PB, PETarget = PETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
 #'  log = TRUE)
 #'
 #' #
@@ -59,18 +59,18 @@
 #' #  (coeff, sig2, lbd) = (rep(0,p), .5, .37) & (rep(1,p), 1, .5)
 #' #
 #' #
-#' pEProp1 <- rep(0,p); pEProp2 <- rep(1,p)
+#' PEProp1 <- rep(0,p); PEProp2 <- rep(1,p)
 #' sig2Prop1 <- .5; sig2Prop2 <- 1
 #' lbdProp1 <- .37; lbdProp2 <- .5
 #'
-#' PBMixture <- PBsampler(X = x, PE_1 = pEProp1,
-#'  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, PE_2 = pEProp2,
+#' PBMixture <- PBsampler(X = x, PE_1 = PEProp1,
+#'  sig2_1 = sig2Prop1, lbd_1 = lbdProp1, PE_2 = PEProp2,
 #'  sig2_2 = sig2Prop2, lbd_2 = lbdProp2, weights = Weights, group = Group,
-#'  niter = Niter, type="grlasso", PEtype = "coeff")
-#' hdIS(PBMixture, pETarget = pETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
+#'  niter = Niter, type = "grlasso", PEtype = "coeff")
+#' hdIS(PBMixture, PETarget = PETarget, sig2Target = sig2Target, lbdTarget = lbdTarget,
 #'  log = TRUE)
 #' @export
-hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
+hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
             TsA.method = "default", log = TRUE, parallel = FALSE, ncores = 2L)
 {
 
@@ -78,7 +78,7 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
     stop("Use EAlasso::PBsampler to generate Bootstrap samples")
   }
 
-  if (any(missing(pETarget), missing(sig2Target), missing(lbdTarget))) {
+  if (any(missing(PETarget), missing(sig2Target), missing(lbdTarget))) {
     stop("provide all the parameters for the target distribution")
   }
 
@@ -107,16 +107,16 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
   if (Btype == "wild") {
     Y <- PBsample$Y
     if (PEtype == "coeff") {
-      resTarget <- Y - X%*%pETarget
-      resProp1 <- Y - X%*%pEProp1
+      resTarget <- Y - X%*%PETarget
+      resProp1 <- Y - X%*%PEProp1
       if (Mixture) {
-        resProp2 <- Y - X%*%pEProp2
+        resProp2 <- Y - X%*%PEProp2
       }
     } else {
-      resTarget <- Y - pETarget
-      resProp1 <- Y - pEProp1
+      resTarget <- Y - PETarget
+      resProp1 <- Y - PEProp1
       if (Mixture) {
-        resProp2 <- Y - pEProp2
+        resProp2 <- Y - PEProp2
       }
     }
     resTarget <- resTarget - mean(resTarget)
@@ -127,14 +127,14 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
   }
 
   if (Mixture) {
-    pEProp1 <- PBsample$PE[1,]
-    pEProp2 <- PBsample$PE[2,]
+    PEProp1 <- PBsample$PE[1,]
+    PEProp2 <- PBsample$PE[2,]
     sig2Prop1 <- PBsample$sig2[1]
     sig2Prop2 <- PBsample$sig2[2]
     lbdProp1 <- PBsample$lbd[1]
     lbdProp2 <- PBsample$lbd[2]
   } else {
-    pEProp1 <- PBsample$PE
+    PEProp1 <- PBsample$PE
     sig2Prop1 <- PBsample$sig2
     lbdProp1 <- lbdProp2 <- PBsample$lbd
   }
@@ -169,16 +169,16 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
       LBD <- LBDprop <- diag(egC$values[R])
       VRW <- VRWprop <- t(VR)%*%W
       if (PEtype == "coeff") {
-        VRCB     <- t(VR) %*% C %*% pETarget
-        VRCBprop1 <- t(VR) %*% C %*% pEProp1
+        VRCB     <- t(VR) %*% C %*% PETarget
+        VRCBprop1 <- t(VR) %*% C %*% PEProp1
         if (Mixture) {
-          VRCBprop2 <- t(VR) %*% C %*% pEProp2
+          VRCBprop2 <- t(VR) %*% C %*% PEProp2
         }
       } else {
-        VRCB     <- t(VR) %*% t(X) %*% pETarget / n
-        VRCBprop1 <- t(VR) %*% t(X) %*% pEProp1 / n
+        VRCB     <- t(VR) %*% t(X) %*% PETarget / n
+        VRCBprop1 <- t(VR) %*% t(X) %*% PEProp1 / n
         if (Mixture) {
-          VRCBprop2 <- t(VR) %*% t(X) %*% pEProp2 / n
+          VRCBprop2 <- t(VR) %*% t(X) %*% PEProp2 / n
         }
       }
 
@@ -284,16 +284,16 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
         Subgrad <- S[x,]
         if (n < p) {
           if (PEtype == "coeff") {
-            H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pETarget) + lbdTarget * W * Subgrad) #H.tilde
-            H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp1) + lbdProp1 * W * Subgrad) #H.tilde proposed1
+            H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - PETarget) + lbdTarget * W * Subgrad) #H.tilde
+            H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - PEProp1) + lbdProp1 * W * Subgrad) #H.tilde proposed1
             if (Mixture) {
-              H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp2) + lbdProp2 * W * Subgrad) #H.tilde proposed2
+              H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - PEProp2) + lbdProp2 * W * Subgrad) #H.tilde proposed2
             }
           } else {
-            H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdTarget * W * Subgrad) - pETarget / sqrt(n) #H.tilde
-            H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp1 * W * Subgrad) - pEProp1 / sqrt(n)  #H.tilde proposed1
+            H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdTarget * W * Subgrad) - PETarget / sqrt(n) #H.tilde
+            H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp1 * W * Subgrad) - PEProp1 / sqrt(n)  #H.tilde proposed1
             if (Mixture) {
-              H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp2 * W * Subgrad) - pEProp2 / sqrt(n)   #H.tilde proposed2
+              H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta + lbdProp2 * W * Subgrad) - PEProp2 / sqrt(n)   #H.tilde proposed2
             }
           }
 
@@ -348,13 +348,13 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
         }
         # else {
         #   if (PEtype == "coeff") {
-        #     H.target <- Psi %*% (Beta - pETarget) + lbdTarget * W * Subgrad #H.tilde
-        #     H.prop1 <-  Psi %*% (Beta - pEProp1) + lbdProp1 * W * Subgrad #H.tilde proposed1
-        #     if (Mixture) H.prop2 <-  Psi %*% (Beta - pEProp2) + lbdProp2 * W * Subgrad #H.tilde proposed2
+        #     H.target <- Psi %*% (Beta - PETarget) + lbdTarget * W * Subgrad #H.tilde
+        #     H.prop1 <-  Psi %*% (Beta - PEProp1) + lbdProp1 * W * Subgrad #H.tilde proposed1
+        #     if (Mixture) H.prop2 <-  Psi %*% (Beta - PEProp2) + lbdProp2 * W * Subgrad #H.tilde proposed2
         #   } else {
-        #     H.target <- Psi %*% Beta + lbdTarget * W * Subgrad - t(X) %*% pETarget / n #H.tilde
-        #     H.prop1 <-  Psi %*% Beta + lbdProp1 * W * Subgrad - t(X) %*% pEProp1 / n  #H.tilde proposed1
-        #     if (Mixture) H.prop2 <-  Psi %*% Beta + lbdProp2 * W * Subgrad - t(X) %*% pEProp2 / n  #H.tilde proposed2
+        #     H.target <- Psi %*% Beta + lbdTarget * W * Subgrad - t(X) %*% PETarget / n #H.tilde
+        #     H.prop1 <-  Psi %*% Beta + lbdProp1 * W * Subgrad - t(X) %*% PEProp1 / n  #H.tilde proposed1
+        #     if (Mixture) H.prop2 <-  Psi %*% Beta + lbdProp2 * W * Subgrad - t(X) %*% PEProp2 / n  #H.tilde proposed2
         #   }
         #
         #   r <- group.norm2(Beta, group)
@@ -447,22 +447,22 @@ hdIS=function(PBsample, pETarget, sig2Target, lbdTarget,
       Subgrad <- S[x,]
       hatSigma <- hSigma[x]
       if (PEtype == "coeff") {
-        H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pETarget) +
+        H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - PETarget) +
                                                    lbdTarget * hatSigma * W * Subgrad) #H.tilde
-        H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp1) +
+        H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - PEProp1) +
                                                   lbdProp1 * hatSigma * W * Subgrad) #H.tilde proposed1
         if (Mixture) {
-          H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - pEProp2) +
+          H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% (Beta - PEProp2) +
                                                     lbdProp2 * hatSigma * W * Subgrad) #H.tilde proposed2
         }
       } else {
         H.tilde.target <- sqrt(n) * ginv.tX %*% (Psi %*% Beta +
-                                                   lbdTarget * hatSigma * W * Subgrad) - pETarget / sqrt(n) #H.tilde
+                                                   lbdTarget * hatSigma * W * Subgrad) - PETarget / sqrt(n) #H.tilde
         H.tilde.prop1 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta +
-                                                  lbdProp1 * hatSigma * W * Subgrad) - pEProp1 / sqrt(n)  #H.tilde proposed1
+                                                  lbdProp1 * hatSigma * W * Subgrad) - PEProp1 / sqrt(n)  #H.tilde proposed1
         if (Mixture) {
           H.tilde.prop2 <- sqrt(n) * ginv.tX %*% (Psi %*% Beta +
-                                                    lbdProp2 * hatSigma * W * Subgrad) - pEProp2 / sqrt(n)   #H.tilde proposed2
+                                                    lbdProp2 * hatSigma * W * Subgrad) - PEProp2 / sqrt(n)   #H.tilde proposed2
         }
       }
 

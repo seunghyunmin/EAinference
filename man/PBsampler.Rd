@@ -42,7 +42,7 @@ is \code{"gaussian"}.}
 \item{parallel}{logical. If \code{parallel = TRUE}, uses parallelization.
 Default is \code{parallel = FALSE}.}
 
-\item{ncores}{integer. The number of cores to use for the parallelization.}
+\item{ncores}{integer. The number of cores to use for parallelization.}
 
 \item{verbose}{logical. This works only when
 \code{parallel = FALSE}.}

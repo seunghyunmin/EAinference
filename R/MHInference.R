@@ -1,8 +1,8 @@
 #' @title Compute lasso estimator
 #'
 #' @description Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
-#' The outputs are coefficient-estimate and subgradient. If \code{type = "slasso"} or \code{type = "sgrlasso"},
-#' the output will include the sigma-estimate.
+#' The outputs are coefficient-estimate and subgradient. If \code{type = "slasso"}
+#' or \code{type = "sgrlasso"}, the output will include the sigma-estimate.
 #'
 #' @param X predictor matrix.
 #' @param Y response vector.
@@ -20,11 +20,9 @@
 #' @param ... auxiliary arguments for \code{lbd = "cv.min", lbd = "cv.1se"}.
 #' See \code{\link{cv.lasso}} for details.
 #' @details
-#' Using gglasso package, provide lasso / group lasso solution along with
-#' subgradient. The loss function for group lasso is
-#' \deqn{L(\beta) = ||y-X\beta||^2 / (2n) + \lambda \sum_j ||\beta_(j)||,}
-#' where (j) is the index set of j-th group. If the size of the group is 1 for
-#' every group, it becomes lasso loss function.
+#' Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
+#' Users can specify the value of lbd or choose to run cross-validation to get
+#' optimal lambda in term of mean squared error.
 #'
 #' @return \item{B0}{coefficient estimator.}
 #' @return \item{S0}{subgradient.}
@@ -33,18 +31,19 @@
 #' set.seed(123)
 #' n <- 50
 #' p <- 10
-#' X <- matrix(rnorm(n*p),n)
-#' Y <- X %*% c(1,1,rep(0,p-2)) + rnorm(n)
+#' X <- matrix(rnorm(n*p), n)
+#' Y <- X %*% c(1, 1, rep(0, p-2)) + rnorm(n)
 #' #
 #' # lasso
 #' #
-#' Lasso.MHLS(X = X,Y = Y,lbd = .5)
+#' Lasso.MHLS(X = X, Y = Y, type = "lasso", lbd = .5)
 #' #
 #' # group lasso
 #' #
-#' Lasso.MHLS(X = X,Y = Y, type="grlasso", lbd = .5,weights = rep(1,2),group=rep(1:2,each=5))
+#' Lasso.MHLS(X = X, Y = Y, type = "grlasso", lbd = .5, weights = rep(1,2),
+#' group = rep(1:2, each=5))
 #' @export
-Lasso.MHLS <- function(X, Y, type = "lasso", lbd,
+Lasso.MHLS <- function(X, Y, type, lbd,
   group=1:ncol(X), weights=rep(1,max(group)), verbose = FALSE, ...)
 {
   n <- nrow(X)
@@ -153,7 +152,7 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd,
 #' @param niterPerChain the number of iterations per chain.
 #' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
 #' Default is \code{parallel = FALSE}.
-#' @param ncores integer. The number of cores to use for the parallelization.
+#' @param ncores integer. The number of cores to use for parallelization.
 #' @param returnSamples logical. If \code{returnSamples = TRUE}, print Metropolis-Hastings samples.
 #' @param ... auxiliary \code{\link{MHLS}} arguments.
 #' @details
@@ -176,10 +175,10 @@ Lasso.MHLS <- function(X, Y, type = "lasso", lbd,
 #' sig2 <- 1
 #' lbd <- .37
 #' weights <- rep(1,p)
-#' Postinference.MHLS(X, Y, lbd, sig2.hat=1, alpha=.05, nChain=3,
-#' niterPerChain=20, parallel=TRUE)
-#' Postinference.MHLS(X, Y, lbd, sig2.hat=1, alpha=.05, nChain=3,
-#' niterPerChain=20, parallel=TRUE, returnSamples=TRUE)
+#' Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+#' nChain = 3, niterPerChain = 20, parallel = TRUE)
+#' Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+#' nChain = 3, niterPerChain = 20, parallel = TRUE, returnSamples = TRUE)
 #' @export
 Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   tau = rep(1, ncol(X)), sig2.hat, alpha = .05, nChain = 10,
