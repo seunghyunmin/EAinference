@@ -1131,3 +1131,4 @@ ErrorParallel <- function(parallel, ncores) {
   return(list(parallel=parallel,ncores=ncores))
 }
 
+# test
