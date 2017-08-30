@@ -70,7 +70,7 @@ Lasso.MHLS <- function(X, Y, type, lbd,
   if (verbose) {cat("# Cross-validation \n")}
   if (lbd %in% c("cv.1se", "cv.min")) {
     lbdTEMP <- cv.lasso(X = X, Y = Y, group = group, weights = weights,
-                    type = type, plot.it = FALSE, verbose=verbose, ...)
+                    type = type, verbose=verbose, ...)
     if (lbd == "cv.1se") {lbd <- lbdTEMP$lbd.1se} else {
       lbd <- lbdTEMP$lbd.min
     }
