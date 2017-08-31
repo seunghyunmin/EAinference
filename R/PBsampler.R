@@ -1,4 +1,4 @@
-#' @title Parametric Bootstrapping for lasso, group lasso, scaled lasso or scaled group lasso estimator
+#' @title Parametric Bootstrap sampler for lasso, group lasso, scaled lasso or scaled group lasso estimator
 #'
 #' @description Draw guassian bootstrap or wild multiplier bootstrap samples to
 #' derive the lasso estimator along with its subgradient.
