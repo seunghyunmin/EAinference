@@ -365,7 +365,8 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
                                        lbd * W * t(S)) * n # n x niter matrix
 
     hdiFit <- hdi::lasso.proj(x = X, y = X %*% rep(1,p) + rnorm(n),
-                              standardize = FALSE, parallel = TRUE, return.Z = TRUE)
+                              standardize = FALSE, parallel = parallel,
+                              ncores = ncores, return.Z = TRUE)
     Z <- hdiFit$Z
 
     ZrefitY <- crossprod(Z, refitY) # p x niter
