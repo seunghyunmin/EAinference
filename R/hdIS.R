@@ -20,6 +20,13 @@
 #'  distribution with the function \code{\link{PBsampler}} while the parameters of
 #'  the target distribution are (PETarget, sig2Target, lbdTarget).
 #'
+#' @references
+#' Zhou, Q. (2014), "Monte Carlo simulation for Lasso-type problems by estimator augmentation,"
+#' Journal of the American Statistical Association, 109, 1495-1516.
+#'
+#' Zhou, Q. and Min, S. (2017), "Estimator augmentation with applications in
+#' high-dimensional group inference," Electronic Journal of Statistics, 11(2), 3039-3080.
+#'
 #' @return importance weights of the proposed samples.
 #'
 #' @examples

@@ -48,11 +48,11 @@
 #' See Zhou(2014) and Zhou and Min(2016) for details.
 #'
 #' @references
-#' Zhou, Q. (2014). Monte Carlo simulation for Lasso-type problems by estimator augmentation.
+#' Zhou, Q. (2014), "Monte Carlo simulation for Lasso-type problems by estimator augmentation,"
 #' Journal of the American Statistical Association, 109, 1495-1516.
 #'
-#' Zhou, Q. and Min, S. (2017). Estimator augmentation with applications in
-#' high-dimensional group inference. Electronic Journal of Statistics, 11(2), 3039-3080.
+#' Zhou, Q. and Min, S. (2017), "Estimator augmentation with applications in
+#' high-dimensional group inference," Electronic Journal of Statistics, 11(2), 3039-3080.
 #'
 #' @return \item{beta}{coefficient estimate.}
 #' @return \item{subgrad}{subgradient.}
@@ -312,9 +312,13 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
 #' @return \code{(1-alpha)\%} confidence interval of each coefficients
 #'
 #' @references
-#' Zhang, C., Zhang, S. (2014) Confidence intervals for low dimensional
-#' parameters in high dimensional linear models. Journal of the Royal
-#' Statistical Society: Series B 76, 217–242.
+#' Zhang, C., Zhang, S. (2014), "Confidence intervals for low dimensional
+#' parameters in high dimensional linear models," Journal of the Royal
+#' Statistical Society: Series B, 76, 217–242.
+#'
+#' Dezeure, R., Buehlmann, P., Meier, L. and Meinshausen, N. (2015),
+#' "High-Dimensional Inference: Confidence Intervals, p-values and R-Software hdi,"
+#' Statistical Science, 30(4), 533-558
 #'
 #' @examples
 #' set.seed(1234)
