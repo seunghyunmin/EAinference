@@ -364,16 +364,16 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
     refitY <- solve(X%*%t(X))%*%X %*% (crossprod(X) %*% t(B) / n +
                                        lbd * W * t(S)) * n # n x niter matrix
 
-    # Compute Z matrix, see Zhang, C. H. and Zhang S. S. (2014) JRSSB
-    nodewiselasso.out <- score.nodewiselasso(x = X,
-                                             parallel = parallel,
-                                             ncores = ncores)
-    Z <- nodewiselasso.out$out$Z
-    scaleZ <- nodewiselasso.out$out$scaleZ
-    Z <- scale(Z,center=FALSE,scale=1/scaleZ)
-    #hdiFit <- hdi::lasso.proj(x = X, y = refitY[,1], standardize = FALSE, parallel = TRUE, return.Z = TRUE)
-    #Z <- hdiFit$Z
-    #hdiFit$bhat
+    # # Compute Z matrix, see Zhang, C. H. and Zhang S. S. (2014) JRSSB
+    # nodewiselasso.out <- score.nodewiselasso(x = X,
+    #                                          parallel = parallel,
+    #                                          ncores = ncores)
+    # Z <- nodewiselasso.out$out$Z
+    # scaleZ <- nodewiselasso.out$out$scaleZ
+    # Z <- scale(Z,center=FALSE,scale=1/scaleZ)
+    hdiFit <- hdi::lasso.proj(x = X, y = X %*% rep(1,p) + rnorm(n),
+                              standardize = FALSE, parallel = TRUE, return.Z = TRUE)
+    Z <- hdiFit$Z
 
     ZrefitY <- crossprod(Z, refitY) # p x niter
     ZX <- colSums(Z * X) # length p

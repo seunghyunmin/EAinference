@@ -46,7 +46,11 @@ PB.CI(object = object, alpha = .05, method = "none")
 
 }
 \references{
-Zhang, C., Zhang, S. (2014) Confidence intervals for low dimensional
-parameters in high dimensional linear models. Journal of the Royal
-Statistical Society: Series B 76, 217–242.
+Zhang, C., Zhang, S. (2014), "Confidence intervals for low dimensional
+parameters in high dimensional linear models," Journal of the Royal
+Statistical Society: Series B, 76, 217–242.
+
+Dezeure, R., Buehlmann, P., Meier, L. and Meinshausen, N. (2015),
+"High-Dimensional Inference: Confidence Intervals, p-values and R-Software hdi,"
+Statistical Science, 30(4), 533-558
 }

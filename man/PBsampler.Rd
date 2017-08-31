@@ -2,7 +2,7 @@
 % Please edit documentation in R/PBsampler.R
 \name{PBsampler}
 \alias{PBsampler}
-\title{Parametric Bootstrapping for lasso, group lasso, scaled lasso or scaled group lasso estimator}
+\title{Parametric Bootstrap sampler for lasso, group lasso, scaled lasso or scaled group lasso estimator}
 \usage{
 PBsampler(X, PE_1, sig2_1, lbd_1, PE_2, sig2_2, lbd_2, weights = rep(1,
   max(group)), group = 1:ncol(X), niter = 2000, type, PEtype = "coeff",
@@ -103,9 +103,9 @@ PBsampler(X = x, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
  group = Group, type = "grlasso", niter = Niter, parallel = TRUE)
 }
 \references{
-Zhou, Q. (2014). Monte Carlo simulation for Lasso-type problems by estimator augmentation.
+Zhou, Q. (2014), "Monte Carlo simulation for Lasso-type problems by estimator augmentation,"
 Journal of the American Statistical Association, 109, 1495-1516.
 
-Zhou, Q. and Min, S. (2017). Estimator augmentation with applications in
-high-dimensional group inference. Electronic Journal of Statistics, 11(2), 3039-3080.
+Zhou, Q. and Min, S. (2017), "Estimator augmentation with applications in
+high-dimensional group inference," Electronic Journal of Statistics, 11(2), 3039-3080.
 }

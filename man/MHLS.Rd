@@ -115,9 +115,9 @@ MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1,
      PEtype = "mu")
 }
 \references{
-Zhou, Q. (2014). Monte Carlo simulation for Lasso-type problems by estimator augmentation.
+Zhou, Q. (2014), "Monte Carlo simulation for Lasso-type problems by estimator augmentation,"
 Journal of the American Statistical Association, 109, 1495-1516.
 
-Zhou, Q. and Min, S. (2017). Estimator augmentation with applications in
-high-dimensional group inference. Electronic Journal of Statistics, 11(2), 3039-3080.
+Zhou, Q. and Min, S. (2017), "Estimator augmentation with applications in
+high-dimensional group inference," Electronic Journal of Statistics, 11(2), 3039-3080.
 }
