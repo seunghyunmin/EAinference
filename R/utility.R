@@ -508,7 +508,7 @@ rUnitBall.surface <- function(p) {
 rUnitBall <- function(p) {
   x <- rnorm(p,,1/sqrt(2));
   y <- rexp(1)
-  x / sqrt(y+crossprod(x))
+  x / c(sqrt(y+crossprod(x)))
 }
 # hd.Update.r <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,tau) {}
 # hd.Update.S <- function(rcur,Scur,A,Hcur,X,coeff,Psi,W,lbd,group,inv.Var,p) {}
@@ -659,4 +659,234 @@ ErrorParallel <- function(parallel, ncores) {
   return(list(parallel=parallel,ncores=ncores))
 }
 
-# test
+
+#-------------------------------------------
+# Utility functions for MHInference
+#-------------------------------------------
+#Propose mu hat from 95% region
+PluginMu.MHLS <- function(X, Y, lbd, ratioSeq = seq(0,2,by=0.01), alpha = 0.05
+                          , nChain, niter = 100
+                          , parallel = FALSE, ncores = 2) {
+  n <- length(Y)
+  n1 <- round(n/2)
+  n2 <- n - n1
+  muhat <- matrix(,nChain,n)
+
+  FF <- function(x) {
+    muhat <- numeric(n)
+    Index <- sort(sample(n, n1))
+    #print(Index)
+    X1 <- X[Index,]
+    X2 <- X[-Index,]
+    Y1 <- Y[Index]
+    Y2 <- Y[-Index]
+    TEMP <- projStein(X1, X2, Y1, Y2, lbd = lbd, ratios = ratioSeq,
+                      alpha=alpha, niter=niter, fixSeed = FALSE)
+    muhat[-Index] <- TEMP$mu_s + rUnitBall(n1) * TEMP$r_s + TEMP$mu_w + rUnitBall(n1) * TEMP$r_w
+    TEMP <- projStein(X2, X1, Y2, Y1, lbd = lbd, ratios = ratioSeq,
+                      alpha=alpha, niter=niter, fixSeed = FALSE)
+    muhat[Index] <- TEMP$mu_s + rUnitBall(n2) * TEMP$r_s + TEMP$mu_w + rUnitBall(n2) * TEMP$r_w
+    return(muhat)
+  }
+
+  # returns nChain by p matrix
+  return(t(parallel::mcmapply(FF,1:nChain,mc.cores = ncores)))
+
+  # for (i in 1:nChain) {
+  #   Index <- sort(sample(n, n1))
+  #   #print(Index)
+  #   X1 <- X[Index,]
+  #   X2 <- X[-Index,]
+  #   Y1 <- Y[Index]
+  #   Y2 <- Y[-Index]
+  #   TEMP <- projStein(X1, X2, Y1, Y2, lbd = lbd, ratios = ratioSeq,
+  #                     alpha=alpha, niter=niter, fixSeed = FALSE)
+  #   muhat[i,-Index] <- TEMP$mu_s + rUnitBall(n1) * TEMP$r_s + TEMP$mu_w + rUnitBall(n1) * TEMP$r_w
+  #   TEMP <- projStein(X2, X1, Y2, Y1, lbd = lbd, ratios = ratioSeq,
+  #                     alpha=alpha, niter=niter, fixSeed = FALSE)
+  #   muhat[i,Index] <- TEMP$mu_s + rUnitBall(n2) * TEMP$r_s + TEMP$mu_w + rUnitBall(n2) * TEMP$r_w
+  # }
+}
+
+#library(glmnet)
+####################################################
+
+# Shrink Y towards zero by Stein estimate
+# Y: n*1 matrix
+# df: degress of freedom
+# return: list(mu: estimate of true mu, L: sure (stein unbiased risk estimate))
+
+ShrinkToZeroStein <- function(Y, df)
+{
+  B <- df / sum(Y^2)
+  return(list(mu = (1 - B) * Y, L = max(1 - B, 0)))
+}
+
+####################################################
+
+# calculate c(alpha)
+# mu: n*1 matrix
+# df: degress of freedom
+# quantile:
+# proj: identity matrix by default or a n*n matrix
+# niter
+# return: the quantile of c(alpha) in Professor's note
+
+####################################################
+quantile_stein <- function(mu, df, quantile, proj = NULL, niter = 100)
+{
+  #n = dim(mu)[1]
+  n <- length(mu)
+  if (is.null(proj)) {proj <- diag(n)}
+  z <- numeric(niter)
+  for (i in 1:niter)
+  {
+    Y_prime <- mu + proj %*% matrix(rnorm(n), ncol = 1)
+    res <- ShrinkToZeroStein(Y_prime, df)
+    z[i] <- res$L - sum((res$mu - mu)^2) / df
+  }
+  c <- quantile(abs(z) * sqrt(df), probs = quantile)
+  return(c)
+}
+####################################################
+
+# We split X and Y into 2 pieces. (X1, X2) (Y1, Y2).
+# Use (X1,Y1) to get the active set A
+# Then draw inference using (X2, Y2).
+
+# Given a sequence of ratios, X, Y, lbd, calculate r_s r_w, mu_s mu_w which minimize volumne
+# X1, X2: n*p matrx
+# Y1, Y2: n*1 matrix
+# lbd: tunning parameter, lambda, in lasso
+# ratios: a sequence of ratios of tau against lambda (tau the threshold value of \hat{beta})
+# alpha:
+# niter:
+# return: list(r_s, r_w, mu_s, mu_w)
+projStein <- function(X1, X2, Y1, Y2, lbd, ratios, alpha = 0.05,
+                      niter = 100, fixSeed = TRUE)
+{
+  # apply lasso regression of Y onto X
+  n1 <- nrow(X1)
+  n2 <- nrow(X2)
+  #lassomodel <- glmnet::glmnet(X1, Y1, family = 'gaussian', intercept = F, lambda = lbd)
+
+  #lassomodel <- glmnet::glmnet(X1, Y1, family = 'gaussian', intercept = F, lambda = lbd,
+  #                              standardize = FALSE)$beta
+  B0 <- Lasso.MHLS(X = X1, Y = Y1, type = "lasso", lbd = lbd)$B0
+
+  # estimate c by A=0
+  stein <- ShrinkToZeroStein(Y2, n2)
+  if (fixSeed) {set.seed(123)}
+  c <- quantile_stein(stein$mu, n2, 1-alpha/2, niter = niter) # Why 1-alpha/2 instead of 1-alpha?
+
+  # information along ratios
+  r_s_ratio <- r_w_ratio <- logVol_ratio <- numeric(length(ratios))
+
+  for (i in 1:length(ratios))
+  {
+    A <- which(abs(B0) > ratios[i] * lbd)
+    if (length(A) != 0)
+    {
+      r_s_ratio[i] <- sqrt(qchisq(1-alpha/2, df = length(A)) / n2)
+      P_A <- X2[,A] %*% solve(t(X2[,A]) %*% X2[,A]) %*% t(X2[,A])
+      P_perp <- diag(n2) - P_A
+    } else
+    {
+      r_s_ratio[i] <- 0
+      P_perp <- diag(n2)
+    }
+    nMinusA <- n2 - length(A)
+
+    stein <- ShrinkToZeroStein(P_perp %*% Y2, nMinusA)
+    r_w_ratio[i] <- sqrt(nMinusA / n2 * (c / sqrt(nMinusA) + stein$L))
+
+    #update r_s_ratio r_w_ratio if r_s_ratio exists and calculate volume
+    if (length(A) != 0)
+    {
+      r_s_ratio[i] <- r_s_ratio[i] * sqrt(n2 / length(A))
+      r_w_ratio[i] <- r_w_ratio[i] * sqrt(n2 / (n2 - length(A)))
+      logVol_ratio[i] <- length(A) * log(r_s_ratio[i]) + nMinusA * log(r_w_ratio[i])
+    } else
+    {
+      logVol_ratio[i] <- nMinusA * log(r_w_ratio[i])
+    }
+  }
+  # information of minimum volume
+  i <- which.min(logVol_ratio)
+  A <- which(abs(B0) > ratios[i] * lbd)
+  # compute mu_s
+  if (length(A) != 0)
+  {
+    P_A <- X2[,A] %*% solve(t(X2[,A]) %*% X2[,A]) %*% t(X2[,A])
+    mu_s <- P_A %*% Y2
+    P_perp <- diag(n2) - P_A
+  } else
+  {
+    mu_s <- 0
+    P_perp <- diag(n2)
+  }
+  # compute mu_w
+  stein <- ShrinkToZeroStein(P_perp %*% Y2, n2 - length(A))
+  mu_w <- stein$mu
+
+  result <- list(r_s = r_s_ratio[i], r_w = r_w_ratio[i], mu_s = mu_s, mu_w = mu_w)
+  return(result)
+}
+
+
+# Refit the beta estimator to remove the bias
+Refit.MHLS <- function(X,weights,lbd,MHsample) {
+  # W : diag(weights)
+  # MHsample : MH samples from MHLS function
+  n <- nrow(X)
+  # Active set
+  A <- which(MHsample$beta[1,]!=0)
+  # Recover y using KKT condition
+  Y.MH <- solve(X%*%t(X))%*%X %*% (crossprod(X) %*% t(MHsample$beta) / n +
+                                     lbd * weights * t(MHsample$subgrad)) * n
+  # Refit y to the restricted set of X
+  beta.refit <- solve(t(X[,A])%*%X[,A])%*%t(X[,A]) %*% Y.MH
+  return(beta.refit)
+}
+
+# Generate 1-alpha Confidence Interval based on the deviation
+CI.MHLS <- function(betaRefitMH, betaRefit, alpha=.05) {
+  # betaRefitMH : refitted beta via Refit.MHLS, a niter x |A| matrix.
+  # betaRefit : refitted beta from original data, a vector with length p.
+  # alpha : significant level.
+  A <- which(betaRefit!=0)
+  Quantile <- apply(betaRefitMH - betaRefit[A], 1, function(x)
+  {quantile(x,prob=c(alpha/2, 1 - alpha/2))})
+  Result <- rbind(LowerBound = -Quantile[2,] + betaRefit[A],
+                  UpperBound = -Quantile[1,] + betaRefit[A])
+  colnames(Result) <- paste("beta", A, sep="")
+  return(Result)
+}
+
+# Generate pluginbeta's from 95% confidence region
+Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat) {
+  # nPlugin : number of pluginbeta's want to generate
+  # sigma.hat : estimator of sigma , \epsilon ~ N(0, sigma^2)
+  #             If missing, use default way to generate it
+  if (length(A)==0) stop("The lasso solution has an empty active set.")
+
+  if (missing(sigma.hat)) {
+    sigma.hat <- summary((lm(Y~X[,A]+0)))$sigma
+  }
+  betaRefit <- coef(lm(Y~X[,A]+0))
+
+  if (nPlugin == 1) {
+    return(matrix(betaRefit,1))
+  } else {
+    xy <- matrix(rnorm(length(A)*(nPlugin-1)), nPlugin-1)
+    lambda <- 1 / sqrt(rowSums(xy^2))
+    xy <- xy * lambda * sqrt(qchisq(0.95, df=length(A)))
+    coeff.seq <- matrix(0,nPlugin,ncol(X))
+    coeff.seq[,A]  <- rbind(betaRefit, t(t(xy%*%chol(solve(crossprod(X[,A])))) *
+                                           sigma.hat + betaRefit))
+    return(coeff.seq=coeff.seq)
+  }
+}
+
+
+

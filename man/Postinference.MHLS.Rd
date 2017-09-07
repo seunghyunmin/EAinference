@@ -5,8 +5,9 @@
 \title{Post-inference for lasso estimator}
 \usage{
 Postinference.MHLS(X, Y, lbd, weights = rep(1, ncol(X)), tau = rep(1,
-  ncol(X)), sig2.hat, alpha = 0.05, nChain = 10, niterPerChain = 500,
-  parallel = FALSE, ncores = 2L, returnSamples = FALSE, ...)
+  ncol(X)), sig2.hat, alpha = 0.05, nChain = 10, method,
+  niterPerChain = 500, parallel = FALSE, ncores = 2L,
+  returnSamples = FALSE, ...)
 }
 \arguments{
 \item{X}{predictor matrix.}
@@ -30,6 +31,8 @@ Default is \code{rep(1, ncol(X))}.}
 
 \item{nChain}{the number of chains. For each chain, different plug-in beta will be generated
 from its confidence region.}
+
+\item{method}{Type of robust method. Users can choose either \code{"coeff"} or \code{"mu"}.}
 
 \item{niterPerChain}{the number of iterations per chain.}
 
@@ -69,8 +72,9 @@ Y <- X \%*\% rep(1,p) + rnorm(n)
 sig2 <- 1
 lbd <- .37
 weights <- rep(1,p)
+parallel <- (.Platform$OS.type != "windows")
 Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
-nChain = 3, niterPerChain = 20, parallel = TRUE)
+nChain = 3, niterPerChain = 20, method = "coeff", parallel = parallel)
 Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
-nChain = 3, niterPerChain = 20, parallel = TRUE, returnSamples = TRUE)
+nChain = 3, niterPerChain = 20, method = "coeff", parallel = parallel, returnSamples = TRUE)
 }

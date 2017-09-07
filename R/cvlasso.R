@@ -1,3 +1,136 @@
+#' @title Compute lasso estimator
+#'
+#' @description Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
+#' The outputs are coefficient-estimate and subgradient. If \code{type = "slasso"}
+#' or \code{type = "sgrlasso"}, the output will include the sigma-estimate.
+#'
+#' @param X predictor matrix.
+#' @param Y response vector.
+#' @param type type of penalty. Must be specified to be one of the following:
+#'  \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.
+#' @param lbd penalty term of lasso. By letting this argument be \code{"cv.1se"} or
+#' \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
+#' squared error or that is within 1 std error bound.
+#' @param weights weight vector with length equal to the number of groups. Default is
+#' \code{rep(1, max(group))}.
+#' @param group \code{p} x \code{1} vector of consecutive integers describing the group structure.
+#' The number of groups should be the same as max(group). Default is \code{group = 1:p}
+#' , where \code{p} is number of covariates.
+#' @param verbose logical. Only available for \code{type = "slasso"} or \code{type = "sgrlasso"}.
+#' @param ... auxiliary arguments for \code{lbd = "cv.min", lbd = "cv.1se"}.
+#' See \code{\link{cv.lasso}} for details.
+#' @details
+#' Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
+#' Users can specify the value of lbd or choose to run cross-validation to get
+#' optimal lambda in term of mean squared error.
+#'
+#' @return \item{B0}{coefficient estimator.}
+#' @return \item{S0}{subgradient.}
+#' @return \item{lbd, weights, group}{same as input arguments.}
+#' @examples
+#' set.seed(123)
+#' n <- 50
+#' p <- 10
+#' X <- matrix(rnorm(n*p), n)
+#' Y <- X %*% c(1, 1, rep(0, p-2)) + rnorm(n)
+#' #
+#' # lasso
+#' #
+#' Lasso.MHLS(X = X, Y = Y, type = "lasso", lbd = .5)
+#' #
+#' # group lasso
+#' #
+#' Lasso.MHLS(X = X, Y = Y, type = "grlasso", lbd = .5, weights = rep(1,2),
+#' group = rep(1:2, each=5))
+#' @export
+Lasso.MHLS <- function(X, Y, type, lbd,
+                       group=1:ncol(X), weights=rep(1,max(group)), verbose = FALSE, ...)
+{
+  n <- nrow(X)
+  p <- ncol(X)
+  X <- as.matrix(X)
+  Y <- matrix(Y, , 1)
+
+  if (!type %in% c("lasso", "grlasso", "slasso", "sgrlasso")) {
+    stop("type has to be either lasso, grlasso, slasso or sgrlasso.")
+  }
+
+  if (!all(group==1:p) && (!type %in% c("grlasso", "sgrlasso"))) {
+    stop("Choose type to be either grlasso or sgrlasso if group-structure exists.")
+  }
+
+  # if (all(group==1:p) && (!type %in% c("lasso", "slasso"))) {
+  #   stop("Choose type to be either lasso or slasso if group-structure does not exist.")
+  # }
+
+  if (!lbd  %in% c("cv.1se", "cv.min")) {
+    if (!is.numeric(lbd) || lbd <= 0) {stop("invalid lbd input.")}
+  }
+
+  if (verbose) {cat("# Cross-validation \n")}
+  if (lbd %in% c("cv.1se", "cv.min")) {
+    lbdTEMP <- cv.lasso(X = X, Y = Y, group = group, weights = weights,
+                        type = type, verbose=verbose, ...)
+    if (lbd == "cv.1se") {lbd <- lbdTEMP$lbd.1se} else {
+      lbd <- lbdTEMP$lbd.min
+    }
+  }
+
+  # if (missing(lbd)) {
+  #   if (type %in% c("lasso", "grlasso")) {
+  #     lbd <- .37
+  #   } else {
+  #     lbd <- .5
+  #   }
+  # }
+
+  # if (lbd <= 0) {
+  #   stop("lbd has to be positive.")
+  # }
+  if (length(group) != p) {
+    stop("length(group) has to be the same with ncol(X)")
+  }
+  if (length(weights) != length(unique(group))) {
+    stop("length(weights) has to be the same with the number of groups")
+  }
+  if (any(weights <= 0)) {
+    stop("weights should be positive.")
+  }
+  if (any(!1:max(group) %in% group)) {
+    stop("group index has to be a consecutive integer starting from 1.")
+  }
+
+  if (length(Y) != n) {
+    stop("dimension of X and Y are not conformable.")
+  }
+
+  IndWeights <- rep(weights,table(group))
+  # scale X with weights
+  Xtilde   <- scale(X,FALSE,scale=IndWeights)
+
+  # slassoLoss <- function(X,Y,beta,sig,lbd) {
+  #   n <- nrow(X)
+  #   crossprod(Y-X%*%beta) / 2 / n / sig + sig / 2 + lbd * sum(abs(beta))
+  # }
+
+  if (type %in% c("lasso", "grlasso")) {
+    # compute group lasso estimator B0 and S0
+    B0 <- coef(gglasso(Xtilde, Y, pf = rep(1,max(group)), group = group,
+                       loss="ls", intercept=F, lambda=lbd))[-1] / IndWeights
+    S0 <- (t(Xtilde) %*% Y - t(Xtilde) %*% Xtilde %*%
+             (B0 * IndWeights)) / n / lbd
+    #A <- which(B0!=0)
+    return(list(B0=B0, S0=c(S0), lbd=lbd, weights=weights, group=group))
+  } else {
+    TEMP <- slassoFit.tilde(Xtilde = Xtilde, Y=Y, lbd=lbd, group=group, weights = weights, verbose = verbose)
+    if (sum(TEMP$B0!=0) == (n-1)) {
+      warning("Active set is too large. Try to increase the value of lbd.")
+    }
+    return(list(B0=TEMP$B0, S0=TEMP$S0, sigmaHat=TEMP$hsigma, lbd=lbd, weights=weights, group=group))
+  }
+}
+
+
 #' @title Compute K-fold cross-validated mean squared error for lasso
 #'
 #' @description Computes K-fold cross-validated mean squared error

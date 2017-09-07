@@ -168,7 +168,8 @@ output will be the $(1-a)$ quantile of each active coefficient.
 
 ```{r}
 Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
- nChain = 5, niterPerChain = 20, parallel = !(.Platform$OS.type == "windows"))
+ method = "coeff", nChain = 5, niterPerChain = 20, 
+ parallel = !(.Platform$OS.type == "windows"))
 ```
 
 

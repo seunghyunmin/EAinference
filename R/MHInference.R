@@ -1,135 +1,3 @@
-#' @title Compute lasso estimator
-#'
-#' @description Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
-#' The outputs are coefficient-estimate and subgradient. If \code{type = "slasso"}
-#' or \code{type = "sgrlasso"}, the output will include the sigma-estimate.
-#'
-#' @param X predictor matrix.
-#' @param Y response vector.
-#' @param type type of penalty. Must be specified to be one of the following:
-#'  \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.
-#' @param lbd penalty term of lasso. By letting this argument be \code{"cv.1se"} or
-#' \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
-#' squared error or that is within 1 std error bound.
-#' @param weights weight vector with length equal to the number of groups. Default is
-#' \code{rep(1, max(group))}.
-#' @param group \code{p} x \code{1} vector of consecutive integers describing the group structure.
-#' The number of groups should be the same as max(group). Default is \code{group = 1:p}
-#' , where \code{p} is number of covariates.
-#' @param verbose logical. Only available for \code{type = "slasso"} or \code{type = "sgrlasso"}.
-#' @param ... auxiliary arguments for \code{lbd = "cv.min", lbd = "cv.1se"}.
-#' See \code{\link{cv.lasso}} for details.
-#' @details
-#' Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
-#' Users can specify the value of lbd or choose to run cross-validation to get
-#' optimal lambda in term of mean squared error.
-#'
-#' @return \item{B0}{coefficient estimator.}
-#' @return \item{S0}{subgradient.}
-#' @return \item{lbd, weights, group}{same as input arguments.}
-#' @examples
-#' set.seed(123)
-#' n <- 50
-#' p <- 10
-#' X <- matrix(rnorm(n*p), n)
-#' Y <- X %*% c(1, 1, rep(0, p-2)) + rnorm(n)
-#' #
-#' # lasso
-#' #
-#' Lasso.MHLS(X = X, Y = Y, type = "lasso", lbd = .5)
-#' #
-#' # group lasso
-#' #
-#' Lasso.MHLS(X = X, Y = Y, type = "grlasso", lbd = .5, weights = rep(1,2),
-#' group = rep(1:2, each=5))
-#' @export
-Lasso.MHLS <- function(X, Y, type, lbd,
-  group=1:ncol(X), weights=rep(1,max(group)), verbose = FALSE, ...)
-{
-  n <- nrow(X)
-  p <- ncol(X)
-  X <- as.matrix(X)
-  Y <- matrix(Y, , 1)
-
-  if (!type %in% c("lasso", "grlasso", "slasso", "sgrlasso")) {
-    stop("type has to be either lasso, grlasso, slasso or sgrlasso.")
-  }
-
-  if (!all(group==1:p) && (!type %in% c("grlasso", "sgrlasso"))) {
-    stop("Choose type to be either grlasso or sgrlasso if group-structure exists.")
-  }
-
-  # if (all(group==1:p) && (!type %in% c("lasso", "slasso"))) {
-  #   stop("Choose type to be either lasso or slasso if group-structure does not exist.")
-  # }
-
-  if (!lbd  %in% c("cv.1se", "cv.min")) {
-    if (!is.numeric(lbd) || lbd <= 0) {stop("invalid lbd input.")}
-  }
-
-  if (verbose) {cat("# Cross-validation \n")}
-  if (lbd %in% c("cv.1se", "cv.min")) {
-    lbdTEMP <- cv.lasso(X = X, Y = Y, group = group, weights = weights,
-                    type = type, verbose=verbose, ...)
-    if (lbd == "cv.1se") {lbd <- lbdTEMP$lbd.1se} else {
-      lbd <- lbdTEMP$lbd.min
-    }
-  }
-
-  # if (missing(lbd)) {
-  #   if (type %in% c("lasso", "grlasso")) {
-  #     lbd <- .37
-  #   } else {
-  #     lbd <- .5
-  #   }
-  # }
-
-  # if (lbd <= 0) {
-  #   stop("lbd has to be positive.")
-  # }
-  if (length(group) != p) {
-    stop("length(group) has to be the same with ncol(X)")
-  }
-  if (length(weights) != length(unique(group))) {
-    stop("length(weights) has to be the same with the number of groups")
-  }
-  if (any(weights <= 0)) {
-    stop("weights should be positive.")
-  }
-  if (any(!1:max(group) %in% group)) {
-    stop("group index has to be a consecutive integer starting from 1.")
-  }
-
-  if (length(Y) != n) {
-    stop("dimension of X and Y are not conformable.")
-  }
-
-  IndWeights <- rep(weights,table(group))
-  # scale X with weights
-  Xtilde   <- scale(X,FALSE,scale=IndWeights)
-
-  # slassoLoss <- function(X,Y,beta,sig,lbd) {
-  #   n <- nrow(X)
-  #   crossprod(Y-X%*%beta) / 2 / n / sig + sig / 2 + lbd * sum(abs(beta))
-  # }
-
-  if (type %in% c("lasso", "grlasso")) {
-    # compute group lasso estimator B0 and S0
-    B0 <- coef(gglasso(Xtilde, Y, pf = rep(1,max(group)), group = group,
-                       loss="ls", intercept=F, lambda=lbd))[-1] / IndWeights
-    S0 <- (t(Xtilde) %*% Y - t(Xtilde) %*% Xtilde %*%
-             (B0 * IndWeights)) / n / lbd
-    #A <- which(B0!=0)
-    return(list(B0=B0, S0=c(S0), lbd=lbd, weights=weights, group=group))
-  } else {
-    TEMP <- slassoFit.tilde(Xtilde = Xtilde, Y=Y, lbd=lbd, group=group, weights = weights, verbose = verbose)
-    if (sum(TEMP$B0!=0) == (n-1)) {
-      warning("Active set is too large. Try to increase the value of lbd.")
-    }
-    return(list(B0=TEMP$B0, S0=TEMP$S0, sigmaHat=TEMP$hsigma, lbd=lbd, weights=weights, group=group))
-  }
-}
-
 #' @title Post-inference for lasso estimator
 #'
 #' @description Provides confidence intervals for the set of active coefficients
@@ -150,6 +18,7 @@ Lasso.MHLS <- function(X, Y, type, lbd,
 #' @param nChain the number of chains. For each chain, different plug-in beta will be generated
 #' from its confidence region.
 #' @param niterPerChain the number of iterations per chain.
+#' @param method Type of robust method. Users can choose either \code{"coeff"} or \code{"mu"}.
 #' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
 #' Default is \code{parallel = FALSE}.
 #' @param ncores integer. The number of cores to use for parallelization.
@@ -175,13 +44,14 @@ Lasso.MHLS <- function(X, Y, type, lbd,
 #' sig2 <- 1
 #' lbd <- .37
 #' weights <- rep(1,p)
+#' parallel <- (.Platform$OS.type != "windows")
 #' Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
-#' nChain = 3, niterPerChain = 20, parallel = TRUE)
+#' nChain = 3, niterPerChain = 20, method = "coeff", parallel = parallel)
 #' Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
-#' nChain = 3, niterPerChain = 20, parallel = TRUE, returnSamples = TRUE)
+#' nChain = 3, niterPerChain = 20, method = "coeff", parallel = parallel, returnSamples = TRUE)
 #' @export
 Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
-  tau = rep(1, ncol(X)), sig2.hat, alpha = .05, nChain = 10,
+  tau = rep(1, ncol(X)), sig2.hat, alpha = .05, nChain = 10, method,
   niterPerChain = 500, parallel = FALSE, ncores = 2L, returnSamples=FALSE, ...)
 {
   # nChain : the number of MH chains
@@ -194,10 +64,10 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   S0 <- LassoEst$S0
   lbd <- LassoEst$lbd
   A <- which(B0!=0)
-
   if (length(A)==0) {
     stop("Given lbd, active set is empty.")
   }
+  beta.refit <- coef(lm(Y~X[,A]+0))
 
   Y <- matrix(Y, , 1)
   X <- as.matrix(X)
@@ -206,13 +76,16 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
 
   nChain <- as.integer(nChain)
   niterPerChain <- as.integer(niterPerChain)
-
   #--------------------
   # Error Handling
   #--------------------
   parallelTemp <- ErrorParallel(parallel,ncores)
   parallel <- parallelTemp$parallel
   ncores <- parallelTemp$ncores
+
+  if (!method %in% c("coeff", "mu")) {
+    stop("Invalide method type.")
+  }
 
   if (nrow(X) != nrow(Y)) {
     stop("The dimension of X and Y are not conformable.")
@@ -241,6 +114,7 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   # Draw samples of pluginbeta from the 95% confidence
   #  region boundary of restricted lse.
   # If nChain ==1, we just use restricted lse.
+
   if (missing(sig2.hat)) {
     if (length(A) >= nrow(X)) {
       stop("If size of active set matches with nrow(X), sig2.hat needs to be provided.")
@@ -248,12 +122,19 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
     sig2.hat <- summary((lm(Y~X[,A]+0)))$sigma^2
   }
 
-  Pluginbeta.seq <- Pluginbeta.MHLS(X,Y,A,nChain,sqrt(sig2.hat))
+  if (method == "coeff") {
+    Plugin.seq <- Pluginbeta.MHLS(X = X, Y = Y, A = A, nPlugin = nChain,
+                                  sigma.hat = sqrt(sig2.hat))
+  } else {
+    Plugin.seq <- PluginMu.MHLS(X = X, Y = Y, lbd = lbd,
+      ratioSeq = seq(0,2,by=0.01), alpha = 0.05, nChain = nChain, niter = 100,
+      parallel = parallel, ncores = ncores)
+  }
 
   FF <- function(x) {
-    MHLS(X = X, PE = Pluginbeta.seq[x,], sig2 = sig2.hat, lbd = lbd,
+    MHLS(X = X, PE = Plugin.seq[x,], sig2 = sig2.hat, lbd = lbd,
          weights = weights, niter=niterPerChain,
-         burnin = 0, B0 = B0, S0 = S0, tau = tau, PEtype = "coeff", verbose=FALSE, ...)
+         burnin = 0, B0 = B0, S0 = S0, tau = tau, PEtype = method, verbose=FALSE, ...)
   }
 
   if (parallel) {
@@ -277,68 +158,11 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   # Using MH samples, refit the coeff.
   RefitBeta <- Refit.MHLS(X,weights,lbd,MCSAMPLE)
   if (returnSamples) {
-    return(list(MHsamples=TEMP,pluginbeta=Pluginbeta.seq,
-                          confidenceInterval=CI.MHLS(betaRefit = RefitBeta,
-                          pluginbeta = Pluginbeta.seq, alpha=alpha)))
+    return(list(MHsamples = TEMP, pluginValue = Plugin.seq, method = method,
+            confidenceInterval = CI.MHLS(betaRefitMH = RefitBeta,
+                                         betaRefit = beta.refit, alpha = alpha)))
   } else {
-    return(CI.MHLS(betaRefit = RefitBeta, pluginbeta = Pluginbeta.seq,
-                   alpha=alpha))
+    return(CI.MHLS(betaRefitMH = RefitBeta, betaRefit = beta.refit,
+                   alpha = alpha))
   }
 }
-
-# Refit the beta estimator to remove the bias
-Refit.MHLS <- function(X,weights,lbd,MHsample) {
-  # W : diag(weights)
-  # MHsample : MH samples from MHLS function
-  n <- nrow(X)
-  # Active set
-  A <- which(MHsample$beta[1,]!=0)
-  # Recover y using KKT condition
-  Y.MH <- solve(X%*%t(X))%*%X %*% (crossprod(X) %*% t(MHsample$beta) / n +
-                                     lbd * weights * t(MHsample$subgrad)) * n
-  # Refit y to the restricted set of X
-  beta.refit <- solve(t(X[,A])%*%X[,A])%*%t(X[,A]) %*% Y.MH
-  return(beta.refit)
-}
-
-# Generate 1-alpha Confidence Interval based on the deviation
-CI.MHLS <- function(betaRefit, pluginbeta, alpha=.05) {
-  # pluginbeta : a nPlugin x |A| matrix of pluginbeta,
-  #  note that the size is not nPlugin x p.
-  # beta.refit : refitted beta via Refit.MHLS, a niter x |A| matrix.
-  # alpha : significant level.
-  A <- which(pluginbeta[1,]!=0)
-  Quantile <- apply(betaRefit - pluginbeta[1,A], 1, function(x)
-    {quantile(x,prob=c(alpha/2, 1 - alpha/2))})
-  Result <- rbind(LowerBound = -Quantile[2,] + pluginbeta[1,A] ,
-                  UpperBound = -Quantile[1,] + pluginbeta[1,A])
-  colnames(Result) <- paste("beta", A, sep="")
-  return(Result)
-}
-
-# Generate pluginbeta's from 95% confidence region
-Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat) {
-  # nPlugin : number of pluginbeta's want to generate
-  # sigma.hat : estimator of sigma , \epsilon ~ N(0, sigma^2)
-  #             If missing, use default way to generate it
-  if (length(A)==0) stop("The lasso solution has an empty active set.")
-
-  if (missing(sigma.hat)) {
-    sigma.hat <- summary((lm(Y~X[,A]+0)))$sigma
-  }
-  beta.refit <- coef(lm(Y~X[,A]+0))
-
-  if (nPlugin == 1) {
-    return(matrix(beta.refit,1))
-  } else {
-    xy <- matrix(rnorm(length(A)*(nPlugin-1)), nPlugin-1)
-    lambda <- 1 / sqrt(rowSums(xy^2))
-    xy <- xy * lambda * sqrt(qchisq(0.95, df=length(A)))
-    coeff.seq <- matrix(0,nPlugin,ncol(X))
-    coeff.seq[,A]  <- rbind(beta.refit,t(t(xy%*%chol(solve(crossprod(X[,A])))) *
-                                           sigma.hat + beta.refit))
-    return(coeff.seq=coeff.seq)
-  }
-}
-
-
