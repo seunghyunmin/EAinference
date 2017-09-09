@@ -12,7 +12,7 @@ Y <- X %*% rep(1, p) + rnorm(n)
 sigma2 <- 1
 lbd <- .37
 weights <- rep(1, p)
-LassoResult <- Lasso.MHLS(X = X, Y = Y, type = "lasso", lbd = lbd, weights = weights)
+LassoResult <- lassoFit(X = X, Y = Y, type = "lasso", lbd = lbd, weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
 
@@ -84,7 +84,7 @@ test_that("Low dimensional setting under lasso setting", {
 # lbd <- 1
 # group <- c(1, 1, 2, 2, 2)
 # weights <- rep(1, max(group))
-# LassoResult <- Lasso.MHLS(X = X, Y = Y, type = "grlasso", group = group, lbd = lbd, weights = weights)
+# LassoResult <- lassoFit(X = X, Y = Y, type = "grlasso", group = group, lbd = lbd, weights = weights)
 # B0 <- LassoResult$B0
 # S0 <- LassoResult$S0
 #
@@ -146,7 +146,7 @@ Y <- X %*% rep(1,p) + rnorm(n)
 sigma2 <- 1
 lbd <- .37
 weights <- rep(1,p)
-LassoResult <- Lasso.MHLS(X = X,Y = Y, type = "lasso", lbd = lbd,weights = weights)
+LassoResult <- lassoFit(X = X,Y = Y, type = "lasso", lbd = lbd,weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
 A <- which(B0!=0)

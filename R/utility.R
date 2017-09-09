@@ -772,7 +772,7 @@ projStein <- function(X1, X2, Y1, Y2, lbd, ratios, alpha = 0.05,
 
   #lassomodel <- glmnet::glmnet(X1, Y1, family = 'gaussian', intercept = F, lambda = lbd,
   #                              standardize = FALSE)$beta
-  B0 <- Lasso.MHLS(X = X1, Y = Y1, type = "lasso", lbd = lbd)$B0
+  B0 <- lassoFit(X = X1, Y = Y1, type = "lasso", lbd = lbd)$B0
 
   # estimate c by A=0
   stein <- ShrinkToZeroStein(Y2, n2)

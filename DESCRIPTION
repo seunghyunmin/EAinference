@@ -1,15 +1,17 @@
-Package: EAlasso
+Package: EAinference
 Type: Package
-Title: Simulation Based Inference of Lasso Estimator
-Version: 0.1.0
-Authors@R: person("Seunghyun", "Min", email = "seunghyun@ucla.edu", role = c("aut", "cre"))
+Title: Simulation based Inference of Lasso Estimator
+Version: 0.1.1
+Authors@R: c(person("Seunghyun", "Min", email = "seunghyun@ucla.edu", role = c("aut", "cre")), person("Qing", "Zhou", email = "zhou@stat.ucla.edu", role = "aut"))
 Maintainer: Seunghyun Min <seunghyun@ucla.edu>
-Description: Simulation based inference of lasso estimator. It provides several 
- methods to sample lasso estimator: (a) Gaussian and wild multiplier bootstrap for 
- lasso, group lasso, scaled lasso and scaled group lasso, (b) importance sampler
- for lasso, group lasso, scaled lasso and scaled group lasso, (c) Markov chain 
- Monte Carlo sampler for lasso, (d) post-selection inference for lasso. 
- See Zhou, Q. and Min, S. (2017) <doi:10.1214/17-EJS1309> for details.
+Description: Estimator augmentation methods for statistical inference on high-dimensional data, 
+    as described in Zhou, Q. (2014) <doi:10.1080/01621459.2014.946035>
+    and Zhou, Q. and Min, S. (2017) <doi:10.1214/17-EJS1309>.
+    It provides several simulation-based inference methods: (a) Gaussian and 
+    wild multiplier bootstrap for lasso, group lasso, scaled lasso, scaled group
+    lasso and their de-biased estimators, (b) importance sampler for approximating
+    p-values in these methods, (c) Markov chain Monte Carlo lasso sampler with 
+    applications in post-selection inference.
 License: GPL (>=2)
 Encoding: UTF-8
 LazyData: true

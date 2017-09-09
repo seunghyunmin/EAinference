@@ -31,7 +31,7 @@ Y <- X \%*\% rep(1, p) + rnorm(n)
 sigma2 <- 1
 lbd <- .37
 weights <- rep(1, p)
-LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type="lasso", weights = weights)
+LassoResult <- lassoFit(X = X, Y = Y, lbd = lbd, type="lasso", weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
 Result <- MHLS(X = X, PE = rep(0, p), sig2 = sigma2, lbd = lbd, group = 1:p,

@@ -1,4 +1,4 @@
 library(testthat)
-library(EAlasso)
+library(EAinference)
 
-test_check("EAlasso")
+test_check("EAinference")

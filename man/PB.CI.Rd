@@ -26,9 +26,9 @@ Using samples drawn by \code{\link{PBsampler}}, computes
 \code{(1-alpha)\%} confidence interval of each coefficient.
 }
 \details{
-If \code{method==none}, \code{\link{PB.CI}} simply compute
-the two-soded \code{(1-alpha)} quantile of the sampled coefficients.
-If \code{method==debias}, we use
+If \code{method = "none"}, \code{\link{PB.CI}} simply compute
+the two-sided \code{(1-alpha)} quantile of the sampled coefficients.
+If \code{method = "debias"}, we use
 debiased estimator to compute confidence interval.
 }
 \examples{

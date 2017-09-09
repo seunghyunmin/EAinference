@@ -12,9 +12,9 @@ hdIS(PBsample, PETarget, sig2Target, lbdTarget, TsA.method = "default",
 \item{PBsample}{bootstrap samples of class \code{PB} from \code{\link{PBsampler}}.}
 
 \item{PETarget, sig2Target, lbdTarget}{parameters of target distribution.
-(point estimate of beta or E(y), estimated variance of error and lambda)}
+(point estimate of beta or \code{E(y)}, estimated variance of error and lambda)}
 
-\item{TsA.method}{method to construct T(eta(s),A) matrix. See Zhou and Min(2016)
+\item{TsA.method}{method to construct \code{T(eta(s),A)} matrix. See Zhou and Min(2017)
 for details.}
 
 \item{log}{logical. If \code{log = TRUE}, importance weight is computed in log scale.}
@@ -33,10 +33,15 @@ drawn by \code{\link{PBsampler}}. See the examples
 below for details.
 }
 \details{
-computes importance weights which is defined as \deqn{\frac{target
- density}{proposal density}}, when the samples are drawn from the proposal
+computes importance weights which is defined as (target density)/(proposal density),
+ when the samples are drawn from the proposal
  distribution with the function \code{\link{PBsampler}} while the parameters of
  the target distribution are (PETarget, sig2Target, lbdTarget).
+
+ Say that we are interested in computing the expectation of a function of a random variable, \code{h(X)}.
+ Let \code{f(x)} be the true or target distribution and \code{g(x)} be the proposal distribution.
+ We can approximate the expectation, \code{E[h(X)]}, by a weighted average of samples, \code{x_i}, drawn from
+ the proposal distribution as follows, \code{E[h(X)] = mean( h(x_i) * f(x_i)/h(x_i) )}.
 }
 \examples{
 set.seed(1234)

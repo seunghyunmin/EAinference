@@ -2,12 +2,13 @@
 #'
 #' @description Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
 #' The outputs are coefficient-estimate and subgradient. If \code{type = "slasso"}
-#' or \code{type = "sgrlasso"}, the output will include the sigma-estimate.
+#' or \code{type = "sgrlasso"}, the output will include estimated standard deviation.
 #'
 #' @param X predictor matrix.
 #' @param Y response vector.
 #' @param type type of penalty. Must be specified to be one of the following:
-#'  \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.
+#'  \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}, which correspond to
+#'  lasso, group lasso, scaled lasso or scaled group lasso.
 #' @param lbd penalty term of lasso. By letting this argument be \code{"cv.1se"} or
 #' \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
 #' squared error or that is within 1 std error bound.
@@ -22,10 +23,20 @@
 #' @details
 #' Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
 #' Users can specify the value of lbd or choose to run cross-validation to get
-#' optimal lambda in term of mean squared error.
+#' optimal lambda in term of mean squared error. \code{\link{gglasso}}
+#' is used to fit lasso and group lasso models. Coordinate decent algorithm is used
+#' to fit scaled lasso and sclaed group lasso models.
+#'
+#' @references
+#' Mitra, R. and Zhang, C. H. (2016), "The benefit of group sparsity in group inference with
+#' de-biased scaled group lasso," Electronic Journal of Statistics, 10, 1829-1873.
+#'
+#' Yang, Y. and Zou, H. (2015), “A Fast Unified Algorithm for Computing
+#' Group-Lasso Penalized Learning Problems,” Statistics and Computing, 25(6), 1129-1141.
 #'
 #' @return \item{B0}{coefficient estimator.}
 #' @return \item{S0}{subgradient.}
+#' @return \item{sigmaHat}{estimated standard deviation.}
 #' @return \item{lbd, weights, group}{same as input arguments.}
 #' @examples
 #' set.seed(123)
@@ -36,14 +47,23 @@
 #' #
 #' # lasso
 #' #
-#' Lasso.MHLS(X = X, Y = Y, type = "lasso", lbd = .5)
+#' lassoFit(X = X, Y = Y, type = "lasso", lbd = .5)
 #' #
 #' # group lasso
 #' #
-#' Lasso.MHLS(X = X, Y = Y, type = "grlasso", lbd = .5, weights = rep(1,2),
-#' group = rep(1:2, each=5))
+#' lassoFit(X = X, Y = Y, type = "grlasso", lbd = .5, weights = rep(1,2),
+#'            group = rep(1:2, each=5))
+#' #
+#' # scaled lasso
+#' #
+#' lassoFit(X = X, Y = Y, type = "slasso", lbd = .5)
+#' #
+#' # scaled group lasso
+#' #
+#' lassoFit(X = X, Y = Y, type = "sgrlasso", lbd = .5, weights = rep(1,2),
+#'            group = rep(1:2, each=5))
 #' @export
-Lasso.MHLS <- function(X, Y, type, lbd,
+lassoFit <- function(X, Y, type, lbd,
                        group=1:ncol(X), weights=rep(1,max(group)), verbose = FALSE, ...)
 {
   n <- nrow(X)
@@ -145,7 +165,8 @@ Lasso.MHLS <- function(X, Y, type, lbd,
 #' @param weights weight vector with length equal to the number of groups. Default is
 #' \code{rep(1, max(group))}.
 #' @param type type of penalty. Must be specified to be one of the following:
-#'  \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.
+#'  \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}, which correspond to
+#'  lasso, group lasso, scaled lasso or scaled group lasso.
 #' @param K integer. Number of folds
 #' @param minlbd numeric. Minumum value of the lambda sequence.
 #' @param maxlbd numeric. Maximum value of the lambda sequence.
@@ -263,7 +284,7 @@ cv.lasso <- function(
   residmat <- matrix(0, length(index), K)
 
   FF <- function(x,omit) {
-    fit <- Lasso.MHLS(X=X[-omit,,drop=FALSE],Y=Y[-omit],type=type,
+    fit <- lassoFit(X=X[-omit,,drop=FALSE],Y=Y[-omit],type=type,
                       lbd=index[x],group=group,weights=weights)$B0
     fit <- X[omit,,drop=FALSE]%*%fit
     return(mean((Y[omit]-fit)^2))

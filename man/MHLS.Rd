@@ -2,7 +2,7 @@
 % Please edit documentation in R/MHLS.R
 \name{MHLS}
 \alias{MHLS}
-\title{Metropolis-Hastings sampler for lasso estimator under the fixed active set.}
+\title{Metropolis-Hastings lasso sampler under a fixed active set.}
 \usage{
 MHLS(X, PE, sig2, lbd, weights = rep(1, ncol(X)), B0, S0, A = which(B0 !=
   0), tau = rep(1, ncol(X)), niter = 2000, burnin = 0, PEtype = "coeff",
@@ -57,7 +57,7 @@ The default is \code{FlipSA=A}}
 }}
 }
 \value{
-\code{MHLS} returns an object of class \code{"MHLS"}.
+\code{\link{MHLS}} returns an object of class \code{"MHLS"}.
 The functions \code{\link{summary.MHLS}} and \code{\link{plot.MHLS}}
 provide a brief summary and generate plots.
 \item{beta}{lasso samples.}
@@ -66,12 +66,19 @@ provide a brief summary and generate plots.
 \item{niter, burnin, PE, type}{same as function arguments.}
 }
 \description{
-Metropolis-Hastings sampler for lasso estimator
-under the fixed active set.
+Metropolis-Hastings sampler to simulate from the sampling
+distribution of lasso given a fixed active set.
 }
 \details{
 Given appropriate initial value, provides Metropolis-Hastings samples
  under the fixed active set.
+
+From the initial values, \code{B0} and {S0}, \code{\link{MHLS}} draws \code{beta} and \code{subgrad} samples.
+In every iteration, given \code{t}-th iteration values, \code{t}-th \code{beta} and \code{t}-th \code{subgrad},
+a new set of proposed beta and subgradient is sampled. We either accept the proposed sample
+and use that as \code{(t+1)}-th iteration values or reuse \code{t}-th iteration values.
+
+See Zhou(2014) for more details.
 }
 \examples{
 #-------------------------
@@ -85,7 +92,7 @@ Y <- X \%*\% rep(1, p) + rnorm(n)
 sigma2 <- 1
 lbd <- .37
 weights <- rep(1, p)
-LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
+LassoResult <- lassoFit(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
 MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
@@ -104,7 +111,7 @@ p <- 10
 X <- matrix(rnorm(n*p),n)
 Y <- X \%*\% rep(1,p) + rnorm(n)
 weights <- rep(1,p)
-LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd, type = "lasso", weights = weights)
+LassoResult <- lassoFit(X = X,Y = Y,lbd = lbd, type = "lasso", weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
 MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
@@ -117,7 +124,4 @@ MHLS(X = X, PE = rep(0, n), sig2 = 1, lbd = 1,
 \references{
 Zhou, Q. (2014), "Monte Carlo simulation for Lasso-type problems by estimator augmentation,"
 Journal of the American Statistical Association, 109, 1495-1516.
-
-Zhou, Q. and Min, S. (2017), "Estimator augmentation with applications in
-high-dimensional group inference," Electronic Journal of Statistics, 11(2), 3039-3080.
 }

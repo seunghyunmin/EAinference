@@ -21,7 +21,8 @@ The number of groups should be the same as max(group). Default is \code{group = 
 \code{rep(1, max(group))}.}
 
 \item{type}{type of penalty. Must be specified to be one of the following:
-\code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}.}
+\code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}, which correspond to
+lasso, group lasso, scaled lasso or scaled group lasso.}
 
 \item{K}{integer. Number of folds}
 

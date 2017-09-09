@@ -1,7 +1,7 @@
-#' @title Metropolis-Hastings sampler for lasso estimator under the fixed active set.
+#' @title Metropolis-Hastings lasso sampler under a fixed active set.
 #'
-#' @description Metropolis-Hastings sampler for lasso estimator
-#' under the fixed active set.
+#' @description Metropolis-Hastings sampler to simulate from the sampling
+#' distribution of lasso given a fixed active set.
 #'
 #' @param X predictor matrix.
 #' @param PE,sig2,lbd parameters of target distribution.
@@ -41,7 +41,14 @@
 #' @details Given appropriate initial value, provides Metropolis-Hastings samples
 #'  under the fixed active set.
 #'
-#' @return \code{MHLS} returns an object of class \code{"MHLS"}.
+#' From the initial values, \code{B0} and {S0}, \code{\link{MHLS}} draws \code{beta} and \code{subgrad} samples.
+#' In every iteration, given \code{t}-th iteration values, \code{t}-th \code{beta} and \code{t}-th \code{subgrad},
+#' a new set of proposed beta and subgradient is sampled. We either accept the proposed sample
+#' and use that as \code{(t+1)}-th iteration values or reuse \code{t}-th iteration values.
+#'
+#' See Zhou(2014) for more details.
+#'
+#' @return \code{\link{MHLS}} returns an object of class \code{"MHLS"}.
 #' The functions \code{\link{summary.MHLS}} and \code{\link{plot.MHLS}}
 #' provide a brief summary and generate plots.
 #' \item{beta}{lasso samples.}
@@ -52,9 +59,6 @@
 #' @references
 #' Zhou, Q. (2014), "Monte Carlo simulation for Lasso-type problems by estimator augmentation,"
 #' Journal of the American Statistical Association, 109, 1495-1516.
-#'
-#' Zhou, Q. and Min, S. (2017), "Estimator augmentation with applications in
-#' high-dimensional group inference," Electronic Journal of Statistics, 11(2), 3039-3080.
 #'
 #' @examples
 #' #-------------------------
@@ -68,7 +72,7 @@
 #' sigma2 <- 1
 #' lbd <- .37
 #' weights <- rep(1, p)
-#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
+#' LassoResult <- lassoFit(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
 #' MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
@@ -87,7 +91,7 @@
 #' X <- matrix(rnorm(n*p),n)
 #' Y <- X %*% rep(1,p) + rnorm(n)
 #' weights <- rep(1,p)
-#' LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd, type = "lasso", weights = weights)
+#' LassoResult <- lassoFit(X = X,Y = Y,lbd = lbd, type = "lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
 #' MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1,
@@ -171,7 +175,7 @@ MHLSmain <- function (X, PE, sig2, lbd,
 MHLSswp <- function(X, PE, sig2, lbd, weights,
   B0, S0, A, tau, niter,
   burnin, PEtype, FlipSA = A, SFindex,
-  randomSFindex = TRUE, updateSF.itv = round(niter/20), updateS.itv,
+  randomSFindex = TRUE, updateSF.itv = max(round(niter/20), 50), updateS.itv,
   verbose, ...)
 {
   X <- as.matrix(X)
@@ -598,7 +602,7 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
 #' sigma2 <- 1
 #' lbd <- .37
 #' weights <- rep(1, p)
-#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type="lasso", weights = weights)
+#' LassoResult <- lassoFit(X = X, Y = Y, lbd = lbd, type="lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
 #' Result <- MHLS(X = X, PE = rep(0, p), sig2 = sigma2, lbd = lbd, group = 1:p,
@@ -693,7 +697,7 @@ print.MHLS <- function (x, ...) {
 #' sigma2 <- 1
 #' lbd <- .37
 #' weights <- rep(1, p)
-#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
+#' LassoResult <- lassoFit(X = X, Y = Y, lbd = lbd, type = "lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
 #' summary(MHLS(X = X, PE = rep(0, p), sig2 = sigma2, lbd = lbd,
@@ -733,7 +737,7 @@ summary.MHLS <- function (object, ...) {
 #' sigma2 <- 1
 #' lbd <- .37
 #' weights <- rep(1, p)
-#' LassoResult <- Lasso.MHLS(X = X, Y = Y, lbd = lbd, type="lasso", weights = weights)
+#' LassoResult <- lassoFit(X = X, Y = Y, lbd = lbd, type="lasso", weights = weights)
 #' B0 <- LassoResult$B0
 #' S0 <- LassoResult$S0
 #' plot(MHLS(X = X, PE = rep(0, p), sig2 = 1, lbd = 1, group = 1:p,

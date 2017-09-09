@@ -7,18 +7,23 @@
 #'
 #' @param PBsample bootstrap samples of class \code{PB} from \code{\link{PBsampler}}.
 #' @param PETarget,sig2Target,lbdTarget parameters of target distribution.
-#' (point estimate of beta or E(y), estimated variance of error and lambda)
-#' @param TsA.method method to construct T(eta(s),A) matrix. See Zhou and Min(2016)
+#' (point estimate of beta or \code{E(y)}, estimated variance of error and lambda)
+#' @param TsA.method method to construct \code{T(eta(s),A)} matrix. See Zhou and Min(2017)
 #' for details.
 #' @param log logical. If \code{log = TRUE}, importance weight is computed in log scale.
 #' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
 #' Default is \code{parallel = FALSE}.
 #' @param ncores integer. The number of cores to use for parallelization.
 #'
-#' @details computes importance weights which is defined as \deqn{\frac{target
-#'  density}{proposal density}}, when the samples are drawn from the proposal
+#' @details computes importance weights which is defined as (target density)/(proposal density),
+#'  when the samples are drawn from the proposal
 #'  distribution with the function \code{\link{PBsampler}} while the parameters of
 #'  the target distribution are (PETarget, sig2Target, lbdTarget).
+#'
+#'  Say that we are interested in computing the expectation of a function of a random variable, \code{h(X)}.
+#'  Let \code{f(x)} be the true or target distribution and \code{g(x)} be the proposal distribution.
+#'  We can approximate the expectation, \code{E[h(X)]}, by a weighted average of samples, \code{x_i}, drawn from
+#'  the proposal distribution as follows, \code{E[h(X)] = mean( h(x_i) * f(x_i)/h(x_i) )}.
 #'
 #' @references
 #' Zhou, Q. (2014), "Monte Carlo simulation for Lasso-type problems by estimator augmentation,"
@@ -191,10 +196,10 @@ hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
 
       if (Btype == "wild") {
         XVR <- X%*%VR
-        VARTarget <- t(XVR) %*% diag(resTarget) %*% XVR * sig2Target / n^2
-        VARProp1 <- t(XVR) %*% diag(resProp1) %*% XVR * sig2Prop1 / n^2
+        VARTarget <- t(XVR) %*% diag(resTarget) %*% XVR / n^2
+        VARProp1 <- t(XVR) %*% diag(resProp1) %*% XVR / n^2
         if (Mixture) {
-          VARProp2 <- t(XVR) %*% diag(resProp2) %*% XVR * sig2Prop2 / n^2
+          VARProp2 <- t(XVR) %*% diag(resProp2) %*% XVR / n^2
         }
       }
 

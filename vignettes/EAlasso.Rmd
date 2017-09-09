@@ -1,27 +1,26 @@
 ---
-title: "Introduction to the EAlasso package"
+title: "Introduction to the EAinference package"
 author: "Seunghyun Min"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Introduction to EAlasso}
+  %\VignetteIndexEntry{Introduction to EAinference}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-`EAlasso` package is designed to facilitate simulation based inference of lasso type estimators. 
+`EAinference` package is designed to facilitate simulation based inference of lasso type estimators. 
 The package includes
 
-- Computing the lasso type estimator
+- Fitting the lasso, group lasso, scaleld lasso and scaled group lasso models
 - Gaussian bootstrap and wild multiplier bootstrap sampler
 - Importance sampler
-- Metropolis-Hastings sampler for lasso estimator
-- Post-selection inference for lasso estimator
+- Metropolis-Hastings lasso sampler with applications in post-selection inference.
 
-## Loss function for lasso-type estimators
+## Loss functions
 Let the unknown true model be
 $$ y = X\beta_0 + \epsilon,$$
-where $\beta_0$ is unknown true coefficient and $\epsilon_i \sim_{iid} N(0,\sigma^2)$. 
+where $\beta_0$ is a unknown true coefficient vector and $\epsilon_i \sim_{iid} N(0,\sigma^2)$. 
 
 We use following loss functions. 
 <!--$$ \ell_{lasso}(\beta ; \lambda) = \frac{1}{2}||y-X\beta||^2_2 + n\lambda\sum_i w_i|\beta_i|$$-->
@@ -29,18 +28,20 @@ $$ \ell_{grlasso}(\beta ; \lambda) = \frac{1}{2}||y-X\beta||^2_2 + n\lambda\sum_
 <!--$$ \ell_{slasso}(\beta, \sigma ; \lambda) = \frac{1}{2\sigma}||y-X\beta||^2_2 + \frac{\sigma}{2} + n\lambda\sum_i w_i|\beta_i|$$-->
 $$ \ell_{sgrlasso}(\beta, \sigma ; \lambda) = \frac{1}{2\sigma}||y-X\beta||^2_2 + \frac{\sigma}{2} + n\lambda\sum_j w_j||\beta_{(j)}||_2,$$
 where $grlasso$ and $sgrlasso$ represent group lasso and scaled group lasso, respectively,
-and $w_j$ is the weight factor for the j-th group. Loss functions for lasso and 
+and $w_j$ is the weight factor for the $j$-th group. Loss functions for lasso and 
 scaled lasso can be treated as special cases of group lasso and group scaled lasso
-when the group size is one, respectively.
+when every group is a singleton, respectively.
 
-## Fit Lasso Type Estimator
+## Fit lasso, group lasso, scaled lasso and scaled group lasso models
 
-`Lasso.MHLS` computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
+`lassoFit` computes lasso, group lasso, scaled lasso and scaled group lasso solutions.
 Users can either provide the value of $\lambda$ or choose to use cross-validation
-by setting `lbd = "cv.min"` or `lbd = "cv.1se"`. 
+by setting `lbd = "cv.min"` or `lbd = "cv.1se"`. By letting `lbd = "cv.min"`, users
+can have $\lambda$ which gives minimum mean-squared error, while `lbd = "cv.1se"`
+is the largest $\lambda$ within 1 standard deviaion error bound of `"cv.min"`. 
 
 ```{r}
-library(EAlasso)
+library(EAinference)
 set.seed(1234)
 n <- 30; p <- 50
 Niter <-  10
@@ -50,20 +51,20 @@ beta0 <- c(rep(1,5), rep(0, p-5))
 X <- matrix(rnorm(n*p), n)
 Y <- X %*% beta0 + rnorm(n)
 # set lambda = .5
-Lasso.MHLS(X = X, Y = Y, lbd = .5, group = group, weights = weights, type="grlasso")
+lassoFit(X = X, Y = Y, lbd = .5, group = group, weights = weights, type="grlasso")
 # use cross-validation
-Lasso.MHLS(X = X, Y = Y, lbd = "cv.1se", group = group, weights = weights, type="grlasso")
+lassoFit(X = X, Y = Y, lbd = "cv.1se", group = group, weights = weights, type="grlasso")
 ```
-## Parametric Bootstrap Sampler
+## Parametric bootstrap sampler
 
 `PBsampler` supports two bootstrap methods; Gaussian bootstrap and wild multiplier bootstrap. 
-Due to the fact that the sampling distirbution of $(\hat{\beta}, S)$, coefficient estimator and its subgradient, is characterized by $(\beta_0, \sigma^2, \lambda)$, users are required to provide PE(either the estimate of $\beta_0$ or the estimate of $E(y) = X\beta_0$), sig2(or estimate of $\sigma^2$)
-and lbd($\lambda$ from above loss functions).
+Due to the fact that the sampling distirbution of $(\hat{\beta}, S)$, coefficient estimator and its subgradient, is characterized by $(\beta_0, \sigma^2, \lambda)$, users are required to provide `PE`(either the estimate of $\beta_0$ or the estimate of $E(y) = X\beta_0$), `sig2`(or estimate of $\sigma^2$)
+and `lbd`($\lambda$ from above loss functions).
 
 By specifying two sets of arguments,
-(PE_1, sig2_1, lbd_1) and (PE_2, sig2_2, lbd_2), users can sample from the mixture distribution.
-In this way, samples will be drawn from (PE_1, sig2_1, lbd_1) with 1/2 probability and from 
-(PE_2, sig2_2, lbd_2) with another 1/2 probability. 
+`(PE_1, sig2_1, lbd_1)` and `(PE_2, sig2_2, lbd_2)`, users can sample from the mixture distribution.
+In this way, samples will be drawn from `(PE_1, sig2_1, lbd_1)` with 1/2 probability and from 
+`(PE_2, sig2_2, lbd_2)` with another 1/2 probability. 
 
 ```{r}
 set.seed(1234)
@@ -87,11 +88,11 @@ PBsampler(X = X, PE_1 = rep(0, p), sig2_1 = 1, lbd_1 = .5,
  group = group, type = "grlasso", niter = Niter, parallel = FALSE)
 ```
     
-## Importance Sampler for High Dimensional Data
-Importance Sampler enables users to access the inference of an extreme region.
+## Importance sampler for high dimensional data
+Importance sampler enables users to access the inference of an extreme region.
 This is done by using a proposal distiribution that is denser around the extreme region.
 
-Say that we are interested in computing the expectation of a function of ㅁ random variable, $h(X)$.
+Say that we are interested in computing the expectation of a function of a random variable, $h(X)$.
 Let $f(x)$ be the true or target distribution and $g(x)$ be the proposal distribution. 
 We can approximate the expectation by a weighted average of samples drawn from 
 the proposal distribution as follows,
@@ -141,7 +142,7 @@ under the fixed active set, A.
 ```{r}
 weights <- rep(1,p)
 lbd <- .37
-LassoResult <- Lasso.MHLS(X = X,Y = Y,lbd = lbd, type = "lasso", weights = weights)
+LassoResult <- lassoFit(X = X,Y = Y,lbd = lbd, type = "lasso", weights = weights)
 B0 <- LassoResult$B0
 S0 <- LassoResult$S0
 Result <- MHLS(X = X, PE = B0, sig2 = 1, lbd = 1,
@@ -159,15 +160,15 @@ plot(Result, index=c(1,4,9))
 
 ## Post-selection Inference
 
-`Postinference.MHLS` is a method for post-selection inference. 
+`postInference.MHLS` is a method for post-selection inference. 
 The inference is provided by `MHLS` results from multiple chains. 
-In order to make the method more robust, different PE values are used
-for each chain. After drawing samples of $(\hat{\beta}, S)$ from MH sampler, 
+In order to achieve the robust result, different `PE` values are used
+for each chain. After drawing samples of $(\hat{\beta}, S)$ with MH sampler, 
 we then refit the estimator to remove the bias of the lasso estimator. The final
-output will be the $(1-a)$ quantile of each active coefficient. 
+output is the $(1-a)$ quantile of each active coefficient. 
 
 ```{r}
-Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
  method = "coeff", nChain = 5, niterPerChain = 20, 
  parallel = !(.Platform$OS.type == "windows"))
 ```

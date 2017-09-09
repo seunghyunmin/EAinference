@@ -1,7 +1,7 @@
-#' @title Post-inference for lasso estimator
+#' @title Post-inference with lasso estimator
 #'
 #' @description Provides confidence intervals for the set of active coefficients
-#' from lasso estimator using Metropolis-Hastings sampler.
+#' of lasso using Metropolis-Hastings sampler.
 #'
 #' @param X predictor matrix.
 #' @param Y response vector.
@@ -25,10 +25,11 @@
 #' @param returnSamples logical. If \code{returnSamples = TRUE}, print Metropolis-Hastings samples.
 #' @param ... auxiliary \code{\link{MHLS}} arguments.
 #' @details
-#' This function provides post-selection inference for lasso estimator.
-#' Using Metropolis-Hastings sampler with multiple chains, generates \code{(1-alpha)}
+#' This function provides post-selection inference for the active coefficients selected by lasso.
+#' Uses Metropolis-Hastings sampler with multiple chains to draw from the
+#' distribution under a fixed active set and generates \code{(1-alpha)}
 #' confidence interval for each active coefficients.
-#' Set \code{returnSamples = TRUE} to check the samples.
+#' Set \code{returnSamples = TRUE} to check the Metropolis-Hastings samples.
 #' Check the acceptance rate and adjust \code{tau} accordingly.
 #' We recommend to set \code{nChain >= 10} and \code{niterPerChain >= 500}.
 #'
@@ -45,12 +46,12 @@
 #' lbd <- .37
 #' weights <- rep(1,p)
 #' parallel <- (.Platform$OS.type != "windows")
-#' Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+#' postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
 #' nChain = 3, niterPerChain = 20, method = "coeff", parallel = parallel)
-#' Postinference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+#' postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
 #' nChain = 3, niterPerChain = 20, method = "coeff", parallel = parallel, returnSamples = TRUE)
 #' @export
-Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
+postInference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   tau = rep(1, ncol(X)), sig2.hat, alpha = .05, nChain = 10, method,
   niterPerChain = 500, parallel = FALSE, ncores = 2L, returnSamples=FALSE, ...)
 {
@@ -59,7 +60,7 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   # B0, S0 : The lasso estimator
   # tau : same as in MHLS function
 
-  LassoEst <- Lasso.MHLS(X=X, Y=Y, type = "lasso", lbd=lbd, weights=weights)
+  LassoEst <- lassoFit(X=X, Y=Y, type = "lasso", lbd=lbd, weights=weights)
   B0 <- LassoEst$B0
   S0 <- LassoEst$S0
   lbd <- LassoEst$lbd
@@ -109,7 +110,7 @@ Postinference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   #                             intercept=F, lambda=lbd))[-1],B0) != TRUE ||
   #     all.equal(c(((t(X)/weights)%*%Y - (t(X) /weights) %*% X %*% B0) / n / lbd)
   #                , S0) != TRUE) {
-  #   stop("Invalid B0 or S0, use Lasso.MHLS to get a valid lasso solution.")
+  #   stop("Invalid B0 or S0, use lassoFit to get a valid lasso solution.")
   # }
   # Draw samples of pluginbeta from the 95% confidence
   #  region boundary of restricted lse.
