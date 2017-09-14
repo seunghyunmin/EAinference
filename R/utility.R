@@ -1,17 +1,13 @@
 #' @useDynLib EAinference
 #' @importFrom Rcpp evalCpp
-#' @exportPattern "^[[:alpha:]]+"
 NULL
 
 #' @importFrom msm rtnorm
 #' @importFrom mvtnorm dmvnorm
 #' @import graphics
 #' @import stats
-
-# devtools::check()
-# devtools::build_win() : to check package under Window enviornment
 #-------------------------------------------
-# Utility functions for Individual Lasso
+# Utility functions for lasso
 #-------------------------------------------
 logFlipTR <- function(x,t)
 {
