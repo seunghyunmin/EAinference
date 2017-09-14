@@ -1,4 +1,8 @@
-#' @importFrom gglasso gglasso coef.gglasso
+#' @useDynLib EAinference
+#' @importFrom Rcpp evalCpp
+#' @exportPattern "^[[:alpha:]]+"
+NULL
+
 #' @importFrom msm rtnorm
 #' @importFrom mvtnorm dmvnorm
 #' @import graphics
@@ -409,7 +413,7 @@ F2 <- function(s, Psi, group) {
   return(Result)
 }
 
-log.Jacobi.partial <- function(X, s, r, Psi, group, A, lam, W, TSA) { # log(abs(det(X %*% [F2[,A] | (F1 + lam * W) %*% TsA])))
+logJacobiPartial <- function(X, s, r, Psi, group, A, lam, W, TSA) { # log(abs(det(X %*% [F2[,A] | (F1 + lam * W) %*% TsA])))
   n <- nrow(X)
   p <- ncol(X)
   table.group <- table(group)
@@ -456,8 +460,8 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
 
     lNormalRatio <- drop(t(Hdiff)%*% inv.Var %*% (Hprop + Hdiff/2))
     #dmvnorm(Hprop,,sig2 / n * Psi,log=T) - dmvnorm(Hcur,,sig2 / n * Psi,log=T)
-    lJacobianRatio <- log.Jacobi.partial(X,Scur,rprop,Psi,group,A,lbd,W,TSA.prop) -
-      log.Jacobi.partial(X,Scur,rcur,Psi,group,A,lbd,W,TSA.cur)
+    lJacobianRatio <- logJacobiPartial(X,Scur,rprop,Psi,group,A,lbd,W,TSA.prop) -
+      logJacobiPartial(X,Scur,rcur,Psi,group,A,lbd,W,TSA.cur)
     lProposalRatio <- pnorm(0,rcur[i],sqrt(tau[i] * rcur[i]), lower.tail=FALSE, log.p=TRUE) -
       pnorm(0,rprop[i],sqrt(tau[i] * rprop[i]), lower.tail=FALSE, log.p=TRUE)
     lAcceptanceRatio <-  lNormalRatio + lJacobianRatio + lProposalRatio
@@ -471,6 +475,7 @@ ld.Update.r <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
   }
   return(list(r = rprop, Hcur = Hcur, nrUpdate = nrUpdate))
 }
+
 ld.Update.S <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var,PEtype,n,p) {
   Sprop <- Scur;
   nSUpdate <- 0;
@@ -489,8 +494,8 @@ ld.Update.S <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
 
     lNormalRatio <- drop(t(Hdiff)%*% inv.Var %*% (Hprop + Hdiff/2))
     #dmvnorm(Hprop,,sig2 / n * Psi,log=T) - dmvnorm(Hcur,,sig2 / n * Psi,log=T)
-    lJacobianRatio <- log.Jacobi.partial(X,Sprop,rcur,Psi,group,A,lbd,W,TsA(,Sprop,group,A,n,p)) -
-      log.Jacobi.partial(X,Scur,rcur,Psi,group,A,lbd,W,TsA(,Scur,group,A,n,p))
+    lJacobianRatio <- logJacobiPartial(X,Sprop,rcur,Psi,group,A,lbd,W,TsA(,Sprop,group,A,n,p)) -
+      logJacobiPartial(X,Scur,rcur,Psi,group,A,lbd,W,TsA(,Scur,group,A,n,p))
     lAcceptanceRatio <-  lNormalRatio + lJacobianRatio
     if (lAcceptanceRatio <= log(runif(1))) { # Reject
       Sprop[group == i] <- Scur[group == i];
@@ -582,7 +587,8 @@ TsA.slasso <- function(SVD.temp, Q, s, W, group, A, n, p) {
   }
   return(Result)
 }
-log.Jacobi.partial.slasso <- function(X, s, r, Psi, group, A, lam, hsigma, W, TSA) { # log(abs(det(X %*% [F2[,A] | (F1 + lam * W) %*% TsA])))
+
+logJacobiPartial.slasso <- function(X, s, r, Psi, group, A, lam, hsigma, W, TSA) { # log(abs(det(X %*% [F2[,A] | (F1 + lam * W) %*% TsA])))
   # This function is only for high-dimensional cases.
   n <- nrow(X)
   p <- ncol(X)
@@ -617,7 +623,8 @@ slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, verbose=FALSE){
   while(K == 1 & niter < 1000){
     sig <- signew;
     lam <- lbd * sig
-    B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
+    B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), lbd = lam)$coef
+    # B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
     signew <- sqrt(crossprod(Y-Xtilde %*% B0) / n)
 
     niter <- niter + 1
@@ -628,7 +635,8 @@ slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, verbose=FALSE){
     }
   }
   lam <- lbd * signew
-  B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
+  B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), lbd = lam)$coef
+  # B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
   hsigma <- c(signew)
   S0 <- t(Xtilde) %*% (Y - Xtilde %*% B0) / n / lbd / hsigma
   B0 <- B0 / rep(weights,table(group))
@@ -888,5 +896,15 @@ Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat) {
   }
 }
 
-
+# Compute group-wize max eigen-value
+groupMaxEigen <- function(X, group) {
+  Psi <- crossprod(X) / nrow(X)
+  J <- max(group)
+  Gamma <- numeric(J)
+  for (i in 1:J) {
+    Gamma[i] <- max(eigen(Psi[group==i, group==i], only.values= TRUE)$values)
+  }
+  Gamma <- Gamma * (1 + 1e-10)
+  return(Gamma)
+}
 

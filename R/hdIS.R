@@ -18,8 +18,7 @@
 #' @details computes importance weights which is defined as (target density)/(proposal density),
 #'  when the samples are drawn from the proposal
 #'  distribution with the function \code{\link{PBsampler}} while the parameters of
-#'  the target distribution are (PETarget, sig2Target, lbdTarget).
-#'
+#'  the target distribution are (PETarget, sig2Target, lbdTarget). \cr
 #'  Say that we are interested in computing the expectation of a function of a random variable, \code{h(X)}.
 #'  Let \code{f(x)} be the true or target distribution and \code{g(x)} be the proposal distribution.
 #'  We can approximate the expectation, \code{E[h(X)]}, by a weighted average of samples, \code{x_i}, drawn from
@@ -321,13 +320,13 @@ hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
             TSA <- TsA.select(Q, Subgrad, group, A, n, p)
 
             log.f1 <- sum(dnorm(H.tilde.prop1, 0, f1sd, log = T)) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, W, TSA) )
+              (logJacobiPartial(X, Subgrad, r, Psi, group, A, lbdProp1, W, TSA) )
             if (Mixture) {
               log.f2 <- sum(dnorm(H.tilde.prop2, 0, f2sd, log = T)) +
-                (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, W, TSA) )
+                (logJacobiPartial(X, Subgrad, r, Psi, group, A, lbdProp2, W, TSA) )
             }
             log.f0 <- sum(dnorm(H.tilde.target, 0, f0sd, log = T)) +
-              (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, W, TSA) )
+              (logJacobiPartial(X, Subgrad, r, Psi, group, A, lbdTarget, W, TSA) )
 
             if (!Mixture) {
               if (log) {Weight <- log.f0 - log.f1} else {
@@ -381,13 +380,13 @@ hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
         #     }
         #
         #     log.f1 <- dmvnorm(drop(H.prop1), , sig2Prop1/n * Psi, log = T) +
-        #       (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp1, weights, TSA) )
+        #       (logJacobiPartial(X, Subgrad, r, Psi, group, A, lbdProp1, weights, TSA) )
         #     if (Mixture) {
         #       log.f2 <- dmvnorm(drop(H.prop2), , sig2Prop2/n * Psi, log = T) +
-        #         (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdProp2, weights, TSA) )
+        #         (logJacobiPartial(X, Subgrad, r, Psi, group, A, lbdProp2, weights, TSA) )
         #     }
         #     log.f0 <- dmvnorm(drop(H.target), , sig2Target/n * Psi, log = T) +
-        #       (log.Jacobi.partial(X, Subgrad, r, Psi, group, A, lbdTarget, weights, TSA) )
+        #       (logJacobiPartial(X, Subgrad, r, Psi, group, A, lbdTarget, weights, TSA) )
         #
         #     if (!Mixture) {
         #       if (log) {Weight <- log.f0 - log.f1} else {
@@ -485,13 +484,13 @@ hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
         TSA <- TsA.slasso(SVD.temp = SVD.temp, Q = Q, s = Subgrad, W = W, group = group,
                           A = A, n = n, p = p)
         log.f1 <- sum(dnorm(H.tilde.prop1, 0, f1sd, log = TRUE)) +
-          (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdProp1, hsigma = hatSigma, W = W, TSA = TSA))
+          (logJacobiPartial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdProp1, hsigma = hatSigma, W = W, TSA = TSA))
         if (Mixture) {
           log.f2 <- sum(dnorm(H.tilde.prop2, 0, f2sd, log = TRUE)) +
-            (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdProp2, hsigma = hatSigma, W = W, TSA = TSA))
+            (logJacobiPartial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdProp2, hsigma = hatSigma, W = W, TSA = TSA))
         }
         log.f0 <- sum(dnorm(H.tilde.target, 0, f0sd, log = TRUE)) +
-          (log.Jacobi.partial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdTarget, hsigma = hatSigma, W = W, TSA = TSA))
+          (logJacobiPartial.slasso(X = X, s = Subgrad, r = r, Psi = Psi, group = group, A = A, lam = lbdTarget, hsigma = hatSigma, W = W, TSA = TSA))
       } else { # Jacobian terms cancel out
         log.f1 <- sum(dnorm(H.tilde.prop1, 0, f1sd, log = TRUE))
         if (Mixture) {log.f2 <- sum(dnorm(H.tilde.prop2, 0, f2sd, log = TRUE))}

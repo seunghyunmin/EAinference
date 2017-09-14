@@ -13,7 +13,7 @@
 #' \code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
 #' squared error or that is within 1 std error bound.
 #' @param weights weight vector with length equal to the number of groups. Default is
-#' \code{rep(1, max(group))}.
+#' \code{weights = rep(1, max(group))}.
 #' @param group \code{p} x \code{1} vector of consecutive integers describing the group structure.
 #' The number of groups should be the same as max(group). Default is \code{group = 1:p}
 #' , where \code{p} is number of covariates.
@@ -23,7 +23,7 @@
 #' @details
 #' Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
 #' Users can specify the value of lbd or choose to run cross-validation to get
-#' optimal lambda in term of mean squared error. \code{\link{gglasso}}
+#' optimal lambda in term of mean squared error. \code{\link{grlassoFit}}
 #' is used to fit lasso and group lasso models. Coordinate decent algorithm is used
 #' to fit scaled lasso and sclaed group lasso models.
 #'
@@ -135,8 +135,8 @@ lassoFit <- function(X, Y, type, lbd,
 
   if (type %in% c("lasso", "grlasso")) {
     # compute group lasso estimator B0 and S0
-    B0 <- coef(gglasso(Xtilde, Y, pf = rep(1,max(group)), group = group,
-                       loss="ls", intercept=F, lambda=lbd))[-1] / IndWeights
+    # B0 <- coef(gglasso(x=Xtilde,y=Y,group=group,pf=rep(1,max(group)),lambda=lbd,intercept=FALSE))[-1] / IndWeights
+    B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), lbd = lbd)$coef / IndWeights
     S0 <- (t(Xtilde) %*% Y - t(Xtilde) %*% Xtilde %*%
              (B0 * IndWeights)) / n / lbd
     #A <- which(B0!=0)

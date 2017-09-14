@@ -36,8 +36,7 @@ below for details.
 computes importance weights which is defined as (target density)/(proposal density),
  when the samples are drawn from the proposal
  distribution with the function \code{\link{PBsampler}} while the parameters of
- the target distribution are (PETarget, sig2Target, lbdTarget).
-
+ the target distribution are (PETarget, sig2Target, lbdTarget). \cr
  Say that we are interested in computing the expectation of a function of a random variable, \code{h(X)}.
  Let \code{f(x)} be the true or target distribution and \code{g(x)} be the proposal distribution.
  We can approximate the expectation, \code{E[h(X)]}, by a weighted average of samples, \code{x_i}, drawn from

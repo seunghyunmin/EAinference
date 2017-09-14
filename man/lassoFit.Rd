@@ -25,7 +25,7 @@ The number of groups should be the same as max(group). Default is \code{group = 
 , where \code{p} is number of covariates.}
 
 \item{weights}{weight vector with length equal to the number of groups. Default is
-\code{rep(1, max(group))}.}
+\code{weights = rep(1, max(group))}.}
 
 \item{verbose}{logical. Only available for \code{type = "slasso"} or \code{type = "sgrlasso"}.}
 
@@ -49,7 +49,7 @@ or \code{type = "sgrlasso"}, the output will include estimated standard deviatio
 \details{
 Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
 Users can specify the value of lbd or choose to run cross-validation to get
-optimal lambda in term of mean squared error. \code{\link{gglasso}}
+optimal lambda in term of mean squared error. \code{\link{grlassoFit}}
 is used to fit lasso and group lasso models. Coordinate decent algorithm is used
 to fit scaled lasso and sclaed group lasso models.
 }

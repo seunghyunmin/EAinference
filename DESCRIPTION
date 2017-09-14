@@ -16,7 +16,9 @@ License: GPL (>=2)
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.2.3)
-Imports: stats, graphics, gglasso, msm, mvtnorm, parallel, limSolve, MASS, hdi
+Imports: stats, graphics, msm, mvtnorm, parallel, limSolve, MASS, hdi,
+    Rcpp, RcppArmadillo
+LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.0.1
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
