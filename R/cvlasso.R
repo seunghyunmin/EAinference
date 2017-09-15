@@ -23,8 +23,7 @@
 #' @details
 #' Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
 #' Users can specify the value of lbd or choose to run cross-validation to get
-#' optimal lambda in term of mean squared error. \code{\link{grlassoFit}}
-#' is used to fit lasso and group lasso models. Coordinate decent algorithm is used
+#' optimal lambda in term of mean squared error. Coordinate decent algorithm is used
 #' to fit scaled lasso and sclaed group lasso models.
 #'
 #' @references
