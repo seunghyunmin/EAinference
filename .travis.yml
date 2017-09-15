@@ -5,6 +5,5 @@ cache: packages
 
 # Test on release, old, and development versions of R
 r:
- - oldrel
  - release
  - devel
