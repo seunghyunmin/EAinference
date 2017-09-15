@@ -33,7 +33,7 @@ arma::rowvec grlasso(NumericMatrix X, NumericVector Y, NumericMatrix XY,
       NumericVector TEMP2 = as<NumericVector>(wrap(TEMP));
       arma::vec TEMP3 = std::max(0.0, 1 - lbd * weights[j] / sqrt(sum(pow(TEMP2, 2)))) / Gamma[j] * TEMP;
 
-      for (int i=0; i<ind.n_elem; i++) { Beta[ind(i)] = TEMP3[i]; }
+      for (int i=0; i< as<int>(wrap(ind.n_elem)); i++) { Beta[ind(i)] = TEMP3[i]; }
     }
     niter += 1;
   } while (sum(pow(Beta-oldBeta, 2)) >  eps*eps && niter < 500);
