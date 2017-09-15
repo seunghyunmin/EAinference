@@ -71,13 +71,11 @@ distribution of lasso given a fixed active set.
 }
 \details{
 Given appropriate initial value, provides Metropolis-Hastings samples
- under the fixed active set.
-
+ under the fixed active set. \cr
 From the initial values, \code{B0} and {S0}, \code{\link{MHLS}} draws \code{beta} and \code{subgrad} samples.
 In every iteration, given \code{t}-th iteration values, \code{t}-th \code{beta} and \code{t}-th \code{subgrad},
 a new set of proposed beta and subgradient is sampled. We either accept the proposed sample
-and use that as \code{(t+1)}-th iteration values or reuse \code{t}-th iteration values.
-
+and use that as \code{(t+1)}-th iteration values or reuse \code{t}-th iteration values. \cr
 See Zhou(2014) for more details.
 }
 \examples{
