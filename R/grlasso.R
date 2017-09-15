@@ -1,4 +1,4 @@
-#' @title Compute group lasso estimator when lambda is given.
+#' @title Compute group lasso estimator
 #'
 #' @description Computes group lasso solution when lambda is given.
 #'
