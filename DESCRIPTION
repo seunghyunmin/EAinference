@@ -1,6 +1,6 @@
 Package: EAinference
 Type: Package
-Title: Simulation Based Inference of Lasso Estimator
+Title: Estimator Augmentation and Simulation-based Inference
 Version: 0.2.0
 Authors@R: c(person("Seunghyun", "Min", email = "seunghyun@ucla.edu", role = c("aut", "cre")), person("Qing", "Zhou", email = "zhou@stat.ucla.edu", role = "aut"))
 Maintainer: Seunghyun Min <seunghyun@ucla.edu>
