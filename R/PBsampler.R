@@ -338,8 +338,6 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
 #' n <- 40
 #' p <- 50
 #' Niter <-  10
-#' Group <- rep(1:(p/10), each = 10)
-#' Weights <- rep(1, p/10)
 #' X <- matrix(rnorm(n*p), n)
 #' object <- PBsampler(X = X, PE_1 = c(1,1,rep(0,p-2)), sig2_1 = 1, lbd_1 = .5,
 #' niter = 100, type = "lasso")
@@ -362,6 +360,7 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
   weights <- object$weights
   lbd <- object$lbd
   group <- object$group
+  type <- object$type
 
   if (!method %in% c("none", "debias")) {
     stop("method should be either \"default\" or \"debias\".")
@@ -371,7 +370,6 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
   } else { # debiased estimator
     B <- object$beta # niter x p matrix
     S <- object$subgrad # niter x p matrix
-    refitB <- matrix(0,nrow(B),ncol(B))
     W <- rep(weights, table(group))
 
     refitY <- solve(X%*%t(X))%*%X %*% (crossprod(X) %*% t(B) / n +
@@ -382,20 +380,50 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
                               ncores = ncores, return.Z = TRUE)
     Z <- hdiFit$Z
 
-    ZrefitY <- crossprod(Z, refitY) # p x niter
-    ZX <- colSums(Z * X) # length p
-    ZXcomp <- matrix(0,p-1,p)
-    for (i in 1:p) {
-      ZXcomp[,i] <- crossprod(Z[,i], X[, -i])
+    if (type %in% c("lasso", "slasso")) {
+      ZrefitY <- crossprod(Z, refitY) # p x niter
+      ZX <- colSums(Z * X) # length p
+      ZXcomp <- matrix(0,p-1,p)
+      for (i in 1:p) {
+        ZXcomp[,i] <- crossprod(Z[,i], X[, -i])
+      }
+    } else {
+      J <- max(group)
+      inv.ZX.X <- vector("list", J) # each with size n x p_j
+      for (i in 1:J) {
+        inv.ZX.X[[i]] <- Z[, group==i] %*% ginv(t(Z[,group==i])%*%X[,group==i])
+      }
+
+      tinv.ZX.X.refitY <- vector("list", J) # each with size p_j x niter
+      for (i in 1:J) {
+        tinv.ZX.X.refitY[[i]] <- crossprod(inv.ZX.X[[i]], refitY)
+      }
+
+      ZXcomp.group <- vector("list", J) # each w/ size p_j x (n - p_j)
+      for (i in 1:J) {
+        ZXcomp.group[[i]] <- crossprod(inv.ZX.X[[i]], X[, group!=i])
+      }
+
+      ZXcomp.B <- vector("list", J) # each w/ size p_j x niter
+      for (i in 1:J) {
+        ZXcomp.B[[i]] <- tcrossprod(ZXcomp.group[[i]], B[, group!=i])
+      }
     }
 
     refitB <- matrix(0,nrow(B),ncol(B))
 
     # eq(4) from Zhang & Zhang(2014)
     FF <- function(x) {
-      TEMP <- c()
-      for (j in 1:ncol(B)) {
-        TEMP[j] <- (ZrefitY[j,x] - ZXcomp[,j] %*% B[x,-j]) / ZX[j]
+      if (type %in% c("lasso", "slasso")) {
+        TEMP <- c()
+        for (j in 1:ncol(B)) {
+          TEMP[j] <- (ZrefitY[j,x] - ZXcomp[,j] %*% B[x,-j]) / ZX[j]
+        }
+      } else { # eq (2.12) from Mitra & Zhang(2016) with little modification
+        TEMP <- c()
+        for (j in 1:J) {
+          TEMP[group==j] <- tinv.ZX.X.refitY[[j]][,x] - ZXcomp.B[[j]][,x]
+        }
       }
       return(TEMP)
     }
