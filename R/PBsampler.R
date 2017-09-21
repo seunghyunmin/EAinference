@@ -391,7 +391,7 @@ PB.CI <- function(object, alpha = .05, method = "debias", parallel=FALSE, ncores
       J <- max(group)
       inv.ZX.X <- vector("list", J) # each with size n x p_j
       for (i in 1:J) {
-        inv.ZX.X[[i]] <- Z[, group==i] %*% ginv(t(Z[,group==i])%*%X[,group==i])
+        inv.ZX.X[[i]] <- Z[, group==i] %*% MASS::ginv(t(Z[,group==i])%*%X[,group==i])
       }
 
       tinv.ZX.X.refitY <- vector("list", J) # each with size p_j x niter
