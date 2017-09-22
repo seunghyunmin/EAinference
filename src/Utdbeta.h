@@ -4,7 +4,7 @@ using namespace Rcpp;
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
-arma::rowvec Utdbeta(NumericMatrix X, NumericVector Y, NumericMatrix XY, arma::rowvec Beta)
+arma::vec Utdbeta(NumericMatrix X, NumericVector Y, NumericMatrix XY, arma::vec Beta)
 {
   int n = Y.size();
   int p = X.ncol();

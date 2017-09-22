@@ -6,15 +6,15 @@ using namespace Rcpp;
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
 
-arma::rowvec grlasso(NumericMatrix X, NumericVector Y, NumericMatrix XY,
+arma::vec grlasso(NumericMatrix X, NumericVector Y, NumericMatrix XY,
                      NumericVector weights, arma::rowvec group,
                      double lbd,
                      NumericVector Gamma, NumericVector initBeta, double eps)
 {
   //int n = Y.size();
   //int p = X.ncol();
-  arma::rowvec Beta = initBeta;
-  arma::rowvec oldBeta;
+  arma::vec Beta = initBeta;
+  arma::vec oldBeta;
   int niter = 0;
   int J = max(group);
   /*
@@ -26,7 +26,7 @@ arma::rowvec grlasso(NumericMatrix X, NumericVector Y, NumericMatrix XY,
   do{
     oldBeta = Beta;
     for (int j=0; j<J; j++) {
-      arma::rowvec U = Utdbeta(X,Y,XY,Beta);
+      arma::vec U = Utdbeta(X,Y,XY,Beta);
       arma::uvec ind = arma::find(group == (j+1)); // Find indices
       arma::vec TEMP = U.elem(ind) + Gamma[j] * Beta.elem(ind); // selected indices
 

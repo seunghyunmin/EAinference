@@ -7,7 +7,7 @@
 using namespace Rcpp;
 
 // grlasso
-arma::rowvec grlasso(NumericMatrix X, NumericVector Y, NumericMatrix XY, NumericVector weights, arma::rowvec group, double lbd, NumericVector Gamma, NumericVector initBeta, double eps);
+arma::vec grlasso(NumericMatrix X, NumericVector Y, NumericMatrix XY, NumericVector weights, arma::rowvec group, double lbd, NumericVector Gamma, NumericVector initBeta, double eps);
 RcppExport SEXP _EAinference_grlasso(SEXP XSEXP, SEXP YSEXP, SEXP XYSEXP, SEXP weightsSEXP, SEXP groupSEXP, SEXP lbdSEXP, SEXP GammaSEXP, SEXP initBetaSEXP, SEXP epsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
