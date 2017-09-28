@@ -605,7 +605,7 @@ slassoLoss <- function(X,Y,beta,sig,lbd) {
 }
 
 # Scaled lasso / group lasso function, use scaled X matrix.
-slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, verbose=FALSE){
+slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, Gamma, verbose=FALSE){
   n <- nrow(Xtilde)
   p <- ncol(Xtilde)
 
@@ -615,11 +615,13 @@ slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, verbose=FALSE){
   }
   sig <- signew <- .1
   K <- 1 ; niter <- 0
-
+  if (missing(Gamma)) {
+    Gamma <- groupMaxEigen(X = Xtilde, group = group)
+  }
   while(K == 1 & niter < 1000){
     sig <- signew;
     lam <- lbd * sig
-    B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), lbd = lam)$coef
+    B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), Gamma = Gamma, lbd = lam)$coef
     # B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
     signew <- sqrt(crossprod(Y-Xtilde %*% B0) / n)
 
@@ -631,7 +633,7 @@ slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, verbose=FALSE){
     }
   }
   lam <- lbd * signew
-  B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), lbd = lam)$coef
+  B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)),  Gamma = Gamma, lbd = lam)$coef
   # B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
   hsigma <- c(signew)
   S0 <- t(Xtilde) %*% (Y - Xtilde %*% B0) / n / lbd / hsigma

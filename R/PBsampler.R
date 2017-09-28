@@ -217,9 +217,9 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
 
   W <- rep(weights, table(group))
 
-  X.tilde   <- scale(X, FALSE, scale = W)
-  t.X.tilde <- t(X.tilde) # same as  t(X) / W
-  GramMat   <- t(X.tilde) %*% X.tilde
+  Xtilde   <- scale(X, FALSE, scale = W)
+  t.Xtilde <- t(Xtilde) # same as  t(X) / W
+  GramMat   <- t(Xtilde) %*% Xtilde
   Lassobeta <- matrix(0, niter, p)
   Subgrad   <- matrix(0, niter, p)
   Ysample   <- numeric(n)
@@ -233,7 +233,7 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
     res <- res - mean(res) # centering the residuals
   }
 
-  Gamma <- groupMaxEigen(X.tilde, group)
+  GAMMA <- groupMaxEigen(X = Xtilde, group = group)
 
   if (type %in% c("lasso", "grlasso")) {
     FF <- function(x) {
@@ -246,13 +246,13 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
       Ysample <- Yexpect + epsilon;
       #if(center){Ysample=Ysample-mean(Ysample);}
 
-      # LassoFit <- gglasso(X.tilde, Ysample, pf = rep(1, max(group)),
+      # LassoFit <- gglasso(Xtilde, Ysample, pf = rep(1, max(group)),
       #                     group = group, loss = "ls", intercept = FALSE, lambda = lbd)
       # Lassobeta <- coef(LassoFit)[-1] / W
-      LassoFit <- grlassoFit(X = X.tilde, Y = Ysample, group = group,
-                             weights = rep(1, max(group)), Gamma=Gamma, lbd = lbd)
+      LassoFit <- grlassoFit(X = Xtilde, Y = Ysample, group = group,
+                             weights = rep(1, max(group)), Gamma = GAMMA, lbd = lbd)
       Lassobeta <- LassoFit$coef / W
-      return(c(Lassobeta, (t.X.tilde %*% Ysample -
+      return(c(Lassobeta, (t.Xtilde %*% Ysample -
                              GramMat %*% (Lassobeta * W)) / n / lbd))
     }
   } else {
@@ -264,30 +264,43 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
         epsilon <- rnorm(n, mean = 0, sd = sig2^0.5)
       }
       Ysample <- Yexpect + epsilon;
-      #if(center){Ysample=Ysample-mean(Ysample);}
 
-      sig <- signew <- .5
-      K <- 1 ; niter <- 0
-      while(K == 1 & niter < 1000){
-        sig <- signew;
-        lam <- lbd * sig
-        # B0 <- coef(gglasso(X.tilde,Ysample,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
-        B0 <- grlassoFit(X = X.tilde, Y = Ysample, group = group,
-                         weights = rep(1, max(group)), Gamma=Gamma, lbd = lbd)$coef
-        signew <- sqrt(crossprod(Ysample-X.tilde %*% B0) / n)
-
-        niter <- niter + 1
-        if (abs(signew - sig) < 1e-04) {K <- 0}
-        if (verbose) {
-          cat(niter, "\t", sprintf("%.3f", slassoLoss(X.tilde,Ysample,B0,signew,lbd)),"\t",
-              sprintf("%.3f", signew), "\n")
-        }
-      }
-      hsigma <- c(signew)
-      S0 <- (t.X.tilde %*% (Ysample - X.tilde %*% B0)) / n / lbd / hsigma
-      B0 <- B0 / rep(weights,table(group))
-      return(c(B0, S0, hsigma))
+      Fit <- slassoFit.tilde(Xtilde = Xtilde, Y = Ysample, lbd = lbd, group = group, weights = weights, Gamma = GAMMA, verbose = verbose)
+      return(c(Fit$B0, Fit$S0, Fit$hsigma))
     }
+
+    # FF <- function(x) {
+    #   if (Btype == "wild") {
+    #     epsilon <- rnorm(n, mean = 0, sd = 1)
+    #     epsilon <- epsilon * res
+    #   } else {
+    #     epsilon <- rnorm(n, mean = 0, sd = sig2^0.5)
+    #   }
+    #   Ysample <- Yexpect + epsilon;
+    #   #if(center){Ysample=Ysample-mean(Ysample);}
+    #
+    #   sig <- signew <- .5
+    #   K <- 1 ; niter <- 0
+    #   while(K == 1 & niter < 1000){
+    #     sig <- signew;
+    #     lam <- lbd * sig
+    #     # B0 <- coef(gglasso(Xtilde,Ysample,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
+    #     B0 <- grlassoFit(X = Xtilde, Y = Ysample, group = group,
+    #                      weights = rep(1, max(group)), Gamma = Gamma, lbd = lbd)$coef
+    #     signew <- sqrt(crossprod(Ysample-Xtilde %*% B0) / n)
+    #
+    #     niter <- niter + 1
+    #     if (abs(signew - sig) < 1e-04) {K <- 0}
+    #     if (verbose) {
+    #       cat(niter, "\t", sprintf("%.3f", slassoLoss(Xtilde,Ysample,B0,signew,lbd)),"\t",
+    #           sprintf("%.3f", signew), "\n")
+    #     }
+    #   }
+    #   hsigma <- c(signew)
+    #   S0 <- (t.Xtilde %*% (Ysample - Xtilde %*% B0)) / n / lbd / hsigma
+    #   B0 <- B0 / rep(weights,table(group))
+    #   return(c(B0, S0, hsigma))
+    # }
   }
 
   if (parallel == FALSE) {

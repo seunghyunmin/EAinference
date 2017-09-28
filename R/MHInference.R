@@ -68,12 +68,14 @@ postInference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   if (length(A)==0) {
     stop("Given lbd, active set is empty.")
   }
-  beta.refit <- coef(lm(Y~X[,A]+0))
-
+  
   Y <- matrix(Y, , 1)
   X <- as.matrix(X)
   n <- nrow(X)
   p <- ncol(X)
+
+  beta.refit <- rep(0,p)
+  beta.refit[A] <- coef(lm(Y~X[,A]+0))
 
   nChain <- as.integer(nChain)
   niterPerChain <- as.integer(niterPerChain)
