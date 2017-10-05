@@ -199,20 +199,9 @@ lassoFit <- function(X, Y, type, lbd,
 #' cv.lasso(X = X, Y = Y, group = group, weights = weights, K = 2,
 #' type = "sgrlasso", num.lbdseq = 2, plot.it = FALSE)
 #' @export
-cv.lasso <- function(
-  X,
-  Y,
-  group = 1:ncol(X),
-  weights = rep(1,max(group)),
-  type,
-  K = 10L,
-  minlbd,
-  maxlbd,
-  num.lbdseq = 100L,
-  parallel = FALSE,
-  ncores = 2L,
-  plot.it = FALSE,
-  verbose = FALSE)
+cv.lasso <- function( X, Y, group = 1:ncol(X), weights = rep(1,max(group)),
+  type, K = 10L, minlbd, maxlbd, num.lbdseq = 100L, parallel = FALSE,
+  ncores = 2L, plot.it = FALSE, verbose = FALSE)
 {
   n <- nrow(X)
   p <- ncol(X)
@@ -223,7 +212,9 @@ cv.lasso <- function(
 
   if (!parallel) {ncores <- 1}
 
-  if(missing(minlbd)) {minlbd <- 0}
+  if(missing(minlbd)) {
+    ifelse(type %in% c("lasso", "grlasso"), minlbd <- 0, minlbd <- .1)
+  }
   if(missing(maxlbd)) {
     maxlbd <- if (type == "lasso")
       {
@@ -302,9 +293,7 @@ cv.lasso <- function(
 
   err.1se <- cvsd[index.min.cv] + cv[index.min.cv]
 
-  index.min.cv:num.lbdseq
-
-  lbd.1se <- index[which.min(abs(cv - err.1se)[index.min.cv:num.lbdseq]) + index.min.cv - 1]
+  lbd.1se <- max(index[cv <= err.1se], na.rm=TRUE)
   lbd.min <- index[index.min.cv]
 
   if (plot.it) {
