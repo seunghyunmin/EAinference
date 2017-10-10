@@ -1,5 +1,5 @@
 grlassoFit <- function(X, Y, lbd, weights = rep(1, max(group)), group = 1:p,
-                       Gamma, eps=1e-5, returnGamma = FALSE)
+                       Gamma, eps=1e-5, returnGamma = FALSE, initBeta = rep(1, ncol(X)))
 {
   n <- nrow(X)
   p <- ncol(X)
@@ -33,12 +33,12 @@ grlassoFit <- function(X, Y, lbd, weights = rep(1, max(group)), group = 1:p,
 
   if (returnGamma) {
     return(list(coef = c(grlasso(X = X, Y = Y, XY = XY, weights = weights, group = group,
-                                 lbd = lbd, Gamma = Gamma, initBeta = rep(1, ncol(X)),
+                                 lbd = lbd, Gamma = Gamma, initBeta = initBeta,
                                  eps = eps))
     , Gamma = Gamma))
   } else {
     return(list(coef = c(grlasso(X = X, Y = Y, XY = XY, weights = weights, group = group,
-                                 lbd = lbd, Gamma = Gamma, initBeta = rep(1, ncol(X)),
+                                 lbd = lbd, Gamma = Gamma, initBeta = initBeta,
                                  eps = eps))))
   }
 }

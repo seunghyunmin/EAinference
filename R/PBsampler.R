@@ -91,9 +91,12 @@ PBsampler <- function(X, PE_1, sig2_1, lbd_1, PE_2,
   #--------------------
   # Error Handling
   #--------------------
-  if (Btype == "wild") {
-    sig2_1 <- sig2_2 <- 1
-  }
+  # if (Btype == "wild") {
+  #   sig2_1 <- NULL
+  #   if (!missing(lbd_2) && !mising(PE_2)) {
+  #     sig2_2 <- NULL
+  #   }
+  # }
   if (!is.null(Y) & length(Y) != n) {
     stop("dimension of X and Y are not conformable.")
   }
@@ -238,7 +241,7 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
   if (type %in% c("lasso", "grlasso")) {
     FF <- function(x) {
       if (Btype == "wild") {
-        epsilon <- rnorm(n, mean = 0, sd = 1)
+        epsilon <- rnorm(n, mean = 0, sd = sig2^0.5)
         epsilon <- epsilon * res
       } else {
         epsilon <- rnorm(n, mean = 0, sd = sig2^0.5)
@@ -258,7 +261,7 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
   } else {
     FF <- function(x) {
       if (Btype == "wild") {
-        epsilon <- rnorm(n, mean = 0, sd = 1)
+        epsilon <- rnorm(n, mean = 0, sd = sig2^0.5)
         epsilon <- epsilon * res
       } else {
         epsilon <- rnorm(n, mean = 0, sd = sig2^0.5)

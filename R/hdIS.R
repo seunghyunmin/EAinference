@@ -115,6 +115,19 @@ hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
   B <- PBsample$beta
   S <- PBsample$subgrad
 
+  if (Mixture) {
+    PEProp1 <- PBsample$PE[1,]
+    PEProp2 <- PBsample$PE[2,]
+    sig2Prop1 <- PBsample$sig2[1]
+    sig2Prop2 <- PBsample$sig2[2]
+    lbdProp1 <- PBsample$lbd[1]
+    lbdProp2 <- PBsample$lbd[2]
+  } else {
+    PEProp1 <- PBsample$PE
+    sig2Prop1 <- PBsample$sig2
+    lbdProp1 <- lbdProp2 <- PBsample$lbd
+  }
+
   if (Btype == "wild") {
     Y <- PBsample$Y
     if (PEtype == "coeff") {
@@ -135,19 +148,6 @@ hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
     if (Mixture) {
       resProp2 <- resProp2 - mean(resProp2)
     }
-  }
-
-  if (Mixture) {
-    PEProp1 <- PBsample$PE[1,]
-    PEProp2 <- PBsample$PE[2,]
-    sig2Prop1 <- PBsample$sig2[1]
-    sig2Prop2 <- PBsample$sig2[2]
-    lbdProp1 <- PBsample$lbd[1]
-    lbdProp2 <- PBsample$lbd[2]
-  } else {
-    PEProp1 <- PBsample$PE
-    sig2Prop1 <- PBsample$sig2
-    lbdProp1 <- lbdProp2 <- PBsample$lbd
   }
 
   if (type %in% c("slasso", "sgrlasso")) {
@@ -195,10 +195,10 @@ hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
 
       if (Btype == "wild") {
         XVR <- X%*%VR
-        VARTarget <- t(XVR) %*% diag(resTarget) %*% XVR / n^2
-        VARProp1 <- t(XVR) %*% diag(resProp1) %*% XVR / n^2
+        VARTarget <- t(XVR) %*% diag(resTarget * sig2Target) %*% XVR / n^2
+        VARProp1 <- t(XVR) %*% diag(resProp1 * sig2Prop1) %*% XVR / n^2
         if (Mixture) {
-          VARProp2 <- t(XVR) %*% diag(resProp2) %*% XVR / n^2
+          VARProp2 <- t(XVR) %*% diag(resProp2 * sig2Prop2) %*% XVR / n^2
         }
       }
 
@@ -283,10 +283,10 @@ hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
           f2sd <- sqrt(sig2Prop2/n)
         }
       } else {
-        f0sd <- sqrt(sig2Target/n) * resTarget
-        f1sd <- sqrt(sig2Prop1/n) * resProp1
+        f0sd <- sqrt(sig2Target/n) * abs(resTarget)
+        f1sd <- sqrt(sig2Prop1/n) * abs(resProp1)
         if (Mixture) {
-          f2sd <- sqrt(sig2Prop2/n) * resProp2
+          f2sd <- sqrt(sig2Prop2/n) * abs(resProp2)
         }
       }
 

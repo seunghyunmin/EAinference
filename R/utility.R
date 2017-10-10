@@ -618,10 +618,11 @@ slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, Gamma, verbose=FALSE
   if (missing(Gamma)) {
     Gamma <- groupMaxEigen(X = Xtilde, group = group)
   }
-  while(K == 1 & niter < 1000){
+  B0 <- rep(1, p)
+  while(K == 1 & niter < 500){
     sig <- signew;
     lam <- lbd * sig
-    B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), Gamma = Gamma, lbd = lam)$coef
+    B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), Gamma = Gamma, lbd = lam, initBeta = B0)$coef
     # B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
     signew <- sqrt(crossprod(Y-Xtilde %*% B0) / n)
 
@@ -633,7 +634,7 @@ slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, Gamma, verbose=FALSE
     }
   }
   lam <- lbd * signew
-  B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)),  Gamma = Gamma, lbd = lam)$coef
+  B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)),  Gamma = Gamma, lbd = lam, initBeta = B0)$coef
   # B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
   hsigma <- c(signew)
   S0 <- t(Xtilde) %*% (Y - Xtilde %*% B0) / n / lbd / hsigma
