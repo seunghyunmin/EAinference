@@ -165,7 +165,7 @@ PBsampler <- function(X, PE_1, sig2_1, lbd_1, PE_2,
       RESULT <- list(beta = rbind(PB1$beta, PB2$beta),
                      subgrad = rbind(PB1$subgrad, PB2$subgrad), hsigma = c(PB1$hsigma, PB2$hsigma), X = X,
                      PE = rbind(PE_1, PE_2),
-                     sig2 = NULL, lbd = c(lbd_1, lbd_2), weights = weights, group = group,
+                     sig2 = c(sig2_1, sig2_2), lbd = c(lbd_1, lbd_2), weights = weights, group = group,
                      type = type, PEtype = PEtype, Btype = Btype, Y = Y, mixture = Mixture)
     }
   } else {
@@ -179,7 +179,7 @@ PBsampler <- function(X, PE_1, sig2_1, lbd_1, PE_2,
                      type = type, PEtype = PEtype, Btype = Btype, Y = Y, mixture = Mixture)
     } else {
       RESULT <- list(beta = PB$beta, subgrad = PB$subgrad, hsigma = PB$hsigma, X = X,
-                     PE = PE_1, sig2 = NULL, lbd = lbd_1, weights = weights, group = group,
+                     PE = PE_1, sig2 = sig2_1, lbd = lbd_1, weights = weights, group = group,
                      type = type, PEtype = PEtype, Btype = Btype, Y = Y, mixture = Mixture)
     }
   }
