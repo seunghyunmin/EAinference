@@ -256,8 +256,6 @@ group.norm2 <- function(x, group) {
 
 # T(s,A) : p x (n-|A|) matrix s.t. ds = T(s,A)ds_F
 TsA <- function(Q, s, group, A, n, p) {
-  # even if length(A) == 0, everything will work just fine !!
-  # when lengthI(A) == n, we only compute F2 function.
   if (n < p && missing(Q)) {
     stop("High dimensional setting needs Q")
   }
@@ -312,11 +310,7 @@ TsA <- function(Q, s, group, A, n, p) {
   return(Result)
 }
 #------------------------------
-# TsA.qr is not updated
-# RD is not invertible-guaranteed.
 TsA.qr <- function(Q, s, group, A, n, p) { # T(s,A)
-  # even if length(A) == 0, everything will work just fine !!
-  # when length(A) == n, we only compute F2 function.
   if (n == length(A)) {stop("|A| should be smaller than n")}
   if (n < p && missing(Q)) {
     stop("High dimensional setting needs Q")
@@ -528,8 +522,6 @@ SummSign <- function ( x ) {
 # Utility functions for scaled lasso / scaled group lasso
 #-------------------------------------------
 TsA.slasso <- function(SVD.temp, Q, s, W, group, A, n, p) {
-  # even if length(A) == 0, everything will work just fine !!
-  # when lengthI(A) == n, we only compute F2 function.
   if (n < p && missing(Q)) {
     stop("High dimensional setting needs Q")
   }
