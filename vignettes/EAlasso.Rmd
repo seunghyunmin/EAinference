@@ -13,9 +13,10 @@ vignette: >
 The package includes
 
 - Fitting the lasso, group lasso, scaleld lasso and scaled group lasso models
-- Gaussian bootstrap and wild multiplier bootstrap sampler
-- Importance sampler
-- Metropolis-Hastings lasso sampler with applications in post-selection inference.
+- Gaussian and wild multiplier bootstrap for lasso, group lasso, scaled lasso, scaled group
+lasso and their de-biased estimators
+- Importance sampler for approximating p-values in these methods
+- Markov chain Monte Carlo lasso sampler with applications in post-selection inference.
 
 ## Loss functions
 Let the unknown true model be

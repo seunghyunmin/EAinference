@@ -498,7 +498,7 @@ ld.Update.S <- function(rcur,Scur,A,Hcur,X,pointEstimate,Psi,W,lbd,group,inv.Var
 }
 rUnitBall.surface <- function(p) {
   x <- rnorm(p)
-  x / sqrt(crossprod(x))
+  x / c(sqrt(crossprod(x)))
 }
 rUnitBall <- function(p) {
   x <- rnorm(p,,1/sqrt(2));
@@ -663,9 +663,12 @@ ErrorParallel <- function(parallel, ncores) {
 # Utility functions for MHInference
 #-------------------------------------------
 #Propose mu hat from 95% region
-PluginMu.MHLS <- function(X, Y, lbd, ratioSeq = seq(0,2,by=0.01), alpha = 0.05
-                          , nChain, niter = 100
+PluginMu.MHLS <- function(X, Y, lbd, ratioSeq = seq(0,1,by=0.01), alpha = 0.05
+                          , nChain, niter = 100, method = "boundary"
                           , parallel = FALSE, ncores = 2) {
+  # method can be either "boundary" or "unif"
+  Sample <- switch(method, boundary = rUnitBall.surface, unif = rUnitBall)
+
   n <- length(Y)
   n1 <- round(n/2)
   n2 <- n - n1
@@ -681,10 +684,10 @@ PluginMu.MHLS <- function(X, Y, lbd, ratioSeq = seq(0,2,by=0.01), alpha = 0.05
     Y2 <- Y[-Index]
     TEMP <- projStein(X1, X2, Y1, Y2, lbd = lbd, ratios = ratioSeq,
                       alpha=alpha, niter=niter, fixSeed = FALSE)
-    muhat[-Index] <- TEMP$mu_s + rUnitBall(n1) * TEMP$r_s + TEMP$mu_w + rUnitBall(n1) * TEMP$r_w
+    muhat[-Index] <- TEMP$mu_s + Sample(n1) * TEMP$r_s + TEMP$mu_w + Sample(n1) * TEMP$r_w
     TEMP <- projStein(X2, X1, Y2, Y1, lbd = lbd, ratios = ratioSeq,
                       alpha=alpha, niter=niter, fixSeed = FALSE)
-    muhat[Index] <- TEMP$mu_s + rUnitBall(n2) * TEMP$r_s + TEMP$mu_w + rUnitBall(n2) * TEMP$r_w
+    muhat[Index] <- TEMP$mu_s + Sample(n2) * TEMP$r_s + TEMP$mu_w + Sample(n2) * TEMP$r_w
     return(muhat)
   }
 

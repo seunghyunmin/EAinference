@@ -68,7 +68,7 @@ postInference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   if (length(A)==0) {
     stop("Given lbd, active set is empty.")
   }
-  
+
   Y <- matrix(Y, , 1)
   X <- as.matrix(X)
   n <- nrow(X)
@@ -130,7 +130,7 @@ postInference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
                                   sigma.hat = sqrt(sig2.hat))
   } else {
     Plugin.seq <- PluginMu.MHLS(X = X, Y = Y, lbd = lbd,
-      ratioSeq = seq(0,2,by=0.01), alpha = 0.05, nChain = nChain, niter = 100,
+      ratioSeq = seq(0,1,by=0.01), alpha = 0.05, nChain = nChain, niter = 100,
       parallel = parallel, ncores = ncores)
   }
 
