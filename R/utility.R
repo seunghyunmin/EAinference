@@ -684,10 +684,10 @@ PluginMu.MHLS <- function(X, Y, lbd, ratioSeq = seq(0,1,by=0.01), alpha = 0.05
     Y2 <- Y[-Index]
     TEMP <- projStein(X1, X2, Y1, Y2, lbd = lbd, ratios = ratioSeq,
                       alpha=alpha, niter=niter, fixSeed = FALSE)
-    muhat[-Index] <- TEMP$mu_s + Sample(n1) * TEMP$r_s + TEMP$mu_w + Sample(n1) * TEMP$r_w
+    muhat[-Index] <- TEMP$mu_s + Sample(n2) * TEMP$r_s + TEMP$mu_w + Sample(n2) * TEMP$r_w
     TEMP <- projStein(X2, X1, Y2, Y1, lbd = lbd, ratios = ratioSeq,
                       alpha=alpha, niter=niter, fixSeed = FALSE)
-    muhat[Index] <- TEMP$mu_s + Sample(n2) * TEMP$r_s + TEMP$mu_w + Sample(n2) * TEMP$r_w
+    muhat[Index] <- TEMP$mu_s + Sample(n1) * TEMP$r_s + TEMP$mu_w + Sample(n1) * TEMP$r_w
     return(muhat)
   }
 
