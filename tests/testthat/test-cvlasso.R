@@ -78,9 +78,9 @@ test_that("Low dimensional setting", {
 
 test_that("cv.lasso", {
   expect_error(lassoFit(X = X,Y = Y, type="lasso"),
-               , "missing")
+               , "error")
   expect_error(lassoFit(X = X,Y = Y, type="lasso", lbd = "cv"),
-               , "invalid")
+               , "error")
   expect_error(lassoFit(X = X,Y = Y, type="lasso", lbd = "cv.1se")
                , NA)
   expect_error(lassoFit(X = X,Y = Y, type="lasso", lbd = "cv.min")

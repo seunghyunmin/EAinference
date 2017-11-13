@@ -38,7 +38,7 @@
 #' for each active coefficient.}
 #' @examples
 #' set.seed(123)
-#' n <- 5
+#' n <- 6
 #' p <- 10
 #' X <- matrix(rnorm(n*p),n)
 #' Y <- X %*% rep(1,p) + rnorm(n)
@@ -50,6 +50,10 @@
 #' nChain = 3, niterPerChain = 20, method = "coeff", parallel = parallel)
 #' postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
 #' nChain = 3, niterPerChain = 20, method = "coeff", parallel = parallel, returnSamples = TRUE)
+#' postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+#' nChain = 3, niterPerChain = 20, method = "mu", parallel = parallel)
+#' postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+#' nChain = 3, niterPerChain = 20, method = "mu", parallel = parallel, returnSamples = TRUE)
 #' @export
 postInference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   tau = rep(1, ncol(X)), sig2.hat, alpha = .05, nChain = 10, method,
