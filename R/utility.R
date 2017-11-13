@@ -639,14 +639,14 @@ slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, Gamma, verbose=FALSE
 # Error handling
 #---------------------
 ErrorParallel <- function(parallel, ncores) {
-  if(.Platform$OS.type == "windows" && parallel == TRUE){
+  if(.Platform$OS.type == "windows" && (parallel == TRUE | ncores > 1)){
     ncores <- 1L
     parallel <- FALSE
     warning("Under Windows platform, parallel computing cannot be executed.")
   }
 
   if (parallel && ncores == 1) {
-    ncores <- 2
+    ncores <- 2L
     warning("If parallel=TRUE, ncores needs to be greater than 1. Automatically
             set ncores to 2.")
   }
