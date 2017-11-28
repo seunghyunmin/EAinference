@@ -672,10 +672,9 @@ PluginMu.MHLS <- function(X, Y, lbd, ratioSeq = seq(0,1,by=0.01), alpha = 0.05
   n <- length(Y)
   n1 <- round(n/2)
   n2 <- n - n1
-  muhat <- matrix(,nChain,n)
 
   FF <- function(x) {
-    muhat <- numeric(n)
+    muhat <- numeric(2 * n)
     Index <- sort(sample(n, n1))
     #print(Index)
     X1 <- X[Index,]
@@ -684,15 +683,18 @@ PluginMu.MHLS <- function(X, Y, lbd, ratioSeq = seq(0,1,by=0.01), alpha = 0.05
     Y2 <- Y[-Index]
     TEMP <- projStein(X1, X2, Y1, Y2, lbd = lbd, ratios = ratioSeq,
                       alpha=alpha, niter=niter, fixSeed = FALSE)
-    muhat[-Index] <- TEMP$mu_s + Sample(n2) * TEMP$r_s + TEMP$mu_w + Sample(n2) * TEMP$r_w
+    muhat[(1:n)[-Index]] <- TEMP$mu_s + Sample(n2) * TEMP$r_s + TEMP$mu_w + Sample(n2) * TEMP$r_w
+    muhat[(1:n + n)[-Index]] <- TEMP$mu_s + TEMP$mu_w
     TEMP <- projStein(X2, X1, Y2, Y1, lbd = lbd, ratios = ratioSeq,
                       alpha=alpha, niter=niter, fixSeed = FALSE)
     muhat[Index] <- TEMP$mu_s + Sample(n1) * TEMP$r_s + TEMP$mu_w + Sample(n1) * TEMP$r_w
+    muhat[(1:n + n)[Index]] <- TEMP$mu_s + TEMP$mu_w
     return(muhat)
   }
+  TEMP <- t(parallel::mcmapply(FF,1:nChain,mc.cores = ncores))
 
   # returns nChain by p matrix
-  return(t(parallel::mcmapply(FF,1:nChain,mc.cores = ncores)))
+  return(rbind(TEMP[,1:n], colMeans(TEMP[,1:n+n])))
 
   # for (i in 1:nChain) {
   #   Index <- sort(sample(n, n1))
@@ -852,12 +854,14 @@ Refit.MHLS <- function(X,weights,lbd,MHsample) {
 }
 
 # Generate 1-alpha Confidence Interval based on the deviation
-CI.MHLS <- function(betaRefitMH, betaRefit, alpha=.05) {
+CI.MHLS <- function(betaRefitMH, betaCenter, betaRefit, alpha=.05) {
+  # betaCenter : ginv(X[,A]) %*% X %*% beta0 or ginv(X[,A]) %*% hatMu
+  #               , vector of length |A|
   # betaRefitMH : refitted beta via Refit.MHLS, a niter x |A| matrix.
   # betaRefit : refitted beta from original data, a vector with length p.
   # alpha : significant level.
   A <- which(betaRefit!=0)
-  Quantile <- apply(betaRefitMH - betaRefit[A], 1, function(x)
+  Quantile <- apply(betaRefitMH - betaCenter[A], 1, function(x)
   {quantile(x,prob=c(alpha/2, 1 - alpha/2))})
   Result <- rbind(LowerBound = -Quantile[2,] + betaRefit[A],
                   UpperBound = -Quantile[1,] + betaRefit[A])
@@ -880,11 +884,11 @@ Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat) {
   if (nPlugin == 1) {
     return(matrix(betaRefit,1))
   } else {
-    xy <- matrix(rnorm(length(A)*(nPlugin-1)), nPlugin-1)
+    xy <- matrix(rnorm(length(A)*(nPlugin)), nPlugin)
     lambda <- 1 / sqrt(rowSums(xy^2))
     xy <- xy * lambda * sqrt(qchisq(0.95, df=length(A)))
     coeff.seq <- matrix(0,nPlugin,ncol(X))
-    coeff.seq[,A]  <- rbind(betaRefit, t(t(xy%*%chol(solve(crossprod(X[,A])))) *
+    coeff.seq[,A]  <- rbind(t(t(xy%*%chol(solve(crossprod(X[,A])))) *
                                            sigma.hat + betaRefit))
     return(coeff.seq=coeff.seq)
   }

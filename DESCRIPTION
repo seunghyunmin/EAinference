@@ -1,7 +1,7 @@
 Package: EAinference
 Type: Package
 Title: Estimator Augmentation and Simulation-Based Inference
-Version: 0.2.2
+Version: 0.2.3
 Authors@R: c(person("Seunghyun", "Min", email = "seunghyun@ucla.edu", role = c("aut", "cre")), person("Qing", "Zhou", email = "zhou@stat.ucla.edu", role = "aut"))
 Maintainer: Seunghyun Min <seunghyun@ucla.edu>
 Description: Estimator augmentation methods for statistical inference on high-dimensional data, 

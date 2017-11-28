@@ -132,10 +132,13 @@ postInference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   if (method == "coeff") {
     Plugin.seq <- Pluginbeta.MHLS(X = X, Y = Y, A = A, nPlugin = nChain,
                                   sigma.hat = sqrt(sig2.hat))
+    betaCenter <- beta.refit
   } else {
     Plugin.seq <- PluginMu.MHLS(X = X, Y = Y, lbd = lbd,
       ratioSeq = seq(0,1,by=0.01), alpha = 0.05, nChain = nChain, niter = 100,
-      parallel = parallel, ncores = ncores)
+      method = "unif", parallel = parallel, ncores = ncores)
+    betaCenter <- rep(0,p)
+    betaCenter[A] <- solve(crossprod(X[,A]))%*%t(X[,A])%*% Plugin.seq[nChain+1, ]
   }
 
   FF <- function(x) {
@@ -166,10 +169,10 @@ postInference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   RefitBeta <- Refit.MHLS(X,weights,lbd,MCSAMPLE)
   if (returnSamples) {
     return(list(MHsamples = TEMP, pluginValue = Plugin.seq, method = method,
-            confidenceInterval = CI.MHLS(betaRefitMH = RefitBeta,
+            confidenceInterval = CI.MHLS(betaRefitMH = RefitBeta, betaCenter = betaCenter,
                                          betaRefit = beta.refit, alpha = alpha)))
   } else {
     return(CI.MHLS(betaRefitMH = RefitBeta, betaRefit = beta.refit,
-                   alpha = alpha))
+                   betaCenter = betaCenter, alpha = alpha))
   }
 }
