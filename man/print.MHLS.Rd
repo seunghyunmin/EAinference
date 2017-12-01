@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{an object of class "MHLS", which is a result of \code{\link{MHLS}}.}
 
-\item{...}{...    addtional print arguments.}
+\item{...}{additional print arguments.}
 }
 \value{
 Above results are silently returned.

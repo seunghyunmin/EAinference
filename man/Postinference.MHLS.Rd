@@ -21,7 +21,7 @@ squared error or that is within 1 std error bound.}
 \item{weights}{weight vector with length equal to the number of coefficients.
 Default is \code{rep(1, ncol(X))}.}
 
-\item{tau}{numeric vector. Standard deviaion of proposal distribution
+\item{tau}{numeric vector. Standard deviation of proposal distribution
 for each beta. Adjust the value to get relevant level of acceptance rate.
 Default is \code{rep(1, ncol(X))}.}
 

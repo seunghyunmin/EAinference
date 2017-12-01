@@ -13,7 +13,7 @@
 
 \item{skipS}{logical. If \code{skipS = TRUE}, plots beta only.}
 
-\item{...}{addtional arguments passed to or from other methods.}
+\item{...}{additional arguments passed to or from other methods.}
 }
 \description{
 Provides six plots for each covariate index;

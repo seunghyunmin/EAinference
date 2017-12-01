@@ -29,7 +29,7 @@ Every active coefficient index in \code{B0} must be included.
 Default is \code{A = which(B0 != 0)}.}
 
 \item{tau}{numeric vector with length \code{p}.
-Standard deviaion of proposal distribution for each coefficient.}
+Standard deviation of proposal distribution for each coefficient.}
 
 \item{niter}{integer. The number of iterations. Default is \code{niter = 2000}}
 

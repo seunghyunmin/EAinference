@@ -35,7 +35,7 @@ The number of groups should be the same as max(group). Default is \code{group = 
 Users can choose either \code{"coeff"} or \code{"mu"}.}
 
 \item{Btype}{Type of bootstrap method. Users can choose either \code{"gaussian"}
-for guassian bootstrap or \code{"wild"} for wild multiplier bootstrap. Default
+for gaussian bootstrap or \code{"wild"} for wild multiplier bootstrap. Default
 is \code{"gaussian"}.}
 
 \item{Y}{response vector. This is only required when \code{Btype = "wild"}.}
@@ -65,7 +65,7 @@ lasso, group lasso, scaled lasso and scaled group lasso estimators along with th
 This function provides bootstrap samples for lasso, group lasso,
 scaled lasso or scaled group lasso estimator
 and its subgradient. \cr
-The sampling distribution is chracterized by \code{(PE, sig2, lbd)}.
+The sampling distribution is characterized by \code{(PE, sig2, lbd)}.
 If \code{Btype = "gaussian"}, \code{error_new} is generated from \code{N(0, sig2)}.
 If \code{Btype = "wild"}, we first generate \code{error_new} from \code{N(0, 1)}
  and multiply with the residuals.
@@ -75,7 +75,7 @@ By providing \code{(PE_2, sig2_2, lbd_2)}, this function simulates from a mixtur
 With 1/2 probability, samples will be drawn from the distribution with parameters
 (PE_1, sig2_1, lbd_1) and with another 1/2 probability, they will be drawn from
 the distribution with parameters (PE_2, sig2_2, lbd_2).
-Four distict penalties can be used; \code{"lasso"} for lasso, \code{"grlasso"} for group lasso,
+Four distinct penalties can be used; \code{"lasso"} for lasso, \code{"grlasso"} for group lasso,
 \code{"slasso"} for scaled lasso and \code{"sgrlasso"} for scaled group lasso.
 See Zhou(2014) and Zhou and Min(2017) for details.
 }

@@ -583,7 +583,7 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
 #' @description Print a brief summary of the MH sampler outputs.
 #'
 #' @param x an object of class "MHLS", which is a result of \code{\link{MHLS}}.
-#' @param ... ...	additional print arguments.
+#' @param ...	additional print arguments.
 #' @details
 #' \code{\link{print.MHLS}} prints out last 10 iterations and a brief summary
 #' of the simulation; number of iterations, number of burn-in periods, PE, PEtype and
@@ -720,7 +720,7 @@ summary.MHLS <- function (object, ...) {
 #' @param x an object of class "MHLS", which is an output of \code{\link{MHLS}}.
 #' @param index an index of covariates to plot.
 #' @param skipS logical. If \code{skipS = TRUE}, plots beta only.
-#' @param ...	addtional arguments passed to or from other methods.
+#' @param ...	additional arguments passed to or from other methods.
 #' @details
 #' \code{\link{plot.MHLS}} provides summary plots of beta and subgradient.
 #'  The first column provides histogram of beta and subgradient, while the second

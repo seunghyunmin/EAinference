@@ -26,7 +26,7 @@ lasso, group lasso, scaled lasso or scaled group lasso.}
 
 \item{K}{integer. Number of folds}
 
-\item{minlbd}{numeric. Minumum value of the lambda sequence.}
+\item{minlbd}{numeric. Minimum value of the lambda sequence.}
 
 \item{maxlbd}{numeric. Maximum value of the lambda sequence.}
 

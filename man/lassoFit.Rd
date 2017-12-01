@@ -50,7 +50,7 @@ or \code{type = "sgrlasso"}, the output will include estimated standard deviatio
 Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
 Users can specify the value of lbd or choose to run cross-validation to get
 optimal lambda in term of mean squared error. Coordinate decent algorithm is used
-to fit scaled lasso and sclaed group lasso models.
+to fit scaled lasso and scaled group lasso models.
 }
 \examples{
 set.seed(123)
