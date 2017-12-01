@@ -24,7 +24,7 @@
 #' Computes lasso, group lasso, scaled lasso, or scaled group lasso solution.
 #' Users can specify the value of lbd or choose to run cross-validation to get
 #' optimal lambda in term of mean squared error. Coordinate decent algorithm is used
-#' to fit scaled lasso and sclaed group lasso models.
+#' to fit scaled lasso and scaled group lasso models.
 #'
 #' @references
 #' Mitra, R. and Zhang, C. H. (2016), "The benefit of group sparsity in group inference with
@@ -167,7 +167,7 @@ lassoFit <- function(X, Y, type, lbd,
 #'  \code{"lasso", "grlasso", "slasso"} or \code{"sgrlasso"}, which correspond to
 #'  lasso, group lasso, scaled lasso or scaled group lasso.
 #' @param K integer. Number of folds
-#' @param minlbd numeric. Minumum value of the lambda sequence.
+#' @param minlbd numeric. Minimum value of the lambda sequence.
 #' @param maxlbd numeric. Maximum value of the lambda sequence.
 #' @param num.lbdseq integer. Length of the lambda sequence.
 #' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.

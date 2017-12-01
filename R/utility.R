@@ -680,7 +680,8 @@ ErrorParallel <- function(parallel, ncores) {
 # Utility functions for MHInference
 #-------------------------------------------
 #Propose mu hat from 95% region
-PluginMu.MHLS <- function(X, Y, lbd, ratioSeq, alpha
+PluginMu.MHLS <- function(X, Y, lbd, alpha
+                          , sigma.hat
                           , nChain, niter, method = "boundary"
                           , parallel, ncores) {
   # method can be either "boundary" or "unif"
@@ -688,9 +689,8 @@ PluginMu.MHLS <- function(X, Y, lbd, ratioSeq, alpha
 
   n <- length(Y)
   B0 <- lassoFit(X = X, Y = Y, type = "lasso", lbd = lbd)$B0
-  TEMP <- projStein(X, Y, B0, lbd = lbd, ratios = ratioSeq,
-                    alpha=alpha, niter=niter, fixSeed = FALSE)
-
+  TEMP <- projStein(X, Y, B0, sig2 = sigma.hat^2
+                    , alpha=alpha, niter=niter, fixSeed = FALSE)
   Result <- matrix(0,nChain + 1, n)
   Result[1:nChain, ] <- tcrossprod(rep(1,nChain), TEMP$mu_s) + Sample(p = n, n = nChain) * TEMP$r_s * sqrt(n) +
     tcrossprod(rep(1,nChain), TEMP$mu_w) + Sample(p = n, n = nChain) * TEMP$r_w  * sqrt(n)
@@ -728,10 +728,10 @@ PluginMu.MHLS <- function(X, Y, lbd, ratioSeq, alpha
 # Y: n*1 matrix
 # df: degress of freedom
 # return: list(mu: estimate of true mu, L: sure (stein unbiased risk estimate))
-ShrinkToZeroStein <- function(Y, df)
+ShrinkToZeroStein <- function(Y, df, sig2)
 {
-  B <- df / sum(Y^2)
-  return(list(mu = (1 - B) * Y, L = max(1 - B, 0)))
+  B <- sig2 * df / sum(Y^2)
+  return(list(mu = (1 - B) * Y, L = sig2 * max(1 - B, 0)))
 }
 
 ####################################################
@@ -745,7 +745,7 @@ ShrinkToZeroStein <- function(Y, df)
 # return: the quantile of c(alpha) in Professor's note
 
 ####################################################
-quantile_stein <- function(mu, df, quantile, proj = NULL, niter = 100)
+quantile_stein <- function(mu, df, Quantile, sig2, proj = NULL, niter = 100)
 {
   #n = dim(mu)[1]
   n <- length(mu)
@@ -753,11 +753,11 @@ quantile_stein <- function(mu, df, quantile, proj = NULL, niter = 100)
   z <- numeric(niter)
   for (i in 1:niter)
   {
-    Y_prime <- mu + proj %*% matrix(rnorm(n), ncol = 1)
-    res <- ShrinkToZeroStein(Y_prime, df)
+    Y_prime <- mu + proj %*% matrix(rnorm(n,sd = sqrt(sig2)), ncol = 1)
+    res <- ShrinkToZeroStein(Y = Y_prime, df = df, sig2 = sig2)
     z[i] <- res$L - sum((res$mu - mu)^2) / df
   }
-  c <- quantile(abs(z) * sqrt(df), probs = quantile)
+  c <- quantile(abs(z) * sqrt(df) / sig2, probs = Quantile)
   return(c)
 }
 ####################################################
@@ -774,52 +774,53 @@ quantile_stein <- function(mu, df, quantile, proj = NULL, niter = 100)
 # alpha:
 # niter:
 # return: list(r_s, r_w, mu_s, mu_w)
-projStein <- function(X, Y, B0, lbd, ratios, alpha,
+projStein <- function(X, Y, B0, sig2, alpha,
                       niter, fixSeed)
 {
   n <- length(Y)
   # B0 <- lassoFit(X = X, Y = Y, type = "lasso", lbd = lbd)$B0
 
   # estimate c by A=0
-  stein <- ShrinkToZeroStein(Y, n)
+  stein <- ShrinkToZeroStein(Y = Y, df = n, sig2 = sig2)
   if (fixSeed) {set.seed(123)}
-  c <- quantile_stein(mu = stein$mu, df = n, quantile = 1-alpha/2, niter = niter) # Why 1-alpha/2 instead of 1-alpha?, Bonferroni
+  c <- quantile_stein(mu = stein$mu, df = n, Quantile = 1-alpha/2, sig2 = sig2, niter = niter)
+    # Why 1-alpha/2 instead of 1-alpha?, Bonferroni
 
-  # information along ratios
-  r_s_ratio <- r_w_ratio <- logVol_ratio <- numeric(length(ratios))
-
-  for (i in 1:length(ratios))
-  {
-    A <- which(abs(B0) > ratios[i] * lbd)
-    if (length(A) != 0)
-    {
-      r_s_ratio[i] <- sqrt(qchisq(1-alpha/2, df = length(A)) / n)
-      P_A <- X[,A] %*% solve(t(X[,A]) %*% X[,A]) %*% t(X[,A])
-      P_perp <- diag(n) - P_A
-    } else
-    {
-      r_s_ratio[i] <- 0
-      P_perp <- diag(n)
-    }
-    nMinusA <- n - length(A)
-
-    stein <- ShrinkToZeroStein(P_perp %*% Y, nMinusA)
-    r_w_ratio[i] <- sqrt(nMinusA / n * (c / sqrt(nMinusA) + stein$L))
-
-    #update r_s_ratio r_w_ratio if r_s_ratio exists and calculate volume
-    if (length(A) != 0)
-    {
-      r_s_ratio[i] <- r_s_ratio[i] * sqrt(n / length(A))
-      r_w_ratio[i] <- r_w_ratio[i] * sqrt(n / (n - length(A)))
-      logVol_ratio[i] <- length(A) * log(r_s_ratio[i]) + nMinusA * log(r_w_ratio[i])
-    } else
-    {
-      logVol_ratio[i] <- nMinusA * log(r_w_ratio[i])
-    }
-  }
-  # information of minimum volume
-  i <- which.min(logVol_ratio)
-  A <- which(abs(B0) > ratios[i] * lbd)
+  # # information along ratios
+  # r_s_ratio <- r_w_ratio <- logVol_ratio <- numeric(length(ratios))
+  #
+  # for (i in 1:length(ratios))
+  # {
+  #   A <- which(abs(B0) > ratios[i] * lbd)
+  #   if (length(A) != 0)
+  #   {
+  #     r_s_ratio[i] <- sqrt(qchisq(1-alpha/2, df = length(A)) / n)
+  #     P_A <- X[,A] %*% solve(t(X[,A]) %*% X[,A]) %*% t(X[,A])
+  #     P_perp <- diag(n) - P_A
+  #   } else
+  #   {
+  #     r_s_ratio[i] <- 0
+  #     P_perp <- diag(n)
+  #   }
+  #   nMinusA <- n - length(A)
+  #
+  #   stein <- ShrinkToZeroStein(P_perp %*% Y, nMinusA)
+  #   r_w_ratio[i] <- sqrt(nMinusA / n * (c / sqrt(nMinusA) + stein$L))
+  #
+  #   #update r_s_ratio r_w_ratio if r_s_ratio exists and calculate volume
+  #   if (length(A) != 0)
+  #   {
+  #     r_s_ratio[i] <- r_s_ratio[i] * sqrt(n / length(A))
+  #     r_w_ratio[i] <- r_w_ratio[i] * sqrt(n / (n - length(A)))
+  #     logVol_ratio[i] <- length(A) * log(r_s_ratio[i]) + nMinusA * log(r_w_ratio[i])
+  #   } else
+  #   {
+  #     logVol_ratio[i] <- nMinusA * log(r_w_ratio[i])
+  #   }
+  # }
+  # # information of minimum volume
+  # i <- which.min(logVol_ratio)
+  A <- which(B0 != 0)
   # compute mu_s
   if (length(A) != 0)
   {
@@ -832,10 +833,28 @@ projStein <- function(X, Y, B0, lbd, ratios, alpha,
     P_perp <- diag(n)
   }
   # compute mu_w
-  stein <- ShrinkToZeroStein(P_perp %*% Y, n - length(A))
+  stein <- ShrinkToZeroStein(Y = P_perp %*% Y, df = n - length(A), sig2 = sig2)
   mu_w <- stein$mu
 
-  result <- list(r_s = r_s_ratio[i], r_w = r_w_ratio[i], mu_s = mu_s, mu_w = mu_w)
+
+    if (length(A) != 0)
+    {
+      r_s <- sqrt(qchisq(1-alpha/2, df = length(A)) / n) * sqrt(sig2)
+    } else
+    {
+      r_s <- 0
+    }
+    r_w <- sqrt(n - length(A) / n * (c  * sig2 / sqrt(n - length(A)) + stein$L))
+
+    #update r_s_ratio r_w_ratio if r_s_ratio exists and calculate volume
+    if (length(A) != 0)
+    {
+      r_s <- r_s * sqrt(n / length(A))
+      r_w <- r_w * sqrt(n / (n - length(A)))
+    }
+
+
+  result <- list(r_s = r_s, r_w = r_w, mu_s = mu_s, mu_w = mu_w)
   return(result)
 }
 # #Propose mu hat from 95% region

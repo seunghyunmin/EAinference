@@ -17,7 +17,7 @@
 #' Every active coefficient index in \code{B0} must be included.
 #' Default is \code{A = which(B0 != 0)}.
 #' @param tau numeric vector with length \code{p}.
-#' Standard deviaion of proposal distribution for each coefficient.
+#' Standard deviation of proposal distribution for each coefficient.
 #' @param niter integer. The number of iterations. Default is \code{niter = 2000}
 #' @param burnin integer. The length of burin-in periods. Default is \code{burnin = 0}
 #' @param updateS.itv integer. Update subgradients every \code{updateS.itv} iterations.
@@ -583,7 +583,7 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
 #' @description Print a brief summary of the MH sampler outputs.
 #'
 #' @param x an object of class "MHLS", which is a result of \code{\link{MHLS}}.
-#' @param ... ...	addtional print arguments.
+#' @param ... ...	additional print arguments.
 #' @details
 #' \code{\link{print.MHLS}} prints out last 10 iterations and a brief summary
 #' of the simulation; number of iterations, number of burn-in periods, PE, PEtype and

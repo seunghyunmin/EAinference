@@ -20,7 +20,7 @@
 #' @param PEtype Type of \code{PE} which is needed to characterize the target distribution.
 #' Users can choose either \code{"coeff"} or \code{"mu"}.
 #' @param Btype Type of bootstrap method. Users can choose either \code{"gaussian"}
-#' for guassian bootstrap or \code{"wild"} for wild multiplier bootstrap. Default
+#' for gaussian bootstrap or \code{"wild"} for wild multiplier bootstrap. Default
 #' is \code{"gaussian"}.
 #' @param Y response vector. This is only required when \code{Btype = "wild"}.
 #' @param parallel logical. If \code{parallel = TRUE}, uses parallelization.
@@ -32,7 +32,7 @@
 #' @details This function provides bootstrap samples for lasso, group lasso,
 #' scaled lasso or scaled group lasso estimator
 #' and its subgradient. \cr
-#' The sampling distribution is chracterized by \code{(PE, sig2, lbd)}.
+#' The sampling distribution is characterized by \code{(PE, sig2, lbd)}.
 #' If \code{Btype = "gaussian"}, \code{error_new} is generated from \code{N(0, sig2)}.
 #' If \code{Btype = "wild"}, we first generate \code{error_new} from \code{N(0, 1)}
 #'  and multiply with the residuals.
@@ -42,7 +42,7 @@
 #' With 1/2 probability, samples will be drawn from the distribution with parameters
 #' (PE_1, sig2_1, lbd_1) and with another 1/2 probability, they will be drawn from
 #' the distribution with parameters (PE_2, sig2_2, lbd_2).
-#' Four distict penalties can be used; \code{"lasso"} for lasso, \code{"grlasso"} for group lasso,
+#' Four distinct penalties can be used; \code{"lasso"} for lasso, \code{"grlasso"} for group lasso,
 #' \code{"slasso"} for scaled lasso and \code{"sgrlasso"} for scaled group lasso.
 #' See Zhou(2014) and Zhou and Min(2017) for details.
 #'
@@ -345,7 +345,7 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
 #' parameters in high dimensional linear models," Journal of the Royal
 #' Statistical Society: Series B, 76, 217–242.
 #'
-#' Dezeure, R., Buehlmann, P., Meier, L. and Meinshausen, N. (2015),
+#' Dezeure, R., Buhlmann, P., Meier, L. and Meinshausen, N. (2015),
 #' "High-Dimensional Inference: Confidence Intervals, p-values and R-Software hdi,"
 #' Statistical Science, 30(4), 533-558
 #'
