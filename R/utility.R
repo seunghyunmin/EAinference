@@ -836,23 +836,21 @@ projStein <- function(X, Y, B0, sig2, alpha,
   stein <- ShrinkToZeroStein(Y = P_perp %*% Y, df = n - length(A), sig2 = sig2)
   mu_w <- stein$mu
 
+  if (length(A) != 0)
+  {
+    r_s <- sqrt(qchisq(1-alpha/2, df = length(A)) / n) * sqrt(sig2)
+  } else
+  {
+    r_s <- 0
+  }
+  r_w <- sqrt((n - length(A)) / n * (c  * sig2 / sqrt(n - length(A)) + stein$L))
 
-    if (length(A) != 0)
-    {
-      r_s <- sqrt(qchisq(1-alpha/2, df = length(A)) / n) * sqrt(sig2)
-    } else
-    {
-      r_s <- 0
-    }
-    r_w <- sqrt(n - length(A) / n * (c  * sig2 / sqrt(n - length(A)) + stein$L))
-
-    #update r_s_ratio r_w_ratio if r_s_ratio exists and calculate volume
-    if (length(A) != 0)
-    {
-      r_s <- r_s * sqrt(n / length(A))
-      r_w <- r_w * sqrt(n / (n - length(A)))
-    }
-
+  #update r_s_ratio r_w_ratio if r_s_ratio exists and calculate volume
+  if (length(A) != 0)
+  {
+    r_s <- r_s * sqrt(n / length(A))
+    r_w <- r_w * sqrt(n / (n - length(A)))
+  }
 
   result <- list(r_s = r_s, r_w = r_w, mu_s = mu_s, mu_w = mu_w)
   return(result)
