@@ -175,9 +175,14 @@ postInference.MHLS <- function(X, Y, lbd, weights = rep(1, ncol(X)),
   if (returnSamples) {
     return(list(MHsamples = TEMP, pluginValue = Plugin.seq, method = method,
             confidenceInterval = CI.MHLS(betaRefitMH = RefitBeta, betaCenter = betaCenter,
-                                         betaRefit = beta.refit, alpha = alpha)))
+                                         betaRefit = beta.refit, alpha = alpha),
+            call = match.call()))
   } else {
-    return(CI.MHLS(betaRefitMH = RefitBeta, betaRefit = beta.refit,
-                   betaCenter = betaCenter, alpha = alpha))
+    return(list(
+           confidenceInterval = CI.MHLS(betaRefitMH = RefitBeta, betaRefit = beta.refit,
+                   betaCenter = betaCenter, alpha = alpha),
+           call = match.call()))
   }
 }
+
+

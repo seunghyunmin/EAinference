@@ -104,10 +104,13 @@ MHLS <-  function(X, PE, sig2, lbd,
                    tau = rep(1, ncol(X)), niter = 2000, burnin = 0,
                    PEtype = "coeff", updateS.itv = 1, verbose = FALSE, ...)
 {
-  MHLSmain(X = X, PE = PE, sig2 = sig2, lbd = lbd,
+  RESULT <- c(MHLSmain(X = X, PE = PE, sig2 = sig2, lbd = lbd,
       weights = weights, B0 = B0, S0 = S0, A = A,
       tau = tau, niter = niter, burnin = burnin, PEtype = PEtype,
-      updateS.itv = updateS.itv, verbose = verbose, ...)
+      updateS.itv = updateS.itv, verbose = verbose, ...), call=match.call())
+  class(RESULT) <- "MHLS"
+
+  return(RESULT)
 }
 
 MHLSmain <- function (X, PE, sig2, lbd,
@@ -162,7 +165,6 @@ MHLSmain <- function (X, PE, sig2, lbd,
                  lbd = lbd, weights = weights, B0 = B0, S0 = S0, A = A,
                  tau = tau, niter = niter, burnin = burnin, PEtype = PEtype,
                  updateS.itv = updateS.itv, verbose = verbose, ...)
-  class(est) <- "MHLS"
   est$niter <- niter
   est$burnin <- burnin
   est$PE <- PE
@@ -374,7 +376,7 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
     BB <- t(V_IN) %*% W[Ac,Ac]
     tVAN.WA <- t(V_AN)%*%W[A,A]
 
-    if (!missing(S0) && !all.equal(t(V[,N])%*%S0,matrix(0,length(N),1))) {
+    if (!missing(S0) && (all.equal(t(V[,N])%*%S0,matrix(0,length(N),1)) != TRUE) ) {
       warning("Invalid S0. Regenerate S0 with a default way")
       S0 <- NULL
     }
@@ -614,7 +616,7 @@ print.MHLS <- function (x, ...) {
   cat ("Burn-in period: ", x$burnin,"\n\n")
   cat ("Plug-in PE: \n")
   print(x$PE)
-  cat ("PEtype: \n")
+  cat ("\nPEtype: \n")
   print(x$PEtype)
 
   # if (inherits(x,"Group")) {
@@ -666,6 +668,9 @@ print.MHLS <- function (x, ...) {
   cat("# Accepted\t : \t", paste(x$acceptHistory[1,],"\t"),"\n")
   cat("# Moved\t\t : \t", paste(x$acceptHistory[2,],"\t"),"\n")
   cat("Acceptance rate\t : \t", paste(round(x$acceptHistory[1,]/x$acceptHistory[2,],3),"\t"),"\n")
+
+  cat("\nCall:\n")
+  print(x$call)
   # cat ("\nSignChange rate:\n")
   # cat("-----------------------------\n")
   # cat("# Accepted\t : \t", paste(x$signchange[1],"\t"),"\n")

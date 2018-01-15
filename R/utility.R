@@ -1056,9 +1056,15 @@ CI.MHLS <- function(betaRefitMH, betaCenter, betaRefit, alpha=.05) {
   A <- which(betaRefit!=0)
   Quantile <- apply(betaRefitMH - betaCenter[A], 1, function(x)
   {quantile(x,prob=c(alpha/2, 1 - alpha/2))})
-  Result <- rbind(LowerBound = -Quantile[2,] + betaRefit[A],
+  # Result <- rbind(LowerBound = -Quantile[2,] + betaRefit[A],
+  #                 UpperBound = -Quantile[1,] + betaRefit[A])
+  # colnames(Result) <- paste("beta", A, sep="")
+  Result <- cbind(Var = A,
+                  Coeff = betaRefit[A],
+                  LowerBound = -Quantile[2,] + betaRefit[A],
                   UpperBound = -Quantile[1,] + betaRefit[A])
-  colnames(Result) <- paste("beta", A, sep="")
+  rownames(Result) <- rep("", length(A))
+  #colnames(Result) <- paste("beta", A, sep="")
   return(Result)
 }
 
