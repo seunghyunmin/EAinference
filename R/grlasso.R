@@ -1,5 +1,5 @@
 grlassoFit <- function(X, Y, lbd, weights = rep(1, max(group)), group = 1:p,
-                       Gamma, eps=1e-5, returnGamma = FALSE, initBeta = rep(1, ncol(X)))
+                        eps = .Machine$double.eps)
 {
   n <- nrow(X)
   p <- ncol(X)
@@ -25,20 +25,6 @@ grlassoFit <- function(X, Y, lbd, weights = rep(1, max(group)), group = 1:p,
     stop("dimension of X and Y are not conformable.")
   }
   #--------------------
-  XY <- X * c(Y)
-
-  if (missing(Gamma)) {
-    Gamma <- groupMaxEigen(X, group)
-  }
-
-  if (returnGamma) {
-    return(list(coef = c(grlasso(X = X, Y = Y, XY = XY, weights = weights, group = group,
-                                 lbd = lbd, Gamma = Gamma, initBeta = initBeta,
-                                 eps = eps))
-    , Gamma = Gamma))
-  } else {
-    return(list(coef = c(grlasso(X = X, Y = Y, XY = XY, weights = weights, group = group,
-                                 lbd = lbd, Gamma = Gamma, initBeta = initBeta,
-                                 eps = eps))))
-  }
+  return(coef(gglasso(x = X, y = Y, group = group, loss = "ls", lambda = lbd,
+                      pf = weights, intercept = FALSE, eps = .Machine$double.eps))[-1])
 }

@@ -1,11 +1,8 @@
-#' @useDynLib EAinference
-#' @importFrom Rcpp evalCpp
-NULL
-
 #' @importFrom msm rtnorm
 #' @importFrom mvtnorm dmvnorm
 #' @import graphics
 #' @import stats
+#' @import gglasso
 #-------------------------------------------
 # Utility functions for lasso
 #-------------------------------------------
@@ -614,7 +611,7 @@ slassoLoss <- function(X,Y,beta,sig,lbd) {
 }
 
 # Scaled lasso / group lasso function, use scaled X matrix.
-slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, Gamma, verbose=FALSE){
+slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, verbose=FALSE){
   n <- nrow(Xtilde)
   p <- ncol(Xtilde)
 
@@ -624,14 +621,15 @@ slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, Gamma, verbose=FALSE
   }
   sig <- signew <- .1
   K <- 1 ; niter <- 0
-  if (missing(Gamma)) {
-    Gamma <- groupMaxEigen(X = Xtilde, group = group)
-  }
+  # if (missing(Gamma)) {
+  #   Gamma <- groupMaxEigen(X = Xtilde, group = group)
+  # }
   B0 <- rep(1, p)
   while(K == 1 & niter < 500){
     sig <- signew;
     lam <- lbd * sig
-    B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), Gamma = Gamma, lbd = lam, initBeta = B0)$coef
+    B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), lbd = lam)
+    # B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), Gamma = Gamma, lbd = lam, initBeta = B0)$coef
     # B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
     signew <- sqrt(crossprod(Y-Xtilde %*% B0) / n)
 
@@ -643,14 +641,13 @@ slassoFit.tilde <- function(Xtilde, Y, lbd, group, weights, Gamma, verbose=FALSE
     }
   }
   lam <- lbd * signew
-  B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)),  Gamma = Gamma, lbd = lam, initBeta = B0)$coef
+  B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), lbd = lam)
   # B0 <- coef(gglasso(Xtilde,Y,loss="ls",group=group,pf=rep(1,max(group)),lambda=lam,intercept = FALSE))[-1]
   hsigma <- c(signew)
   S0 <- t(Xtilde) %*% (Y - Xtilde %*% B0) / n / lbd / hsigma
   B0 <- B0 / rep(weights,table(group))
   return(list(B0=B0, S0=c(S0), hsigma=hsigma,lbd=lbd))
 }
-
 
 #---------------------
 # Error handling
@@ -1093,15 +1090,15 @@ Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat) {
   }
 }
 
-# Compute group-wize max eigen-value
-groupMaxEigen <- function(X, group) {
-  Psi <- crossprod(X) / nrow(X)
-  J <- max(group)
-  Gamma <- numeric(J)
-  for (i in 1:J) {
-    Gamma[i] <- max(eigen(Psi[group==i, group==i], only.values= TRUE)$values)
-  }
-  Gamma <- Gamma * (1 + 1e-10)
-  return(Gamma)
-}
+# # Compute group-wize max eigen-value
+# groupMaxEigen <- function(X, group) {
+#   Psi <- crossprod(X) / nrow(X)
+#   J <- max(group)
+#   Gamma <- numeric(J)
+#   for (i in 1:J) {
+#     Gamma[i] <- max(eigen(Psi[group==i, group==i], only.values= TRUE)$values)
+#   }
+#   Gamma <- Gamma * (1 + 1e-10)
+#   return(Gamma)
+# }
 

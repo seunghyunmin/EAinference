@@ -236,7 +236,7 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
     res <- res - mean(res) # centering the residuals
   }
 
-  GAMMA <- groupMaxEigen(X = Xtilde, group = group)
+  # GAMMA <- groupMaxEigen(X = Xtilde, group = group)
 
   if (type %in% c("lasso", "grlasso")) {
     FF <- function(x) {
@@ -253,8 +253,8 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
       #                     group = group, loss = "ls", intercept = FALSE, lambda = lbd)
       # Lassobeta <- coef(LassoFit)[-1] / W
       LassoFit <- grlassoFit(X = Xtilde, Y = Ysample, group = group,
-                             weights = rep(1, max(group)), Gamma = GAMMA, lbd = lbd)
-      Lassobeta <- LassoFit$coef / W
+                             weights = rep(1, max(group)), lbd = lbd)
+      Lassobeta <- LassoFit / W
       return(c(Lassobeta, (t.Xtilde %*% Ysample -
                              GramMat %*% (Lassobeta * W)) / n / lbd))
     }
@@ -268,7 +268,7 @@ PBsamplerMain <- function(X, PE, sig2, lbd, weights,
       }
       Ysample <- Yexpect + epsilon;
 
-      Fit <- slassoFit.tilde(Xtilde = Xtilde, Y = Ysample, lbd = lbd, group = group, weights = weights, Gamma = GAMMA, verbose = verbose)
+      Fit <- slassoFit.tilde(Xtilde = Xtilde, Y = Ysample, lbd = lbd, group = group, weights = weights, verbose = verbose)
       return(c(Fit$B0, Fit$S0, Fit$hsigma))
     }
 

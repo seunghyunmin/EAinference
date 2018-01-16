@@ -135,7 +135,7 @@ lassoFit <- function(X, Y, type, lbd,
   if (type %in% c("lasso", "grlasso")) {
     # compute group lasso estimator B0 and S0
     # B0 <- coef(gglasso(x=Xtilde,y=Y,group=group,pf=rep(1,max(group)),lambda=lbd,intercept=FALSE))[-1] / IndWeights
-    B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), lbd = lbd)$coef / IndWeights
+    B0 <- grlassoFit(X = Xtilde, Y = Y, group = group, weights = rep(1, max(group)), lbd = lbd) / IndWeights
     S0 <- (t(Xtilde) %*% Y - t(Xtilde) %*% Xtilde %*%
              (B0 * IndWeights)) / n / lbd
     #A <- which(B0!=0)
@@ -267,34 +267,53 @@ cv.lasso <- function( X, Y, group = 1:ncol(X), weights = rep(1,max(group)),
     stop("K should be a positive integer.")
   }
 
-  all.folds <- split(sample(1:n), rep(1:K, length = n))
+  index <- seq(minlbd,maxlbd,length=num.lbdseq+1)[-1]
 
-  #index=seq(0,max(t(X)%*%Y),length=100)
-  index <- seq(minlbd,maxlbd,length=num.lbdseq)[-1]
-  residmat <- matrix(0, length(index), K)
+  if (type %in% c("lasso", "grlasso")) {
+    RESULT <- cv.gglasso(x = X, y = Y, group = group, lambda = index)
+    cv <- RESULT$cvm
+    cvsd <- RESULT$cvsd
+    index.min.cv <- which.min(cv)
 
-  FF <- function(x,omit) {
-    fit <- lassoFit(X=X[-omit,,drop=FALSE],Y=Y[-omit],type=type,
+    lbd.min <- RESULT$lambda.min
+    lbd.1se <- RESULT$lambda.1se
+    index <- RESULT$lambda
+    # err.1se <- cvsd[index.min.cv] + cv[index.min.cv]
+    #
+    # lbd.1se <- max(RESULT$lambda[cv <= err.1se], na.rm=TRUE)
+    # lbd.min <- RESULT$lambda[index.min.cv]
+  } else {
+    all.folds <- split(sample(1:n), rep(1:K, length = n))
+
+    #index=seq(0,max(t(X)%*%Y),length=100)
+    index <- seq(minlbd,maxlbd,length=num.lbdseq)[-1]
+    residmat <- matrix(0, length(index), K)
+
+    FF <- function(x,omit) {
+      fit <- lassoFit(X=X[-omit,,drop=FALSE],Y=Y[-omit],type=type,
                       lbd=index[x],group=group,weights=weights)$B0
-    fit <- X[omit,,drop=FALSE]%*%fit
-    return(mean((Y[omit]-fit)^2))
+      fit <- X[omit,,drop=FALSE]%*%fit
+      return(mean((Y[omit]-fit)^2))
+    }
+
+    for (i in seq(K)) {
+      omit <- all.folds[[i]]
+      residmat[,i] <- do.call(rbind,parallel::mclapply(1:length(index),
+                                                       FF,omit = omit, mc.cores = ncores))
+      if(verbose) {cat("\n CV Fold", i, "\n\n")}
+    }
+    #apply(residmat, 2, which.min)
+    cv <- apply(residmat, 1, mean)
+    cvsd <- apply(residmat, 1, sd)
+    index.min.cv <- which.min(cv)
+
+    err.1se <- cvsd[index.min.cv] + cv[index.min.cv]
+
+    lbd.1se <- max(index[cv <= err.1se], na.rm=TRUE)
+    lbd.min <- index[index.min.cv]
+
   }
 
-  for (i in seq(K)) {
-    omit <- all.folds[[i]]
-    residmat[,i] <- do.call(rbind,parallel::mclapply(1:length(index),
-      FF,omit = omit, mc.cores = ncores))
-    if(verbose) {cat("\n CV Fold", i, "\n\n")}
-  }
-  #apply(residmat, 2, which.min)
-  cv <- apply(residmat, 1, mean)
-  cvsd <- apply(residmat, 1, sd)
-  index.min.cv <- which.min(cv)
-
-  err.1se <- cvsd[index.min.cv] + cv[index.min.cv]
-
-  lbd.1se <- max(index[cv <= err.1se], na.rm=TRUE)
-  lbd.min <- index[index.min.cv]
 
   if (plot.it) {
     matplot(x=index, y=cbind(cv,cv-cvsd,cv+cvsd), type="l",
