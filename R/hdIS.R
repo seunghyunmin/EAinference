@@ -82,7 +82,7 @@
 #'  log = TRUE)
 #' @export
 hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
-            TsA.method = "default", log = TRUE, parallel = FALSE, ncores = 2L)
+            TsA.method = "default", log = FALSE, parallel = FALSE, ncores = 2L)
 {
 
   if (class(PBsample) != "PB") {

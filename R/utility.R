@@ -1066,7 +1066,7 @@ CI.MHLS <- function(betaRefitMH, betaCenter, betaRefit, alpha=.05) {
 }
 
 # Generate pluginbeta's from 95% confidence region
-Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat) {
+Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat,alpha) {
   # nPlugin : number of pluginbeta's want to generate
   # sigma.hat : estimator of sigma , \epsilon ~ N(0, sigma^2)
   #             If missing, use default way to generate it
@@ -1082,7 +1082,7 @@ Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat) {
   } else {
     xy <- matrix(rnorm(length(A)*(nPlugin)), nPlugin)
     lambda <- 1 / sqrt(rowSums(xy^2))
-    xy <- xy * lambda * sqrt(qchisq(0.95, df=length(A)))
+    xy <- xy * lambda * sqrt(qchisq(1-alpha, df=length(A)))
     coeff.seq <- matrix(0,nPlugin,ncol(X))
     coeff.seq[,A]  <- rbind(t(t(xy%*%chol(solve(crossprod(X[,A])))) *
                                            sigma.hat + betaRefit))

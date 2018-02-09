@@ -6,7 +6,7 @@
 scaled group lasso estimator under high-dimensional setting}
 \usage{
 hdIS(PBsample, PETarget, sig2Target, lbdTarget, TsA.method = "default",
-  log = TRUE, parallel = FALSE, ncores = 2L)
+  log = FALSE, parallel = FALSE, ncores = 2L)
 }
 \arguments{
 \item{PBsample}{bootstrap samples of class \code{PB} from \code{\link{PBsampler}}.}
