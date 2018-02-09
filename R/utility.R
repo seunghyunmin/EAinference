@@ -1078,7 +1078,9 @@ Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat,alpha) {
   betaRefit <- coef(lm(Y~X[,A]+0))
 
   if (nPlugin == 1) {
-    return(matrix(betaRefit,1))
+    coeff.seq <- matrix(0,nPlugin,ncol(X))
+    coeff.seq[,A] <- betaRefit
+    return(coeff.seq)
   } else {
     xy <- matrix(rnorm(length(A)*(nPlugin)), nPlugin)
     lambda <- 1 / sqrt(rowSums(xy^2))
