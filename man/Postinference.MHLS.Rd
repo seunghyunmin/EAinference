@@ -2,32 +2,37 @@
 % Please edit documentation in R/MHInference.R
 \name{postInference.MHLS}
 \alias{postInference.MHLS}
-\title{Post-inference with lasso estimator}
+\title{Post-selection individual inference with lasso estimator}
 \usage{
-postInference.MHLS(X, Y, lbd, weights = rep(1, ncol(X)), tau = rep(1,
-  ncol(X)), sig2.hat, alpha = 0.05, nChain = 10, method,
-  niterPerChain = 500, parallel = FALSE, ncores = 2L,
-  returnSamples = FALSE, ...)
+postInference.MHLS(LassoEst, Ctype = "CI", X, Y, sig2.hat, tau = rep(1,
+  ncol(X)), alpha = 0.05, MHsamples, target = which(LassoEst$B0 != 0),
+  nChain = 10, method, niterPerChain = 500, parallel = FALSE,
+  ncores = 2L, returnSamples = FALSE, ...)
 }
 \arguments{
+\item{LassoEst}{The result from \code{\link{lassoFit}} function with \code{type="lasso"}.}
+
+\item{Ctype}{either \code{"CI"} or \code{"CS"} which represent confidence intervals
+and confidence sets, respectively. If \code{"CI"}, confidence intervals for all active
+coefficients are generated. If \code{"CS"}, \code{target} argument needs to be specified.}
+
 \item{X}{predictor matrix.}
 
 \item{Y}{response vector.}
 
-\item{lbd}{penalty term of lasso. By letting this argument be \code{"cv.1se"} or
-\code{"cv.min"}, users can have the cross-validated lambda that gives either minimum
-squared error or that is within 1 std error bound.}
-
-\item{weights}{weight vector with length equal to the number of coefficients.
-Default is \code{rep(1, ncol(X))}.}
+\item{sig2.hat}{variance of error term.}
 
 \item{tau}{numeric vector. Standard deviation of proposal distribution
 for each beta. Adjust the value to get relevant level of acceptance rate.
 Default is \code{rep(1, ncol(X))}.}
 
-\item{sig2.hat}{variance of error term.}
-
 \item{alpha}{confidence level for confidence interval.}
+
+\item{MHsamples}{optional argument. MHsamples from \code{\link{postInference.MHLS}}.
+If MHsamples is supplied, MH sampling step is omitted. See the example for the detail.}
+
+\item{target}{target active variables of which one wants to generate confidence set. Needs
+to be a subset of active set. See the example for the detail.}
 
 \item{nChain}{the number of chains. For each chain, different plug-in beta will be generated
 from its confidence region.}
@@ -41,7 +46,8 @@ Default is \code{parallel = FALSE}.}
 
 \item{ncores}{integer. The number of cores to use for parallelization.}
 
-\item{returnSamples}{logical. If \code{returnSamples = TRUE}, print Metropolis-Hastings samples.}
+\item{returnSamples}{logical. If \code{returnSamples = TRUE}, print Metropolis-Hastings samples.
+If \code{MHsamples} is supplied, \code{returnSamples = FALSE} is forced.}
 
 \item{...}{auxiliary \code{\link{MHLS}} arguments.}
 }
@@ -73,13 +79,13 @@ Y <- X \%*\% rep(1,p) + rnorm(n)
 sig2 <- 1
 lbd <- .37
 weights <- rep(1,p)
+LassoEst <- lassoFit(X = X, Y = Y, type = "lasso", lbd = lbd, weights = weights)
 parallel <- (.Platform$OS.type != "windows")
-postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
-nChain = 3, niterPerChain = 20, method = "coeff", parallel = parallel)
-postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+P1 <- postInference.MHLS(LassoEst= LassoEst, X = X, Y = Y, sig2.hat = 1, alpha = .05,
 nChain = 3, niterPerChain = 20, method = "coeff", parallel = parallel, returnSamples = TRUE)
-postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
-nChain = 3, niterPerChain = 20, method = "mu", parallel = parallel)
-postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
-nChain = 3, niterPerChain = 20, method = "mu", parallel = parallel, returnSamples = TRUE)
+P1
+postInference.MHLS(LassoEst= LassoEst, MHsamples = P1$MHsamples,
+                   Ctype = "CI", X = X, Y = Y, method = "coeff")
+postInference.MHLS(LassoEst= LassoEst, MHsamples = P1$MHsamples,
+                   Ctype = "CS", X = X, Y = Y, method = "coeff")
 }

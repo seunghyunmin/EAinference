@@ -169,9 +169,33 @@ we then refit the estimator to remove the bias of the lasso estimator. The final
 output is the $(1-a)$ quantile of each active coefficient. 
 
 ```{r}
-postInference.MHLS(X = X, Y = Y, lbd = lbd, sig2.hat = 1, alpha = .05,
+postInference.MHLS(LassoEst = LassoResult, X = X, Y = Y, sig2.hat = 1, alpha = .05,
  method = "coeff", nChain = 5, niterPerChain = 20, 
  parallel = !(.Platform$OS.type == "windows"))
 ```
+If one wants to construct a confidence set, set `Ctype = "CS"` and specify `target`.
+`target` needs be a subset of the active set, i.e. a subset of `which(LassoResult$B0 != 0)`.
+The default option is `target = which(LassoResult$B0 != 0)`.
+```{r}
+postInference.MHLS(LassoEst = LassoResult, Ctype = "CS",X = X, Y = Y, sig2.hat = 1, alpha = .05,
+ method = "coeff", nChain = 5, niterPerChain = 20, 
+ parallel = !(.Platform$OS.type == "windows"))
+```
+
+One can reuse MH samples for other inference tasks. To do that, first `postInference.MHLS` needs to be 
+run with argument `returnSamples = TRUE`. Then rerun `postInference.MHLS` with the argument
+`MHsamples`. See below for an example.
+```{r}
+P1 <- postInference.MHLS(LassoEst = LassoResult, Ctype = "CS", X = X, Y = Y, 
+  sig2.hat = 1, alpha = .05, method = "coeff", nChain = 5, niterPerChain = 20, 
+  returnSamples = TRUE, parallel = !(.Platform$OS.type == "windows"))
+postInference.MHLS(LassoEst = LassoResult, MHsamples = P1$MHsamples, Ctype = "CS",
+  X = X, Y = Y, method = "coeff")
+postInference.MHLS(LassoEst = LassoResult, MHsamples = P1$MHsamples, Ctype = "CI",
+  X = X, Y = Y, method = "coeff")
+```
+
+
+
 
 

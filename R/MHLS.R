@@ -137,7 +137,7 @@ MHLSmain <- function (X, PE, sig2, lbd,
     stop("Invalid active set index, A.")
   }
   if (!PEtype %in% c("coeff", "mu")) {
-    stop("Invalide PEtype input.")
+    stop("Invalid PEtype input.")
   }
   if (length(weights) != p) {
     stop("length(weights) has to be the same with the number of coefficients")
@@ -199,9 +199,10 @@ MHLSswp <- function(X, PE, sig2, lbd, weights,
   if (!missing(S0) && !all(round(S0[which(B0 != 0)], 3) == sign(B0[B0 != 0]))) {
     stop("Invalid S0. Leave S0 blank, if S0 is unknown.")
   }
-  if (length(tau) != ncol(X)) {
-    stop("tau must have a same length with the active set, A.")
+  if (length(tau) != p) {
+    stop("length(tau) has to be the same with col(X)")
   }
+
   if (n >= p) {   # Low-dim MH
     #precalculation
     #for(j in 1:p){X[,j]=X[,j]-mean(X[,j])}

@@ -14,24 +14,23 @@ weights <- rep(1,p)
 group <- 1:p
 parallel <- (.Platform$OS.type != "windows")
 
+LassoEst <- lassoFit(X = X, Y = Y, type = "lasso", lbd = lbd, weights = weights)
+
+
 test_that("High dimensional setting", {
-  expect_error(postInference.MHLS(X=X, Y=Y, lbd=lbd, weights = weights,
+  expect_error(postInference.MHLS(LassoEst = LassoEst, X=X, Y=Y,
                                   sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
                                   method = "coeff", parallel = parallel)
                , NA)
-  expect_error(postInference.MHLS(X=X, Y=Y, lbd=lbd, weights = -weights,
-                                  sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
-                                  method = "coeff", parallel = parallel)
-               , "positive")
-  expect_error(postInference.MHLS(X=X, Y=c(Y,0), lbd=lbd, weights = weights,
+  expect_error(postInference.MHLS(LassoEst = LassoEst, X=X, Y=c(Y,0),
                                   sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
                                   method = "coeff", parallel = parallel)
                , "dimension")
-  expect_error(postInference.MHLS(X=X[-1,], Y=Y, lbd=lbd, weights = weights,
+  expect_error(postInference.MHLS(LassoEst = LassoEst, X=X[-1,], Y=Y,
                                   sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
                                   method = "coeff", parallel = parallel)
                , "dimension")
-  expect_error(postInference.MHLS(X=X[,-1], Y=Y, lbd=lbd, weights = weights,
+  expect_error(postInference.MHLS(LassoEst = LassoEst, X=X[,-1], Y=Y,
                                   sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20,
                                   method = "coeff", parallel = parallel)
                , "length")
@@ -40,12 +39,12 @@ test_that("High dimensional setting", {
   #                                   sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20, parallel = FALSE, ncores = 10000)
   #                , "ncores is larger")
   if(.Platform$OS.type != "windows"){
-    expect_warning(postInference.MHLS(X=X, Y=Y, lbd=lbd, weights = weights,
+    expect_warning(postInference.MHLS(LassoEst = LassoEst, X=X, Y=Y,
                                       method = "coeff",
                                       sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20, parallel = TRUE, ncores = 1)
                    , "needs to be greater than 1")
   } else {
-    expect_warning(postInference.MHLS(X=X, Y=Y, lbd=lbd, weights = weights,
+    expect_warning(postInference.MHLS(LassoEst = LassoEst, X=X, Y=Y,
                                       method = "coeff",
                                       sig2.hat=1, alpha=.05, nChain=3, niterPerChain=20, parallel = TRUE)
                    , "Under Windows platform")

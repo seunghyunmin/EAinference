@@ -1056,15 +1056,32 @@ CI.MHLS <- function(betaRefitMH, betaCenter, betaRefit, alpha=.05) {
   # Result <- rbind(LowerBound = -Quantile[2,] + betaRefit[A],
   #                 UpperBound = -Quantile[1,] + betaRefit[A])
   # colnames(Result) <- paste("beta", A, sep="")
-  Result <- cbind(Var = A,
-                  Coeff = betaRefit[A],
-                  LowerBound = -Quantile[2,] + betaRefit[A],
-                  UpperBound = -Quantile[1,] + betaRefit[A])
-  rownames(Result) <- rep("", length(A))
+  Result <- list(Coeff = betaRefit[A],
+                 CI = cbind(Var = A,
+                            LowerBound = -Quantile[2,] + betaRefit[A],
+                            UpperBound = -Quantile[1,] + betaRefit[A]))
+  rownames(Result$CI) <- rep("", length(A))
   #colnames(Result) <- paste("beta", A, sep="")
   return(Result)
 }
 
+# Generate 1-alpha Confidence Set, the center and the radius by the l2 norm
+CS.MHLS <- function(betaRefitMH, betaCenter, betaRefit, target, alpha=.05) {
+  # betaCenter : ginv(X[,A]) %*% X %*% beta0 or ginv(X[,A]) %*% hatMu
+  #               , vector of length |A|
+  # betaRefitMH : refitted beta via Refit.MHLS, a niter x |A| matrix.
+  # betaRefit : refitted beta from original data, a vector with length p.
+  # alpha : significant level.
+  # target : target coefficients of which we want to construct confidence set
+  A <- which(betaRefit!=0)
+  Aloc <- which(target %in% A)
+
+  Result <- list(Target = target,
+                Center = betaRefit[A][Aloc],
+                 l2_Radius = sqrt(quantile(colSums(((betaRefitMH -
+                        betaCenter[A])[Aloc,,drop=FALSE])^2),1-alpha)))
+  return(Result)
+}
 # Generate pluginbeta's from 95% confidence region
 Pluginbeta.MHLS <- function(X,Y,A,nPlugin,sigma.hat,alpha) {
   # nPlugin : number of pluginbeta's want to generate

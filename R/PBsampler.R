@@ -104,10 +104,10 @@ PBsampler <- function(X, PE_1, sig2_1, lbd_1, PE_2,
     stop("type has to be either lasso, grlasso, slasso or sgrlasso.")
   }
   if (!PEtype %in% c("coeff", "mu")) {
-    stop("Invalide PEtype.")
+    stop("Invalid PEtype.")
   }
   if (!Btype %in% c("gaussian", "wild")) {
-    stop("Invalide Btype.")
+    stop("Invalid Btype.")
   }
   if (length(group) != p) {
     stop("group must have a same length with the number of X columns")

@@ -222,7 +222,7 @@ hdIS <- function(PBsample, PETarget, sig2Target, lbdTarget,
           #   lbdProp1 * VRWprop %*% S[x, ] - VRCBprop)^2 * InvVarRprop)
         } else {
           ##############################
-          # wild multiplier bootstrap
+          # wild bootstrap
           ##############################
           log.f0 <- dmvnorm(c(VRC %*% B[x, ] + lbdTarget * VRW %*% S[x, ] - VRCB),
                             mean=rep(0,n),sigma=VARTarget,log=TRUE) +
